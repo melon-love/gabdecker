@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "created_at_month_label": "August 2016",
+      "name": "Ekrem Büyükkaya",
+      "username": "e",
+      "follower_count": 11055,
+      "following_count": 220,
+      "post_count": 2112,
+      "picture_url": "https://files.gab.com/file/files-gab/user/5ba783dd84da1.jpeg",
+      "picture_url_full": "https://files.gab.com/file/files-gab/user/5ba783dd8521e.jpeg",
+      "following": true,
+      "followed": false,
+      "verified": true,
+      "is_pro": true,
+      "is_donor": false,
+      "is_investor": false,
+      "is_premium": false,
+      "is_tippable": true,
+      "is_private": false,
+      "is_accessible": true,
+      "follow_pending": false
+    }
+  ],
+  "no-more": true,
+  "count": 1
+}

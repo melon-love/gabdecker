@@ -1,0 +1,181 @@
+{
+  "id": 1,
+  "created_at_month_label": "August 2016",
+  "name": "Ekrem Büyükkaya",
+  "username": "e",
+  "follower_count": 11055,
+  "following_count": 220,
+  "post_count": 2112,
+  "picture_url": "https://files.gab.com/file/files-gab/user/5ba783dd84da1.jpeg",
+  "picture_url_full": "https://files.gab.com/file/files-gab/user/5ba783dd8521e.jpeg",
+  "following": true,
+  "followed": false,
+  "verified": true,
+  "is_pro": true,
+  "is_donor": false,
+  "is_investor": false,
+  "is_premium": false,
+  "is_tippable": true,
+  "is_private": false,
+  "is_accessible": true,
+  "follow_pending": false,
+  "bio": "Giving life to ideas every single day.",
+  "cover_url": "https://files.gab.com/file/files-gab/user/5942f42a6d074.jpg",
+  "score": 50662,
+  "video_count": 10,
+  "is_favorited": false,
+  "subscribing": false,
+  "is_muted": false,
+  "mutual_count": 240,
+  "mutual_users": [
+    {
+      "id": 31,
+      "name": "Andrew Torba",
+      "username": "a",
+      "picture_url": "https://files.gab.com/file/files-gab/user/5b96e94af175d.jpeg",
+      "verified": true,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": true,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 51,
+      "name": "Milo Yiannopoulos",
+      "username": "m",
+      "picture_url": "https://files.gab.com/file/files-gab/user/593570fe21a28.png",
+      "verified": true,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": false,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 131,
+      "name": "Logan",
+      "username": "L",
+      "picture_url": "https://files.gab.com/file/files-gab/user/59f2ae6bec2e3.jpeg",
+      "verified": true,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": false,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 171,
+      "name": "Brandon",
+      "username": "B",
+      "picture_url": "https://files.gab.com/file/files-gab/user/58e951de701ed.png",
+      "verified": false,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": false,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 201,
+      "name": "Robert Powell",
+      "username": "r",
+      "picture_url": "https://files.gab.com/file/files-gab/user/5b0e17b60a01d.jpeg",
+      "verified": false,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": false,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 251,
+      "name": "gab",
+      "username": "gab",
+      "picture_url": "https://files.gab.com/file/files-gab/user/bb-5bd48a0df10f7.png",
+      "verified": true,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": true,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 361,
+      "name": "Emily J Torba",
+      "username": "Emily",
+      "picture_url": "https://files.gab.com/file/files-gab/user/5b70cb5e8f9db.jpeg",
+      "verified": false,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": true,
+      "is_private": false,
+      "is_premium": true
+    },
+    {
+      "id": 491,
+      "name": "Amy Torba ",
+      "username": "Amy",
+      "picture_url": "https://files.gab.com/file/files-gab/user/5b368038f08ae.jpeg",
+      "verified": true,
+      "is_donor": true,
+      "is_investor": false,
+      "is_pro": true,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 521,
+      "name": "Deplorable",
+      "username": "X",
+      "picture_url": "https://files.gab.com/file/files-gab/user/57b2518153b27.JPG",
+      "verified": false,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": false,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 613,
+      "name": "David ",
+      "username": "d",
+      "picture_url": "https://files.gab.com/file/files-gab/user/57b0d66a24027.jpg",
+      "verified": false,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": true,
+      "is_private": false,
+      "is_premium": false
+    }
+  ],
+  "distribution": [
+    {
+      "category": {
+        "title": "Technology",
+        "slug": "technology",
+        "value": 3,
+        "emoji": "💻"
+      },
+      "count": 37
+    },
+    {
+      "category": {
+        "title": "News",
+        "slug": "news",
+        "value": 1,
+        "emoji": "📰"
+      },
+      "count": 27
+    },
+    {
+      "category": {
+        "title": "AMA",
+        "slug": "ama",
+        "value": 10,
+        "emoji": "❓"
+      },
+      "count": 14
+    }
+  ]
+}

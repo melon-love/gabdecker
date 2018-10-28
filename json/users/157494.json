@@ -1,0 +1,79 @@
+{
+  "id": 157494,
+  "created_at_month_label": "April 2017",
+  "name": "Xossbow: Blogging in Elm",
+  "username": "Xossbow",
+  "follower_count": 33,
+  "following_count": 2,
+  "post_count": 58,
+  "picture_url": "https://files.gab.com/file/files-gab/user/58ed20f60efc6.png",
+  "picture_url_full": "https://files.gab.com/file/files-gab/user/58ed20f60f000.png",
+  "following": true,
+  "followed": false,
+  "verified": false,
+  "is_pro": false,
+  "is_donor": false,
+  "is_investor": false,
+  "is_premium": false,
+  "is_tippable": false,
+  "is_private": false,
+  "is_accessible": true,
+  "follow_pending": false,
+  "bio": "@billstclair's account for reports on and discussion of https://Xossbow.com and Elm programming in general. To chat in real time, ask to join the \"Xossbow\" room.\r\n\r\nhttps://github.com/billstclair/xossbow\r\n\r\nhttp://elm-lang.org\r\n\r\n#xossbow #elm #elm-lang #software #blogging #test",
+  "cover_url": "https://files.gab.com/file/files-gab/user/58ed211e54ee2.png",
+  "score": 61,
+  "video_count": 0,
+  "is_favorited": true,
+  "subscribing": false,
+  "is_muted": false,
+  "mutual_count": 3,
+  "mutual_users": [
+    {
+      "id": 17938,
+      "name": "Michael Quint",
+      "username": "OutOfNod",
+      "picture_url": "https://files.gab.com/file/files-gab/user/58cada962a07f.jpeg",
+      "verified": true,
+      "is_donor": true,
+      "is_investor": true,
+      "is_pro": false,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 89851,
+      "name": "TRUST CHRIST OR GO TO HELL!",
+      "username": "HERALDofYAH",
+      "picture_url": "https://files.gab.com/file/files-gab/user/583a62915df5e.jpg",
+      "verified": false,
+      "is_donor": false,
+      "is_investor": false,
+      "is_pro": false,
+      "is_private": false,
+      "is_premium": false
+    },
+    {
+      "id": 99570,
+      "name": "🤠 Truth Whisper",
+      "username": "truthwhisper",
+      "picture_url": "https://files.gab.com/file/files-gab/user/5944c616789fe.jpg",
+      "verified": false,
+      "is_donor": true,
+      "is_investor": false,
+      "is_pro": true,
+      "is_private": false,
+      "is_premium": false
+    }
+  ],
+  "distribution": [
+    {
+      "category": {
+        "title": "Technology",
+        "slug": "technology",
+        "value": 3,
+        "emoji": "💻"
+      },
+      "count": 20
+    }
+  ]
+}

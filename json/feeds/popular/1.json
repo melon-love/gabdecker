@@ -1,0 +1,1854 @@
+{
+  "data": [
+    {
+      "id": "40060755",
+      "published_at": "2018-10-28T01:09:04+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 24715,
+        "name": "Mein Covfefe",
+        "username": "LonesomeHomestead",
+        "picture_url": "https://files.gab.com/file/files-gab/user/bb-5bb931ce204c6.jpeg",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40060755,
+        "created_at": "2018-10-28T01:09:04+00:00",
+        "revised_at": "2018-10-28T01:12:49+00:00",
+        "edited": true,
+        "body": "I'm sure it is just a coincidence that The Washington Post published a hit piece about Gab 1 day before PA shooting.\nThen the very next day CBS News has a hit piece ready to air very shortly after shooting.\nAND PayPal, who does nothing quickly, removes Gab a few hours after shooting. \nLOT of coincidences @a",
+        "body_html": "I'm sure it is just a coincidence that The Washington Post published a hit piece about Gab 1 day before PA shooting.\nThen the very next day CBS News has a hit piece ready to air very shortly after shooting.\nAND PayPal, who does nothing quickly, removes Gab a few hours after shooting. \nLOT of coincidences @a",
+        "body_html_summary": "I'm sure it is just a coincidence that The Washington Post published a hit piece about Gab 1 day before PA shooting.\nThen the very next day CBS News has a hit piece ready to air very shortly after shooting.\nAND PayPal, who does nothing quickly, removes Gab a few hours after shooting. \nLOT of coincidences @a",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 86,
+        "like_count": 86,
+        "dislike_count": 0,
+        "reply_count": 5,
+        "repost_count": 41,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 24715,
+          "name": "Mein Covfefe",
+          "username": "LonesomeHomestead",
+          "picture_url": "https://files.gab.com/file/files-gab/user/bb-5bb931ce204c6.jpeg",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40068856",
+      "published_at": "2018-10-28T04:23:04+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 37313,
+        "name": "William Thornborrow",
+        "username": "Thorny935",
+        "picture_url": "https://files.gab.com/file/files-gab/user/586185dc7e56a.jpg",
+        "verified": true,
+        "is_donor": true,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40068856,
+        "created_at": "2018-10-28T04:23:04+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "The Gab staff has been working their butts off to back everything up. Gab may go down for a bit, but I have faith that Andrew and company will find a solution.",
+        "body_html": "The Gab staff has been working their butts off to back everything up. Gab may go down for a bit, but I have faith that Andrew and company will find a solution.",
+        "body_html_summary": "The Gab staff has been working their butts off to back everything up. Gab may go down for a bit, but I have faith that Andrew and company will find a solution.",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 92,
+        "like_count": 92,
+        "dislike_count": 0,
+        "reply_count": 8,
+        "repost_count": 27,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 37313,
+          "name": "William Thornborrow",
+          "username": "Thorny935",
+          "picture_url": "https://files.gab.com/file/files-gab/user/586185dc7e56a.jpg",
+          "verified": true,
+          "is_donor": true,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40045925",
+      "published_at": "2018-10-27T21:48:40+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 233064,
+        "name": "Trump's Tweets",
+        "username": "RealTrumpTweets",
+        "picture_url": "https://files.gab.com/file/files-gab/user/599a23a3c2b13.jpeg",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40045925,
+        "created_at": "2018-10-27T21:48:40+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "...This evil Anti-Semitic attack is an assault on humanity. It will take all of us working together to extract the poison of Anti-Semitism from our world. We must unite to conquer hate.2:41 pm - 27 Oct 2018",
+        "body_html": "...This evil Anti-Semitic attack is an assault on humanity. It will take all of us working together to extract the poison of Anti-Semitism from our world. We must unite to conquer hate.2:41 pm - 27 Oct 2018",
+        "body_html_summary": "...This evil Anti-Semitic attack is an assault on humanity. It will take all of us working together to extract the poison of Anti-Semitism from our world. We must unite to conquer hate.2:41 pm - 27 Oct 2018",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 81,
+        "like_count": 96,
+        "dislike_count": 15,
+        "reply_count": 18,
+        "repost_count": 27,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": 1,
+        "category_details": {
+          "title": "News",
+          "slug": "news",
+          "value": 1,
+          "emoji": "📰"
+        },
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 233064,
+          "name": "Trump's Tweets",
+          "username": "RealTrumpTweets",
+          "picture_url": "https://files.gab.com/file/files-gab/user/599a23a3c2b13.jpeg",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "topic": {
+          "id": "523efc8b-3745-46cf-a6cc-869322271578",
+          "created_at": "2018-06-22T15:12:03+00:00",
+          "is_featured": true,
+          "title": "News",
+          "category": 1
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40061769",
+      "published_at": "2018-10-28T01:23:51+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 232982,
+        "name": "Thomas Wictor",
+        "username": "Thomas_Wictor",
+        "picture_url": "https://files.gab.com/file/files-gab/user/599a1a0dad506.jpeg",
+        "verified": true,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40061769,
+        "created_at": "2018-10-28T01:23:51+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "Dan Patterson, CNET Senior Producer.\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed to shut down truly American ideas, like the freedom to worship and celebrate your religion without the threat of or actual violence.\"https://www.youtube.com/watch?v=GHfFAevq8Cg Where to start?Ideas and speech repress nobody.Gab has a \"mute\" function. I use it all the time. If I can't HEAR Jew-haters, then their slobbering hate makes no impression on me.The First Amendment ALLOWS you to express bigotry. That freedom is indisputably AMERICAN.Twitter has become notorious for assassination tweets, such as the one I've attached to this post. Twitter says that these tweets don't violate their Terms of Use, even though they are FEDERAL FELONIES.Leftists HATE conservatives, and they express that hate all the time. They even act on it, such as when that pumpkin-headed Bernie Bro almost killed Steve Scalise. Here's a defining characteristic of leftism:Leftists want the freedom to hate AND to act on that hate, which is why they say, \"Words are violence.\" If you listen to Antifa, they say that smashing you in the face is self-defense. Your words as harming them, so that gives them the right to physically assault you.We may see Gab shut down over this. I hope not. Even though I despise Jew-haters, I just mute them. They disappear. And Twitter has an order of magnitude MORE Jew-haters. One night over 500 of them came after me.And I defeated them all. Their stupid words didn't hurt me.Dan Patterson is lying his ass off. Twitter and Facebook are the go-to places for Jew-haters. But they're all LEFTIST Jew-haters, so that means they get a pass.When I was a child, my mother told me that sticks and stones would break my bones, but words would never hurt me.Let's ask Dan Patterson and any member of Antifa the following question.Which would you rather I do: address you in bigoted language or throw a rock into your face as hard as I can?Yeah.Words and hate are not the problem.Only actions matter.",
+        "body_html": "Dan Patterson, CNET Senior Producer.\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed to shut down truly American ideas, like the freedom to worship and celebrate your religion without the threat of or actual violence.\"https://www.youtube.com/watch?v=GHfFAevq8Cg Where to start?Ideas and speech repress nobody.Gab has a \"mute\" function. I use it all the time. If I can't HEAR Jew-haters, then their slobbering hate makes no impression on me.The First Amendment ALLOWS you to express bigotry. That freedom is indisputably AMERICAN.Twitter has become notorious for assassination tweets, such as the one I've attached to this post. Twitter says that these tweets don't violate their Terms of Use, even though they are FEDERAL FELONIES.Leftists HATE conservatives, and they express that hate all the time. They even act on it, such as when that pumpkin-headed Bernie Bro almost killed Steve Scalise. Here's a defining characteristic of leftism:Leftists want the freedom to hate AND to act on that hate, which is why they say, \"Words are violence.\" If you listen to Antifa, they say that smashing you in the face is self-defense. Your words as harming them, so that gives them the right to physically assault you.We may see Gab shut down over this. I hope not. Even though I despise Jew-haters, I just mute them. They disappear. And Twitter has an order of magnitude MORE Jew-haters. One night over 500 of them came after me.And I defeated them all. Their stupid words didn't hurt me.Dan Patterson is lying his ass off. Twitter and Facebook are the go-to places for Jew-haters. But they're all LEFTIST Jew-haters, so that means they get a pass.When I was a child, my mother told me that sticks and stones would break my bones, but words would never hurt me.Let's ask Dan Patterson and any member of Antifa the following question.Which would you rather I do: address you in bigoted language or throw a rock into your face as hard as I can?Yeah.Words and hate are not the problem.Only actions matter.",
+        "body_html_summary": "<p>Dan Patterson, CNET Senior Producer.\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed...</p>",
+        "body_html_summary_truncated": true,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 274,
+        "like_count": 283,
+        "dislike_count": 9,
+        "reply_count": 68,
+        "repost_count": 131,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": "<a href=\"https://www.youtube.com/watch?v=GHfFAevq8Cg\" target=\"_blank\" class=\"post__embed__body\"><div class=\"post__embed__body__image\" style=\"background-image: url('https://ipr2.gab.ai/871cffb53fd971a667887d21fefb47e1d4217459/68747470733a2f2f692e7974696d672e636f6d2f76692f47486646416576713843672f687164656661756c742e6a7067/')\"></div><div class=\"post__embed__body__content\"><div class=\"post__embed__body__title\">Pittsburg shooting suspect was avid user of social network Gab</div><div class=\"post__embed__body__description\">Pittsburgh shooting suspect Robert Bowers was an avid user of the social media site Gab, which many have accused of being a platform for the alt-right...</div></div></a>",
+          "iframe": false
+        },
+        "attachment": {
+          "type": "media",
+          "value": [
+            {
+              "id": "30e8beef-385d-4511-bc33-9e81e6a10250",
+              "url_thumbnail": "https://files.gab.com/file/files-gab/image/bb-5bd50bd42a1a2.jpeg",
+              "url_full": "https://files.gab.com/file/files-gab/image/bb-5bd50bd42a59f.jpeg",
+              "width": 1242,
+              "height": 775
+            }
+          ]
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 232982,
+          "name": "Thomas Wictor",
+          "username": "Thomas_Wictor",
+          "picture_url": "https://files.gab.com/file/files-gab/user/599a1a0dad506.jpeg",
+          "verified": true,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40048368",
+      "published_at": "2018-10-27T22:15:31+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 135806,
+        "name": "Doomsday Library",
+        "username": "DoomsdayLibrary",
+        "picture_url": "https://files.gab.com/file/files-gab/user/589250bdaa4aa.jpg",
+        "verified": false,
+        "is_donor": true,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": true
+      },
+      "post": {
+        "id": 40048368,
+        "created_at": "2018-10-27T22:15:31+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "READ ME AND PLEASE REPOST: This is really an unbelievable time to be alive. Gab is under attack once again by the liberal media over a maniac who shot up a synagogue. When will liberals take responsibility for their own personal actions and stop blaming everyone around them for the worlds problems? Stop blaming inanimate objects and cyber space for the actions of insane people who commit horrific acts of violence in the real world. @a needs to stay the course and fight these people with everything he has. He also needs our support. This is a liberal media take down of @Gab occurring in real time. These liberals simply will not live and let live or leave good people alone. This is not an alt-right or Nazi website. This is not a den of hate. This is a free speech website, that is all. Think about how badly these sick people want to control everything. Think about how hard they attack free speech and anything that is different from the narrative they spew 24/7. Today is a very important date in the history of Gab and will be benchmarked as the day Gabbers fought back against the insanity of liberal media and the lies they tell the world without punishment. This is not a call to violence in any way. This is a call for action to get your voice heard and illuminate the lies of the left. Now is the time to make a stand and say no more of this bullshit. It is time to brainstorm ideas and come up with a plan. We are 800K strong. Andrew, how can we help? #Gab #GabFam",
+        "body_html": "READ ME AND PLEASE REPOST: This is really an unbelievable time to be alive. Gab is under attack once again by the liberal media over a maniac who shot up a synagogue. When will liberals take responsibility for their own personal actions and stop blaming everyone around them for the worlds problems? Stop blaming inanimate objects and cyber space for the actions of insane people who commit horrific acts of violence in the real world. @a needs to stay the course and fight these people with everything he has. He also needs our support. This is a liberal media take down of @Gab occurring in real time. These liberals simply will not live and let live or leave good people alone. This is not an alt-right or Nazi website. This is not a den of hate. This is a free speech website, that is all. Think about how badly these sick people want to control everything. Think about how hard they attack free speech and anything that is different from the narrative they spew 24/7. Today is a very important date in the history of Gab and will be benchmarked as the day Gabbers fought back against the insanity of liberal media and the lies they tell the world without punishment. This is not a call to violence in any way. This is a call for action to get your voice heard and illuminate the lies of the left. Now is the time to make a stand and say no more of this bullshit. It is time to brainstorm ideas and come up with a plan. We are 800K strong. Andrew, how can we help? #Gab #GabFam",
+        "body_html_summary": "<p>READ ME AND PLEASE REPOST: This is really an unbelievable time to be alive. Gab is under attack once again by the liberal media over a maniac who shot up a synagogue. When will liberals take responsibility for their own personal actions and stop blaming everyone around them for the worlds problems? Stop blaming inanimate objects and cyber space for the actions of insane people who commit horrific...</p>",
+        "body_html_summary_truncated": true,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 195,
+        "like_count": 196,
+        "dislike_count": 1,
+        "reply_count": 35,
+        "repost_count": 118,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": 1,
+        "category_details": {
+          "title": "News",
+          "slug": "news",
+          "value": 1,
+          "emoji": "📰"
+        },
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 135806,
+          "name": "Doomsday Library",
+          "username": "DoomsdayLibrary",
+          "picture_url": "https://files.gab.com/file/files-gab/user/589250bdaa4aa.jpg",
+          "verified": false,
+          "is_donor": true,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": true
+        },
+        "topic": {
+          "id": "523efc8b-3745-46cf-a6cc-869322271578",
+          "created_at": "2018-06-22T15:12:03+00:00",
+          "is_featured": true,
+          "title": "News",
+          "category": 1
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40048114",
+      "published_at": "2018-10-27T22:12:42+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 219598,
+        "name": "Eric Striker",
+        "username": "Eric_Striker",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5994f71bc9189.jpeg",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40048114,
+        "created_at": "2018-10-27T22:12:42+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "Jewish leader of Hebrew immigrant aid society (open borders organization): Bowers \"got away\" with criticizing Jews, immigration and HIAS on social media. Is that a crime?How far are they going to overreach?",
+        "body_html": "Jewish leader of Hebrew immigrant aid society (open borders organization): Bowers \"got away\" with criticizing Jews, immigration and HIAS on social media. Is that a crime?How far are they going to overreach?",
+        "body_html_summary": "Jewish leader of Hebrew immigrant aid society (open borders organization): Bowers \"got away\" with criticizing Jews, immigration and HIAS on social media. Is that a crime?How far are they going to overreach?",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 108,
+        "like_count": 108,
+        "dislike_count": 0,
+        "reply_count": 14,
+        "repost_count": 24,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 219598,
+          "name": "Eric Striker",
+          "username": "Eric_Striker",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5994f71bc9189.jpeg",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40064337",
+      "published_at": "2018-10-28T01:54:58+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 2534,
+        "name": "The Kaiju Conservative",
+        "username": "kaijuconservative",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5b19b7cb5c461.png",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40064337,
+        "created_at": "2018-10-28T01:54:58+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "Boy, good thing we have a free market on the Internet, amirite?",
+        "body_html": null,
+        "body_html_summary": null,
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 88,
+        "like_count": 89,
+        "dislike_count": 1,
+        "reply_count": 6,
+        "repost_count": 6,
+        "is_quote": false,
+        "is_reply": true,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 2534,
+          "name": "The Kaiju Conservative",
+          "username": "kaijuconservative",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5b19b7cb5c461.png",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "parent": {
+          "id": 40064049,
+          "created_at": "2018-10-28T01:51:51+00:00",
+          "revised_at": null,
+          "edited": false,
+          "body": "Breaking: @joyent, Gab’s new hosting provider, has just pulled our hosting service. They have given us until 9am on Monday to find a solution. Gab will likely be down for weeks because of this. Working on solutions. We will never give up on defending free speech for all people.",
+          "body_html": "<p>Breaking: @joyent, Gab’s new hosting provider, has just pulled our hosting service. They have given us until 9am on Monday to find a solution. Gab will likely be down for weeks because of this. Working on solutions. We will never give up on defending free speech for all people. </p>",
+          "body_html_summary": "<p>Breaking: @joyent, Gab’s new hosting provider, has just pulled our hosting service. They have given us until 9am on Monday to find a solution. Gab will likely be down for weeks because of this. Working on solutions. We will never give up on defending free speech for all people. </p>",
+          "body_html_summary_truncated": false,
+          "only_emoji": false,
+          "liked": true,
+          "disliked": false,
+          "bookmarked": false,
+          "repost": true,
+          "reported": false,
+          "score": 742,
+          "like_count": 742,
+          "dislike_count": 0,
+          "reply_count": 295,
+          "repost_count": 475,
+          "is_quote": false,
+          "is_reply": false,
+          "is_replies_disabled": false,
+          "embed": {
+            "html": null,
+            "iframe": null
+          },
+          "attachment": {
+            "type": null,
+            "value": null
+          },
+          "category": null,
+          "category_details": null,
+          "language": "en",
+          "nsfw": false,
+          "is_premium": false,
+          "is_locked": false,
+          "premium_min_tier": 0,
+          "current_tier": 0,
+          "user": {
+            "id": 31,
+            "name": "Andrew Torba",
+            "username": "a",
+            "picture_url": "https://files.gab.com/file/files-gab/user/5b96e94af175d.jpeg",
+            "verified": true,
+            "is_donor": false,
+            "is_investor": false,
+            "is_pro": true,
+            "is_private": false,
+            "is_premium": false
+          },
+          "replies": {
+            "data": []
+          }
+        },
+        "replies": {
+          "data": []
+        },
+        "conversation_parent": {
+          "id": 40064049,
+          "created_at": "2018-10-28T01:51:51+00:00",
+          "revised_at": null,
+          "edited": false,
+          "body": "Breaking: @joyent, Gab’s new hosting provider, has just pulled our hosting service. They have given us until 9am on Monday to find a solution. Gab will likely be down for weeks because of this. Working on solutions. We will never give up on defending free speech for all people.",
+          "body_html": "<p>Breaking: @joyent, Gab’s new hosting provider, has just pulled our hosting service. They have given us until 9am on Monday to find a solution. Gab will likely be down for weeks because of this. Working on solutions. We will never give up on defending free speech for all people. </p>",
+          "body_html_summary": "<p>Breaking: @joyent, Gab’s new hosting provider, has just pulled our hosting service. They have given us until 9am on Monday to find a solution. Gab will likely be down for weeks because of this. Working on solutions. We will never give up on defending free speech for all people. </p>",
+          "body_html_summary_truncated": false,
+          "only_emoji": false,
+          "liked": true,
+          "disliked": false,
+          "bookmarked": false,
+          "repost": true,
+          "reported": false,
+          "score": 742,
+          "like_count": 742,
+          "dislike_count": 0,
+          "reply_count": 295,
+          "repost_count": 475,
+          "is_quote": false,
+          "is_reply": false,
+          "is_replies_disabled": false,
+          "embed": {
+            "html": null,
+            "iframe": null
+          },
+          "attachment": {
+            "type": null,
+            "value": null
+          },
+          "category": null,
+          "category_details": null,
+          "language": "en",
+          "nsfw": false,
+          "is_premium": false,
+          "is_locked": false,
+          "premium_min_tier": 0,
+          "current_tier": 0,
+          "user": {
+            "id": 31,
+            "name": "Andrew Torba",
+            "username": "a",
+            "picture_url": "https://files.gab.com/file/files-gab/user/5b96e94af175d.jpeg",
+            "verified": true,
+            "is_donor": false,
+            "is_investor": false,
+            "is_pro": true,
+            "is_private": false,
+            "is_premium": false
+          },
+          "replies": {
+            "data": []
+          }
+        }
+      }
+    },
+    {
+      "id": "40045670",
+      "published_at": "2018-10-27T21:45:39+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 26942,
+        "name": "Emerson D.  Williams ",
+        "username": "ArgentinoAmericano",
+        "picture_url": "https://files.gab.com/file/files-gab/user/595d995bf27ad.PNG",
+        "verified": true,
+        "is_donor": true,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40045670,
+        "created_at": "2018-10-27T21:45:39+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "One crazy Gab user:  PayPal drops #Gab \nTwitter: Hamas, The Taliban, ISIS all have Twitter accounts. Plus Porn. \nPayPal Approved 👍🏽 \nFacebook: all of the above, plus live crimes.\nPayPal Approved 👍🏽  \n\nSave Free Speech, go #GabPro 👍🏽\nFreedom is not Free",
+        "body_html": "One crazy Gab user:  PayPal drops #Gab \nTwitter: Hamas, The Taliban, ISIS all have Twitter accounts. Plus Porn. \nPayPal Approved 👍🏽 \nFacebook: all of the above, plus live crimes.\nPayPal Approved 👍🏽  \n\nSave Free Speech, go #GabPro 👍🏽\nFreedom is not Free  \n",
+        "body_html_summary": "One crazy Gab user:  PayPal drops #Gab \nTwitter: Hamas, The Taliban, ISIS all have Twitter accounts. Plus Porn. \nPayPal Approved 👍🏽 \nFacebook: all of the above, plus live crimes.\nPayPal Approved 👍🏽  \n\nSave Free Speech, go #GabPro 👍🏽\nFreedom is not Free  \n",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 277,
+        "like_count": 277,
+        "dislike_count": 0,
+        "reply_count": 20,
+        "repost_count": 120,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": "media",
+          "value": [
+            {
+              "id": "7446cb87-e36f-42f0-aa54-6e87afbf3b0e",
+              "url_thumbnail": "https://files.gab.com/file/files-gab/image/bb-5bd4dbf5c69dc.jpeg",
+              "url_full": "https://files.gab.com/file/files-gab/image/bb-5bd4dbf5c6ddb.jpeg",
+              "width": 400,
+              "height": 268
+            }
+          ]
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 26942,
+          "name": "Emerson D.  Williams ",
+          "username": "ArgentinoAmericano",
+          "picture_url": "https://files.gab.com/file/files-gab/user/595d995bf27ad.PNG",
+          "verified": true,
+          "is_donor": true,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40057823",
+      "published_at": "2018-10-28T00:21:34+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 5196,
+        "name": "W.O. Cassity",
+        "username": "wocassity",
+        "picture_url": "https://files.gab.com/file/files-gab/user/57c1e62fd2b44.png",
+        "verified": true,
+        "is_donor": true,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": true
+      },
+      "post": {
+        "id": 40057823,
+        "created_at": "2018-10-28T00:21:34+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "I have no guilt and no shame for anything I've said here on Gab.I'm just a shitposter, simple as that.But I'm under no illusion that if the Commies were in power right now, I'd be knees down in a ditch catching a bullet with the back of my head.So that means I'll be fighting for free speech even harder now.",
+        "body_html": "I have no guilt and no shame for anything I've said here on Gab.I'm just a shitposter, simple as that.But I'm under no illusion that if the Commies were in power right now, I'd be knees down in a ditch catching a bullet with the back of my head.So that means I'll be fighting for free speech even harder now.",
+        "body_html_summary": "I have no guilt and no shame for anything I've said here on Gab.I'm just a shitposter, simple as that.But I'm under no illusion that if the Commies were in power right now, I'd be knees down in a ditch catching a bullet with the back of my head.So that means I'll be fighting for free speech even harder now.",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 133,
+        "like_count": 133,
+        "dislike_count": 0,
+        "reply_count": 21,
+        "repost_count": 42,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 5196,
+          "name": "W.O. Cassity",
+          "username": "wocassity",
+          "picture_url": "https://files.gab.com/file/files-gab/user/57c1e62fd2b44.png",
+          "verified": true,
+          "is_donor": true,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": true
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40077500",
+      "published_at": "2018-10-28T07:00:15+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 834498,
+        "name": "Euffreducci",
+        "username": "Euffreducci",
+        "picture_url": "https://files.gab.com/file/files-gab/user/bb-5bd55d4178231.png",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40077500,
+        "created_at": "2018-10-28T07:00:15+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "Just registered an account on Gab. The aggressive censorship agenda of big tech makes it's more important than ever to support @a and the platform he has built.\nDespicable actions from #paypal #joyent #stripe",
+        "body_html": "Just registered an account on Gab. The aggressive censorship agenda of big tech makes it's more important than ever to support @a and the platform he has built.\nDespicable actions from #paypal #joyent #stripe",
+        "body_html_summary": "Just registered an account on Gab. The aggressive censorship agenda of big tech makes it's more important than ever to support @a and the platform he has built.\nDespicable actions from #paypal #joyent #stripe",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 92,
+        "like_count": 92,
+        "dislike_count": 0,
+        "reply_count": 1,
+        "repost_count": 26,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 834498,
+          "name": "Euffreducci",
+          "username": "Euffreducci",
+          "picture_url": "https://files.gab.com/file/files-gab/user/bb-5bd55d4178231.png",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40050755",
+      "published_at": "2018-10-27T22:43:49+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 125077,
+        "name": "J. Scott Biggs",
+        "username": "jscottbiggs",
+        "picture_url": "https://files.gab.com/file/files-gab/user/59dc5d16ecddf.png",
+        "verified": true,
+        "is_donor": true,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40050755,
+        "created_at": "2018-10-27T22:43:49+00:00",
+        "revised_at": "2018-10-28T01:57:43+00:00",
+        "edited": true,
+        "body": "I read a post (I believe on Twitter) that @a from Gab has blood on his hands and is responsible for the nut bag shooting up the Pittsburgh synagogue. @a is NO more responsible for this than McDonalds is for making people fat. I call BULLSHIT on this one. @a has given ALL of us true FREEDOM OF SPEECH! Thank you @a for bring us Gab.",
+        "body_html": "I read a post (I believe on Twitter) that @a from Gab has blood on his hands and is responsible for the nut bag shooting up the Pittsburgh synagogue. @a is NO more responsible for this than McDonalds is for making people fat. I call BULLSHIT on this one. @a has given ALL of us true FREEDOM OF SPEECH! Thank you @a for bring us Gab.",
+        "body_html_summary": "I read a post (I believe on Twitter) that @a from Gab has blood on his hands and is responsible for the nut bag shooting up the Pittsburgh synagogue. @a is NO more responsible for this than McDonalds is for making people fat. I call BULLSHIT on this one. @a has given ALL of us true FREEDOM OF SPEECH! Thank you @a for bring us Gab.",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 358,
+        "like_count": 358,
+        "dislike_count": 0,
+        "reply_count": 33,
+        "repost_count": 101,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 125077,
+          "name": "J. Scott Biggs",
+          "username": "jscottbiggs",
+          "picture_url": "https://files.gab.com/file/files-gab/user/59dc5d16ecddf.png",
+          "verified": true,
+          "is_donor": true,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40069216",
+      "published_at": "2018-10-28T04:30:54+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 199057,
+        "name": "Becka 🇺🇸🇮🇱",
+        "username": "BewareOfFlatteries",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5b85b84792bcc.jpeg",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40069216,
+        "created_at": "2018-10-28T04:30:54+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "I just had a long prayer session, but saying it nicer. Lord please send your wisdom to @a @e @amq and guide them to resolve these issues. Change the hearts of Joyent.com to give gab more time to buy with their million dollars we just sent them to develop their own hosting site, their own payment system and bless them abundantly to help others have a way to seek help, information and purchasing power. Please give them strength to be a light in the world for a light that is hidden is not seen. Help us overcome our own fears and anger and be a light with them. \nAs Judah stood against Israel who had turned to false gods, 2 Chronicle 13, please help us to stay with you, the one true living God and overcome our enemies who try to take us down while claiming blasphemy in your name. \nPlease give comfort to those who have suffered the wrath of hate. \nAnd above all, let gab be used for the glory of the Lord that your message may be expressed here by the fruit of our lips. \nIn the name of Jesus, Amen.",
+        "body_html": "I just had a long prayer session, but saying it nicer. Lord please send your wisdom to @a @e @amq and guide them to resolve these issues. Change the hearts of Joyent.com to give gab more time to buy with their million dollars we just sent them to develop their own hosting site, their own payment system and bless them abundantly to help others have a way to seek help, information and purchasing power. Please give them strength to be a light in the world for a light that is hidden is not seen. Help us overcome our own fears and anger and be a light with them. \nAs Judah stood against Israel who had turned to false gods, 2 Chronicle 13, please help us to stay with you, the one true living God and overcome our enemies who try to take us down while claiming blasphemy in your name. \nPlease give comfort to those who have suffered the wrath of hate. \nAnd above all, let gab be used for the glory of the Lord that your message may be expressed here by the fruit of our lips. \nIn the name of Jesus, Amen. \n",
+        "body_html_summary": "<p>I just had a long prayer session, but saying it nicer. Lord please send your wisdom to @a @e @amq and guide them to resolve these issues. Change the hearts of Joyent.com to give gab more time to buy with their million dollars we just sent them to develop their own hosting site, their own payment system and bless them abundantly to help others have a way to seek help, information and purchasing po...</p>",
+        "body_html_summary_truncated": true,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 196,
+        "like_count": 202,
+        "dislike_count": 6,
+        "reply_count": 22,
+        "repost_count": 57,
+        "is_quote": true,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 199057,
+          "name": "Becka 🇺🇸🇮🇱",
+          "username": "BewareOfFlatteries",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5b85b84792bcc.jpeg",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "parent": {
+          "id": 40067293,
+          "created_at": "2018-10-28T03:54:34+00:00",
+          "revised_at": null,
+          "edited": false,
+          "body": "We were backing up the server in light of being no platformed by our hosting provider. Please pray for us. Our families, our friends, and our community are all under attack.",
+          "body_html": "<p>We were backing up the server in light of being no platformed by our hosting provider. Please pray for us. Our families, our friends, and our community are all under attack. </p>",
+          "body_html_summary": "<p>We were backing up the server in light of being no platformed by our hosting provider. Please pray for us. Our families, our friends, and our community are all under attack. </p>",
+          "body_html_summary_truncated": false,
+          "only_emoji": false,
+          "liked": false,
+          "disliked": false,
+          "bookmarked": false,
+          "repost": false,
+          "reported": false,
+          "score": 740,
+          "like_count": 740,
+          "dislike_count": 0,
+          "reply_count": 136,
+          "repost_count": 303,
+          "is_quote": false,
+          "is_reply": false,
+          "is_replies_disabled": false,
+          "embed": {
+            "html": null,
+            "iframe": null
+          },
+          "attachment": {
+            "type": null,
+            "value": null
+          },
+          "category": null,
+          "category_details": null,
+          "language": "en",
+          "nsfw": false,
+          "is_premium": false,
+          "is_locked": false,
+          "premium_min_tier": 0,
+          "current_tier": 0,
+          "user": {
+            "id": 31,
+            "name": "Andrew Torba",
+            "username": "a",
+            "picture_url": "https://files.gab.com/file/files-gab/user/5b96e94af175d.jpeg",
+            "verified": true,
+            "is_donor": false,
+            "is_investor": false,
+            "is_pro": true,
+            "is_private": false,
+            "is_premium": false
+          },
+          "replies": {
+            "data": []
+          }
+        },
+        "replies": {
+          "data": []
+        },
+        "conversation_parent": {
+          "id": 40067293,
+          "created_at": "2018-10-28T03:54:34+00:00",
+          "revised_at": null,
+          "edited": false,
+          "body": "We were backing up the server in light of being no platformed by our hosting provider. Please pray for us. Our families, our friends, and our community are all under attack.",
+          "body_html": "<p>We were backing up the server in light of being no platformed by our hosting provider. Please pray for us. Our families, our friends, and our community are all under attack. </p>",
+          "body_html_summary": "<p>We were backing up the server in light of being no platformed by our hosting provider. Please pray for us. Our families, our friends, and our community are all under attack. </p>",
+          "body_html_summary_truncated": false,
+          "only_emoji": false,
+          "liked": false,
+          "disliked": false,
+          "bookmarked": false,
+          "repost": false,
+          "reported": false,
+          "score": 740,
+          "like_count": 740,
+          "dislike_count": 0,
+          "reply_count": 136,
+          "repost_count": 303,
+          "is_quote": false,
+          "is_reply": false,
+          "is_replies_disabled": false,
+          "embed": {
+            "html": null,
+            "iframe": null
+          },
+          "attachment": {
+            "type": null,
+            "value": null
+          },
+          "category": null,
+          "category_details": null,
+          "language": "en",
+          "nsfw": false,
+          "is_premium": false,
+          "is_locked": false,
+          "premium_min_tier": 0,
+          "current_tier": 0,
+          "user": {
+            "id": 31,
+            "name": "Andrew Torba",
+            "username": "a",
+            "picture_url": "https://files.gab.com/file/files-gab/user/5b96e94af175d.jpeg",
+            "verified": true,
+            "is_donor": false,
+            "is_investor": false,
+            "is_pro": true,
+            "is_private": false,
+            "is_premium": false
+          },
+          "replies": {
+            "data": []
+          }
+        }
+      }
+    },
+    {
+      "id": "40070900",
+      "published_at": "2018-10-28T05:06:50+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 431,
+        "name": "💗Donna💗",
+        "username": "Donna",
+        "picture_url": "https://files.gab.com/file/files-gab/user/598a2cd9937b5.png",
+        "verified": false,
+        "is_donor": true,
+        "is_investor": true,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40070900,
+        "created_at": "2018-10-28T05:06:50+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "I'm an American Jew and have been on Gab since the day they started in August 2016. Yes, there are some hateful jerks here speaking freely. But I'm a mature adult and can handle it. I just don't follow them.\nThe majority of us here on Gab are nice people who want to have Free Speech.",
+        "body_html": "I'm an American Jew and have been on Gab since the day they started in August 2016. Yes, there are some hateful jerks here speaking freely. But I'm a mature adult and can handle it. I just don't follow them.\nThe majority of us here on Gab are nice people who want to have Free Speech.",
+        "body_html_summary": "I'm an American Jew and have been on Gab since the day they started in August 2016. Yes, there are some hateful jerks here speaking freely. But I'm a mature adult and can handle it. I just don't follow them.\nThe majority of us here on Gab are nice people who want to have Free Speech.",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 114,
+        "like_count": 116,
+        "dislike_count": 2,
+        "reply_count": 22,
+        "repost_count": 29,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": 1,
+        "category_details": {
+          "title": "News",
+          "slug": "news",
+          "value": 1,
+          "emoji": "📰"
+        },
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 431,
+          "name": "💗Donna💗",
+          "username": "Donna",
+          "picture_url": "https://files.gab.com/file/files-gab/user/598a2cd9937b5.png",
+          "verified": false,
+          "is_donor": true,
+          "is_investor": true,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "topic": {
+          "id": "523efc8b-3745-46cf-a6cc-869322271578",
+          "created_at": "2018-06-22T15:12:03+00:00",
+          "is_featured": true,
+          "title": "News",
+          "category": 1
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40055850",
+      "published_at": "2018-10-27T23:51:14+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 53261,
+        "name": "Ravi Crux",
+        "username": "RaviCrux",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5a4850a9cffcb.png",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40055850,
+        "created_at": "2018-10-27T23:51:14+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "Focus my friends. New troll accounts are being created as we speak, to attempt to create more chaos.\nWe have fought them before... we are still standing.\nWe will win again.\n#ItsOkayToUseGab",
+        "body_html": "Focus my friends. New troll accounts are being created as we speak, to attempt to create more chaos.\nWe have fought them before... we are still standing.\nWe will win again.\n#ItsOkayToUseGab\n",
+        "body_html_summary": "Focus my friends. New troll accounts are being created as we speak, to attempt to create more chaos.\nWe have fought them before... we are still standing.\nWe will win again.\n#ItsOkayToUseGab\n",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 144,
+        "like_count": 144,
+        "dislike_count": 0,
+        "reply_count": 13,
+        "repost_count": 46,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": 2,
+        "category_details": {
+          "title": "Politics",
+          "slug": "politics",
+          "value": 2,
+          "emoji": "🏛"
+        },
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 53261,
+          "name": "Ravi Crux",
+          "username": "RaviCrux",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5a4850a9cffcb.png",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "topic": {
+          "id": "91b0e4ad-c8c2-40bf-8310-74524af7ffc0",
+          "created_at": "2018-06-22T15:12:32+00:00",
+          "is_featured": true,
+          "title": "Politics",
+          "category": 2
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40067468",
+      "published_at": "2018-10-28T03:57:49+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 31,
+        "name": "Andrew Torba",
+        "username": "a",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5b96e94af175d.jpeg",
+        "verified": true,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40067468,
+        "created_at": "2018-10-28T03:57:49+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "GAB IS NOT GOING ANYWHEREI don't care what we have to do, I don't care what it takes. We will build everything from the ground up if we have to. We may be down for a few weeks. The truth is we do not know yet. We are working on solutions. We will figure it out. Keep fighting for freedom. We sure will be. Please pray for the victims and their families. I know many of you are upset at what is happening to Gab, but the focus should be on them.",
+        "body_html": "GAB IS NOT GOING ANYWHEREI don't care what we have to do, I don't care what it takes. We will build everything from the ground up if we have to. We may be down for a few weeks. The truth is we do not know yet. We are working on solutions. We will figure it out. Keep fighting for freedom. We sure will be. Please pray for the victims and their families. I know many of you are upset at what is happening to Gab, but the focus should be on them. ",
+        "body_html_summary": "<p>GAB IS NOT GOING ANYWHEREI don't care what we have to do, I don't care what it takes. We will build everything from the ground up if we have to. We may be down for a few weeks. The truth is we do not know yet. We are working on solutions. We will figure it out. Keep fighting for freedom. We sure will be. Please pray for the victims and their families. I know many of you are upset at what is happ...</p>",
+        "body_html_summary_truncated": true,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 822,
+        "like_count": 827,
+        "dislike_count": 5,
+        "reply_count": 165,
+        "repost_count": 355,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 31,
+          "name": "Andrew Torba",
+          "username": "a",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5b96e94af175d.jpeg",
+          "verified": true,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40069187",
+      "published_at": "2018-10-28T04:30:17+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 148932,
+        "name": "ℕ𝔼𝕆ℕ ℝ𝔼𝕍𝕆𝕃𝕋",
+        "username": "NeonRevolt",
+        "picture_url": "https://files.gab.com/file/files-gab/user/bb-5bb5c804cdace.jpeg",
+        "verified": true,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": true
+      },
+      "post": {
+        "id": 40069187,
+        "created_at": "2018-10-28T04:30:17+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "#POTUS should make a Gab account now to send a direct and clear message, and to put the fear of God into all who to who would interfere with our First Amendment rights.#IStandWithGab",
+        "body_html": "#POTUS should make a Gab account now to send a direct and clear message, and to put the fear of God into all who to who would interfere with our First Amendment rights.#IStandWithGab",
+        "body_html_summary": "#POTUS should make a Gab account now to send a direct and clear message, and to put the fear of God into all who to who would interfere with our First Amendment rights.#IStandWithGab",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 130,
+        "like_count": 130,
+        "dislike_count": 0,
+        "reply_count": 19,
+        "repost_count": 36,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 148932,
+          "name": "ℕ𝔼𝕆ℕ ℝ𝔼𝕍𝕆𝕃𝕋",
+          "username": "NeonRevolt",
+          "picture_url": "https://files.gab.com/file/files-gab/user/bb-5bb5c804cdace.jpeg",
+          "verified": true,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": true
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40063369",
+      "published_at": "2018-10-28T01:44:02+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 113942,
+        "name": "Christopher Cantwell",
+        "username": "Cantwell",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5a6fee1365d1e.jpeg",
+        "verified": true,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40063369,
+        "created_at": "2018-10-28T01:44:02+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "Remember fellas. Any asshole with a gun and and a death wish can shoot up a synagogue and spend the rest of his life in prison, but only people with political power can expel the race of traitors from our continent.",
+        "body_html": "Remember fellas. Any asshole with a gun and and a death wish can shoot up a synagogue and spend the rest of his life in prison, but only people with political power can expel the race of traitors from our continent. ",
+        "body_html_summary": "Remember fellas. Any asshole with a gun and and a death wish can shoot up a synagogue and spend the rest of his life in prison, but only people with political power can expel the race of traitors from our continent. ",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 142,
+        "like_count": 154,
+        "dislike_count": 12,
+        "reply_count": 26,
+        "repost_count": 41,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 113942,
+          "name": "Christopher Cantwell",
+          "username": "Cantwell",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5a6fee1365d1e.jpeg",
+          "verified": true,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40056985",
+      "published_at": "2018-10-28T00:07:53+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 33856,
+        "name": "Hunter Wallace",
+        "username": "occdissent",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5a03e91c96e19.jpeg",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40056985,
+        "created_at": "2018-10-28T00:07:53+00:00",
+        "revised_at": "2018-10-28T00:09:11+00:00",
+        "edited": true,
+        "body": "Pardon me for being a bit cynical about this, but it sure seems like 8 Jews getting shot and killed in a synagogue by a White Nationalist = the national media loses its mind whereas a Sudanese refugee shooting up a bunch of White people in a church = a non-event. Wasn't Emanuel Samson on Facebook?",
+        "body_html": "Pardon me for being a bit cynical about this, but it sure seems like 8 Jews getting shot and killed in a synagogue by a White Nationalist = the national media loses its mind whereas a Sudanese refugee shooting up a bunch of White people in a church = a non-event. Wasn't Emanuel Samson on Facebook?",
+        "body_html_summary": "Pardon me for being a bit cynical about this, but it sure seems like 8 Jews getting shot and killed in a synagogue by a White Nationalist = the national media loses its mind whereas a Sudanese refugee shooting up a bunch of White people in a church = a non-event. Wasn't Emanuel Samson on Facebook?",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 172,
+        "like_count": 172,
+        "dislike_count": 0,
+        "reply_count": 15,
+        "repost_count": 65,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 33856,
+          "name": "Hunter Wallace",
+          "username": "occdissent",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5a03e91c96e19.jpeg",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40076478",
+      "published_at": "2018-10-28T06:43:34+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 1981,
+        "name": "Don",
+        "username": "Don",
+        "picture_url": "https://files.gab.com/file/files-gab/user/5ba1556bd57b6.jpeg",
+        "verified": true,
+        "is_donor": true,
+        "is_investor": false,
+        "is_pro": true,
+        "is_private": false,
+        "is_premium": true
+      },
+      "post": {
+        "id": 40076478,
+        "created_at": "2018-10-28T06:43:34+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "Someday soon we will look back on all this and laugh at the desperation of those who tried to use their temporary positions of power and influence to silence us @a \nTruth will out. Don't back down, no matter what. You have our support, we are with you. Together we will win. Just like we always do.",
+        "body_html": "Someday soon we will look back on all this and laugh at the desperation of those who tried to use their temporary positions of power and influence to silence us @a \nTruth will out. Don't back down, no matter what. You have our support, we are with you. Together we will win. Just like we always do. ",
+        "body_html_summary": "Someday soon we will look back on all this and laugh at the desperation of those who tried to use their temporary positions of power and influence to silence us @a \nTruth will out. Don't back down, no matter what. You have our support, we are with you. Together we will win. Just like we always do. ",
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 165,
+        "like_count": 165,
+        "dislike_count": 0,
+        "reply_count": 9,
+        "repost_count": 46,
+        "is_quote": false,
+        "is_reply": false,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 1981,
+          "name": "Don",
+          "username": "Don",
+          "picture_url": "https://files.gab.com/file/files-gab/user/5ba1556bd57b6.jpeg",
+          "verified": true,
+          "is_donor": true,
+          "is_investor": false,
+          "is_pro": true,
+          "is_private": false,
+          "is_premium": true
+        },
+        "replies": {
+          "data": []
+        }
+      }
+    },
+    {
+      "id": "40062486",
+      "published_at": "2018-10-28T01:33:46+00:00",
+      "type": "post",
+      "actuser": {
+        "id": 586983,
+        "name": "Don Adamson",
+        "username": "Oldmanyyc",
+        "picture_url": "https://gab.com/assets/img/itisokaytobeagrayegg.jpg",
+        "verified": false,
+        "is_donor": false,
+        "is_investor": false,
+        "is_pro": false,
+        "is_private": false,
+        "is_premium": false
+      },
+      "post": {
+        "id": 40062486,
+        "created_at": "2018-10-28T01:33:46+00:00",
+        "revised_at": null,
+        "edited": false,
+        "body": "And the hate speech and assassination threats just keep rolling on twitter and Facebook as long as it is republicans as targets it's all good.",
+        "body_html": null,
+        "body_html_summary": null,
+        "body_html_summary_truncated": false,
+        "only_emoji": false,
+        "liked": false,
+        "disliked": false,
+        "bookmarked": false,
+        "repost": false,
+        "reported": false,
+        "score": 108,
+        "like_count": 108,
+        "dislike_count": 0,
+        "reply_count": 3,
+        "repost_count": 33,
+        "is_quote": false,
+        "is_reply": true,
+        "is_replies_disabled": false,
+        "embed": {
+          "html": null,
+          "iframe": null
+        },
+        "attachment": {
+          "type": null,
+          "value": null
+        },
+        "category": null,
+        "category_details": null,
+        "language": "en",
+        "nsfw": false,
+        "is_premium": false,
+        "is_locked": false,
+        "premium_min_tier": 0,
+        "current_tier": 0,
+        "user": {
+          "id": 586983,
+          "name": "Don Adamson",
+          "username": "Oldmanyyc",
+          "picture_url": "https://gab.com/assets/img/itisokaytobeagrayegg.jpg",
+          "verified": false,
+          "is_donor": false,
+          "is_investor": false,
+          "is_pro": false,
+          "is_private": false,
+          "is_premium": false
+        },
+        "parent": {
+          "id": 40061769,
+          "created_at": "2018-10-28T01:23:51+00:00",
+          "revised_at": null,
+          "edited": false,
+          "body": "Dan Patterson, CNET Senior Producer.\r\n\r\n\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed to shut down truly American ideas, like the freedom to worship and celebrate your religion without the threat of or actual violence.\"\r\n\r\nhttps://www.youtube.com/watch?v=GHfFAevq8Cg \r\n\r\nWhere to start?\r\n\r\nIdeas and speech repress nobody.\r\n\r\nGab has a \"mute\" function. I use it all the time. If I can't HEAR Jew-haters, then their slobbering hate makes no impression on me.\r\n\r\nThe First Amendment ALLOWS you to express bigotry. That freedom is indisputably AMERICAN.\r\n\r\nTwitter has become notorious for assassination tweets, such as the one I've attached to this post. Twitter says that these tweets don't violate their Terms of Use, even though they are FEDERAL FELONIES.\r\n\r\nLeftists HATE conservatives, and they express that hate all the time. They even act on it, such as when that pumpkin-headed Bernie Bro almost killed Steve Scalise. \r\n\r\nHere's a defining characteristic of leftism:\r\n\r\nLeftists want the freedom to hate AND to act on that hate, which is why they say, \"Words are violence.\" If you listen to Antifa, they say that smashing you in the face is self-defense. Your words as harming them, so that gives them the right to physically assault you.\r\n\r\nWe may see Gab shut down over this. I hope not. Even though I despise Jew-haters, I just mute them. They disappear. And Twitter has an order of magnitude MORE Jew-haters. One night over 500 of them came after me.\r\n\r\nAnd I defeated them all. Their stupid words didn't hurt me.\r\n\r\nDan Patterson is lying his ass off. Twitter and Facebook are the go-to places for Jew-haters. \r\n\r\nBut they're all LEFTIST Jew-haters, so that means they get a pass.\r\n\r\nWhen I was a child, my mother told me that sticks and stones would break my bones, but words would never hurt me.\r\n\r\nLet's ask Dan Patterson and any member of Antifa the following question.\r\n\r\nWhich would you rather I do: address you in bigoted language or throw a rock into your face as hard as I can?\r\n\r\nYeah.\r\n\r\nWords and hate are not the problem.\r\n\r\nOnly actions matter.",
+          "body_html": "<p>Dan Patterson, CNET Senior Producer.<br /><br />\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed to shut down truly American ideas, like the freedom to worship and celebrate your religion without the threat of or actual violence.\"<br /><br />https://www.youtube.com/watch?v=GHfFAevq8Cg <br /><br />Where to start?<br /><br />Ideas and speech repress nobody.<br /><br />Gab has a \"mute\" function. I use it all the time. If I can't HEAR Jew-haters, then their slobbering hate makes no impression on me.<br /><br />The First Amendment ALLOWS you to express bigotry. That freedom is indisputably AMERICAN.<br /><br />Twitter has become notorious for assassination tweets, such as the one I've attached to this post. Twitter says that these tweets don't violate their Terms of Use, even though they are FEDERAL FELONIES.<br /><br />Leftists HATE conservatives, and they express that hate all the time. They even act on it, such as when that pumpkin-headed Bernie Bro almost killed Steve Scalise. <br /><br />Here's a defining characteristic of leftism:<br /><br />Leftists want the freedom to hate AND to act on that hate, which is why they say, \"Words are violence.\" If you listen to Antifa, they say that smashing you in the face is self-defense. Your words as harming them, so that gives them the right to physically assault you.<br /><br />We may see Gab shut down over this. I hope not. Even though I despise Jew-haters, I just mute them. They disappear. And Twitter has an order of magnitude MORE Jew-haters. One night over 500 of them came after me.<br /><br />And I defeated them all. Their stupid words didn't hurt me.<br /><br />Dan Patterson is lying his ass off. Twitter and Facebook are the go-to places for Jew-haters. <br /><br />But they're all LEFTIST Jew-haters, so that means they get a pass.<br /><br />When I was a child, my mother told me that sticks and stones would break my bones, but words would never hurt me.<br /><br />Let's ask Dan Patterson and any member of Antifa the following question.<br /><br />Which would you rather I do: address you in bigoted language or throw a rock into your face as hard as I can?<br /><br />Yeah.<br /><br />Words and hate are not the problem.<br /><br />Only actions matter.</p>",
+          "body_html_summary": "<p>Dan Patterson, CNET Senior Producer.<br><br>\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed...</p>",
+          "body_html_summary_truncated": true,
+          "only_emoji": false,
+          "liked": false,
+          "disliked": false,
+          "bookmarked": false,
+          "repost": false,
+          "reported": false,
+          "score": 274,
+          "like_count": 283,
+          "dislike_count": 9,
+          "reply_count": 68,
+          "repost_count": 131,
+          "is_quote": false,
+          "is_reply": false,
+          "is_replies_disabled": false,
+          "embed": {
+            "html": "<a href=\"https://www.youtube.com/watch?v=GHfFAevq8Cg\" target=\"_blank\" class=\"post__embed__body\"><div class=\"post__embed__body__image\" style=\"background-image: url('https://ipr2.gab.ai/871cffb53fd971a667887d21fefb47e1d4217459/68747470733a2f2f692e7974696d672e636f6d2f76692f47486646416576713843672f687164656661756c742e6a7067/')\"></div><div class=\"post__embed__body__content\"><div class=\"post__embed__body__title\">Pittsburg shooting suspect was avid user of social network Gab</div><div class=\"post__embed__body__description\">Pittsburgh shooting suspect Robert Bowers was an avid user of the social media site Gab, which many have accused of being a platform for the alt-right...</div></div></a>",
+            "iframe": false
+          },
+          "attachment": {
+            "type": "media",
+            "value": [
+              {
+                "id": "30e8beef-385d-4511-bc33-9e81e6a10250",
+                "url_thumbnail": "https://files.gab.com/file/files-gab/image/bb-5bd50bd42a1a2.jpeg",
+                "url_full": "https://files.gab.com/file/files-gab/image/bb-5bd50bd42a59f.jpeg",
+                "width": 1242,
+                "height": 775
+              }
+            ]
+          },
+          "category": null,
+          "category_details": null,
+          "language": "en",
+          "nsfw": false,
+          "is_premium": false,
+          "is_locked": false,
+          "premium_min_tier": 0,
+          "current_tier": 0,
+          "user": {
+            "id": 232982,
+            "name": "Thomas Wictor",
+            "username": "Thomas_Wictor",
+            "picture_url": "https://files.gab.com/file/files-gab/user/599a1a0dad506.jpeg",
+            "verified": true,
+            "is_donor": false,
+            "is_investor": false,
+            "is_pro": true,
+            "is_private": false,
+            "is_premium": false
+          },
+          "replies": {
+            "data": []
+          }
+        },
+        "replies": {
+          "data": []
+        },
+        "conversation_parent": {
+          "id": 40061769,
+          "created_at": "2018-10-28T01:23:51+00:00",
+          "revised_at": null,
+          "edited": false,
+          "body": "Dan Patterson, CNET Senior Producer.\r\n\r\n\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed to shut down truly American ideas, like the freedom to worship and celebrate your religion without the threat of or actual violence.\"\r\n\r\nhttps://www.youtube.com/watch?v=GHfFAevq8Cg \r\n\r\nWhere to start?\r\n\r\nIdeas and speech repress nobody.\r\n\r\nGab has a \"mute\" function. I use it all the time. If I can't HEAR Jew-haters, then their slobbering hate makes no impression on me.\r\n\r\nThe First Amendment ALLOWS you to express bigotry. That freedom is indisputably AMERICAN.\r\n\r\nTwitter has become notorious for assassination tweets, such as the one I've attached to this post. Twitter says that these tweets don't violate their Terms of Use, even though they are FEDERAL FELONIES.\r\n\r\nLeftists HATE conservatives, and they express that hate all the time. They even act on it, such as when that pumpkin-headed Bernie Bro almost killed Steve Scalise. \r\n\r\nHere's a defining characteristic of leftism:\r\n\r\nLeftists want the freedom to hate AND to act on that hate, which is why they say, \"Words are violence.\" If you listen to Antifa, they say that smashing you in the face is self-defense. Your words as harming them, so that gives them the right to physically assault you.\r\n\r\nWe may see Gab shut down over this. I hope not. Even though I despise Jew-haters, I just mute them. They disappear. And Twitter has an order of magnitude MORE Jew-haters. One night over 500 of them came after me.\r\n\r\nAnd I defeated them all. Their stupid words didn't hurt me.\r\n\r\nDan Patterson is lying his ass off. Twitter and Facebook are the go-to places for Jew-haters. \r\n\r\nBut they're all LEFTIST Jew-haters, so that means they get a pass.\r\n\r\nWhen I was a child, my mother told me that sticks and stones would break my bones, but words would never hurt me.\r\n\r\nLet's ask Dan Patterson and any member of Antifa the following question.\r\n\r\nWhich would you rather I do: address you in bigoted language or throw a rock into your face as hard as I can?\r\n\r\nYeah.\r\n\r\nWords and hate are not the problem.\r\n\r\nOnly actions matter.",
+          "body_html": "<p>Dan Patterson, CNET Senior Producer.<br /><br />\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed to shut down truly American ideas, like the freedom to worship and celebrate your religion without the threat of or actual violence.\"<br /><br />https://www.youtube.com/watch?v=GHfFAevq8Cg <br /><br />Where to start?<br /><br />Ideas and speech repress nobody.<br /><br />Gab has a \"mute\" function. I use it all the time. If I can't HEAR Jew-haters, then their slobbering hate makes no impression on me.<br /><br />The First Amendment ALLOWS you to express bigotry. That freedom is indisputably AMERICAN.<br /><br />Twitter has become notorious for assassination tweets, such as the one I've attached to this post. Twitter says that these tweets don't violate their Terms of Use, even though they are FEDERAL FELONIES.<br /><br />Leftists HATE conservatives, and they express that hate all the time. They even act on it, such as when that pumpkin-headed Bernie Bro almost killed Steve Scalise. <br /><br />Here's a defining characteristic of leftism:<br /><br />Leftists want the freedom to hate AND to act on that hate, which is why they say, \"Words are violence.\" If you listen to Antifa, they say that smashing you in the face is self-defense. Your words as harming them, so that gives them the right to physically assault you.<br /><br />We may see Gab shut down over this. I hope not. Even though I despise Jew-haters, I just mute them. They disappear. And Twitter has an order of magnitude MORE Jew-haters. One night over 500 of them came after me.<br /><br />And I defeated them all. Their stupid words didn't hurt me.<br /><br />Dan Patterson is lying his ass off. Twitter and Facebook are the go-to places for Jew-haters. <br /><br />But they're all LEFTIST Jew-haters, so that means they get a pass.<br /><br />When I was a child, my mother told me that sticks and stones would break my bones, but words would never hurt me.<br /><br />Let's ask Dan Patterson and any member of Antifa the following question.<br /><br />Which would you rather I do: address you in bigoted language or throw a rock into your face as hard as I can?<br /><br />Yeah.<br /><br />Words and hate are not the problem.<br /><br />Only actions matter.</p>",
+          "body_html_summary": "<p>Dan Patterson, CNET Senior Producer.<br><br>\"[Gab is] wrapping the moniker of free speech around hate speech. And look: Expressions of antisemitism, racism, sexism, homophobia--these are not air quote 'free speech.' In fact these are expressions of bigotry and very clearly anti-American. These are indisputably the ideas of repression, the very opposite of free speech. These ideas repress and are designed...</p>",
+          "body_html_summary_truncated": true,
+          "only_emoji": false,
+          "liked": false,
+          "disliked": false,
+          "bookmarked": false,
+          "repost": false,
+          "reported": false,
+          "score": 274,
+          "like_count": 283,
+          "dislike_count": 9,
+          "reply_count": 68,
+          "repost_count": 131,
+          "is_quote": false,
+          "is_reply": false,
+          "is_replies_disabled": false,
+          "embed": {
+            "html": "<a href=\"https://www.youtube.com/watch?v=GHfFAevq8Cg\" target=\"_blank\" class=\"post__embed__body\"><div class=\"post__embed__body__image\" style=\"background-image: url('https://ipr2.gab.ai/871cffb53fd971a667887d21fefb47e1d4217459/68747470733a2f2f692e7974696d672e636f6d2f76692f47486646416576713843672f687164656661756c742e6a7067/')\"></div><div class=\"post__embed__body__content\"><div class=\"post__embed__body__title\">Pittsburg shooting suspect was avid user of social network Gab</div><div class=\"post__embed__body__description\">Pittsburgh shooting suspect Robert Bowers was an avid user of the social media site Gab, which many have accused of being a platform for the alt-right...</div></div></a>",
+            "iframe": false
+          },
+          "attachment": {
+            "type": "media",
+            "value": [
+              {
+                "id": "30e8beef-385d-4511-bc33-9e81e6a10250",
+                "url_thumbnail": "https://files.gab.com/file/files-gab/image/bb-5bd50bd42a1a2.jpeg",
+                "url_full": "https://files.gab.com/file/files-gab/image/bb-5bd50bd42a59f.jpeg",
+                "width": 1242,
+                "height": 775
+              }
+            ]
+          },
+          "category": null,
+          "category_details": null,
+          "language": "en",
+          "nsfw": false,
+          "is_premium": false,
+          "is_locked": false,
+          "premium_min_tier": 0,
+          "current_tier": 0,
+          "user": {
+            "id": 232982,
+            "name": "Thomas Wictor",
+            "username": "Thomas_Wictor",
+            "picture_url": "https://files.gab.com/file/files-gab/user/599a1a0dad506.jpeg",
+            "verified": true,
+            "is_donor": false,
+            "is_investor": false,
+            "is_pro": true,
+            "is_private": false,
+            "is_premium": false
+          },
+          "replies": {
+            "data": []
+          }
+        }
+      }
+    }
+  ]
+}
