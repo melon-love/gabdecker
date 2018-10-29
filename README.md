@@ -1,9 +1,17 @@
 # GabDecker
 
-I intend to build an Elm application that provides a [TweetDeck](https://tweetdeck.twitter.com/)-like interface to [Gab.ai](https://gab.ai/).
+[GabDecker.com](https://gabdecker.com/) is a [TweetDeck](https://tweetdeck.twitter.com/)-like interface to [Gab.com](https://gab.com/).
 
-It will be open source, and the code will be here.
+Other than persistence and file uploading, the code will run in `elm reactor`:
 
-The site is up, with a place-holder page, at [GabDecker.com](https://gabdecker.com/).
+```
+git clone git@github.com:melon-love/gabdecker.git
+cd gabdecker
+elm reactor
+```
+
+Then aim your browser at http://localhost:8000/src/Main.elm
+
+You won't be able to authenticate with Gab, unless you set up a [billstclair/elm-oauth-middleware](https://package.elm-lang.org/packages/billstclair/elm-oauth-middleware/latest/) server, and use a fake host, listed as a `redirectUri` in that server's configuration. Without an authorization server, you can use cloned data, from the `site/json` directory.
 
 Bill St. Clair - 14 September, 2018
