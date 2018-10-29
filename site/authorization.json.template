@@ -1,0 +1,8 @@
+{ "name": "Gab",
+  "authorizationUri": "https://api.gab.ai/oauth/authorize",
+  "tokenUri": "https://api.gab.ai/oauth/token",
+  "apiUri": "https://api.gab.ai/v1.0/",
+  "clientId": "<Your registered Client ID>",
+  "redirectUri": "<The redirect API for your elm-outh-middleware callback server>",
+  "scopes": {"read": "read"}
+}

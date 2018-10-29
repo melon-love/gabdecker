@@ -1,0 +1,41 @@
+{
+    "type": "application",
+    "source-directories": [
+        "src"
+    ],
+    "elm-version": "0.19.0",
+    "dependencies": {
+        "direct": {
+            "Janiczek/cmd-extra": "1.0.0",
+            "billstclair/elm-custom-element": "1.2.0",
+            "billstclair/elm-localstorage": "6.0.3",
+            "billstclair/elm-oauth-middleware": "2.0.1",
+            "billstclair/elm-port-funnel": "1.1.4",
+            "elm/browser": "1.0.1",
+            "elm/core": "1.0.0",
+            "elm/html": "1.0.0",
+            "elm/http": "1.0.0",
+            "elm/json": "1.0.0",
+            "elm/time": "1.0.0",
+            "elm/url": "1.0.0",
+            "elm-community/string-extra": "4.0.0",
+            "mdgriffith/elm-ui": "1.1.0",
+            "melon-love/elm-gab-api": "1.0.0",
+            "truqu/elm-oauth2": "4.0.0"
+        },
+        "indirect": {
+            "NoRedInk/elm-json-decode-pipeline": "1.0.0",
+            "elm/parser": "1.1.0",
+            "elm/regex": "1.0.0",
+            "elm/virtual-dom": "1.0.2",
+            "elm-community/dict-extra": "2.4.0",
+            "elm-community/list-extra": "8.1.0",
+            "rtfeldman/elm-iso8601-date-strings": "1.1.2",
+            "truqu/elm-base64": "2.0.4"
+        }
+    },
+    "test-dependencies": {
+        "direct": {},
+        "indirect": {}
+    }
+}
