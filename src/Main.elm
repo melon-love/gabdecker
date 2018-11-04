@@ -20,7 +20,26 @@ import Char
 import Cmd.Extra exposing (withCmd, withCmds, withNoCmd)
 import CustomElement.FileListener as File exposing (File)
 import Dict exposing (Dict)
-import Element exposing (Element, column, el, paragraph, row, text, textColumn)
+import Element
+    exposing
+        ( Color
+        , Element
+        , centerX
+        , column
+        , el
+        , height
+        , image
+        , link
+        , padding
+        , paragraph
+        , px
+        , row
+        , spacing
+        , text
+        , textColumn
+        , width
+        )
+import Element.Font as Font
 import Gab
 import Gab.EncodeDecode as ED
 import Gab.Types
@@ -406,12 +425,96 @@ view model =
     }
 
 
+itou : Int -> Float
+itou i =
+    toFloat i / 255
+
+
+rgbi : Int -> Int -> Int -> Color
+rgbi r g b =
+    Element.rgb (itou r) (itou g) (itou b)
+
+
+lightBlue : Color
+lightBlue =
+    rgbi 0xAD 0xD8 0xE6
+
+
+blue : Color
+blue =
+    Element.rgb 0 0 1
+
+
+{-| Color highlighting is temporary, until Font.underline becomes decorative.
+-}
+simpleLink : String -> String -> Element msg
+simpleLink url label =
+    link
+        [ Font.color blue
+        , Element.mouseOver [ Font.color lightBlue ]
+        ]
+        { url = url
+        , label = text label
+        }
+
+
+simpleImage : String -> String -> ( Int, Int ) -> Element msg
+simpleImage src description ( w, h ) =
+    image
+        [ width (px w)
+        , height (px h)
+        ]
+        { src = src
+        , description = description
+        }
+
+
 pageBody : Model -> Element Msg
 pageBody model =
-    text "Hello, GabDecker!"
+    row
+        [ width Element.fill
+        , Font.size 24
+        ]
+        [ column [ centerX, spacing 10 ]
+            [ row
+                [ centerX
+                , padding 20
+                , Font.size 36
+                , Font.bold
+                ]
+                [ text "GabDecker" ]
+            , row [ centerX ]
+                [ simpleLink "./" "GabDecker"
+                , text " is a "
+                , simpleLink "https://tweetdeck.twitter.com" "TweetDeck"
+                , text "-like interface to "
+                , simpleLink "https://gab.com" "Gab.com"
+                , text "."
+                ]
+            , row [ centerX ]
+                [ simpleImage "images/deck-with-frog-671x425.jpg"
+                    "Deck with Frog"
+                    ( 671, 425 )
+                ]
+            , row [ centerX ]
+                [ simpleLink "news/" "News" ]
+            , row [ centerX ]
+                [ simpleLink "api/" "Gab API Explorer" ]
+            , row [ centerX ]
+                [ text <| copyright ++ " 2018 Bill St. Clair" ]
+            , row [ centerX ]
+                [ simpleLink "https://github.com/melon-love/gabdecker" "GitHub" ]
+            ]
+        ]
+
+
+copyright : String
+copyright =
+    String.fromList [ Char.fromCode 169 ]
 
 
 
+-- \u00A9
 {-
 
    footerDiv : Model -> Html Msg
