@@ -469,17 +469,27 @@ simpleImage src description ( w, h ) =
         }
 
 
+baseFontSize : Float
+baseFontSize =
+    24
+
+
+fontSize : Float -> Element.Attr decorative msg
+fontSize scale =
+    Font.size <| round (scale * baseFontSize)
+
+
 pageBody : Model -> Element Msg
 pageBody model =
     row
         [ width Element.fill
-        , Font.size 24
+        , fontSize 1
         ]
         [ column [ centerX, spacing 10 ]
             [ row
                 [ centerX
                 , padding 20
-                , Font.size 36
+                , fontSize 1.5
                 , Font.bold
                 ]
                 [ text "GabDecker" ]
@@ -501,60 +511,19 @@ pageBody model =
             , row [ centerX ]
                 [ simpleLink "api/" "Gab API Explorer" ]
             , row [ centerX ]
-                [ text <| copyright ++ " 2018 Bill St. Clair" ]
-            , row [ centerX ]
-                [ simpleLink "https://github.com/melon-love/gabdecker" "GitHub" ]
+                [ column [ centerX, spacing 6, fontSize 0.75 ]
+                    [ row [ centerX ]
+                        [ text <| copyright ++ " 2018 Bill St. Clair" ]
+                    , row [ centerX ]
+                        [ simpleLink "https://github.com/melon-love/gabdecker"
+                            "GitHub"
+                        ]
+                    ]
+                ]
             ]
         ]
 
 
 copyright : String
 copyright =
-    String.fromList [ Char.fromCode 169 ]
-
-
-
--- \u00A9
-{-
-
-   footerDiv : Model -> Html Msg
-   footerDiv model =
-       div []
-           [ text "API docs: "
-           , a [ href "https://developers.gab.com" ]
-               [ text "developers.gab.com" ]
-           , br
-           , text "Creating an app (Pro Users only): "
-           , a [ href "https://gab.com/settings/clients" ]
-               [ text "gab.com/settings/clients" ]
-           , br
-           , text "Andrew Torba's announcement "
-           , a [ href "https://gab.com/gab/posts/37368168" ]
-               [ text "on October 3, 2018" ]
-           , br
-           , br
-           , text (copyright ++ " 2017-2018 ")
-           , a [ href "https://lisplog.org/" ]
-               [ text "Bill St. Clair" ]
-           , space
-           , mailLink "billstclair@gmail.com"
-           , br
-           , br
-           , span [ style "margin-left" "5em" ]
-               [ logoLink "https://github.com/melon-love/elm-gab-api"
-                   "GitHub-Mark-32px.png"
-                   "GitHub source code"
-                   32
-               , space
-               , logoLink "http://elm-lang.org/"
-                   "elm-logo-125x125.png"
-                   "Elm inside"
-                   28
-               , space
-               , logoLink "https://gabdecker.com/"
-                   "frog-32x32.jpg"
-                   "GabDecker"
-                   31
-               ]
-           ]
--}
+    String.fromList [ Char.fromCode 0xA9 ]
