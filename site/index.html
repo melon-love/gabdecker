@@ -1,27 +1,33 @@
 <html>
-<head>
-<title>GabDecker</title>
-</head>
-<body style="margin-top: 2em; font-size: 24px;">
-<center>
+  <head>
+    <title>GabDecker</title>
+    <script type='text/javascript' src='js/file-listener.js'></script>
+    <script type='text/javascript' src='js/PortFunnel.js'></script>
+    <script type='text/javascript' src='elm.js'></script>
+  </head>
+  <body style="margin-top: 2em; font-size: 24px;">
+    <script type='text/javascript'>
+      // It's an application, so it doesn't need a div.
+      var app = Elm['Main'].init();
+      var modules = ['LocalStorage'];
+      PortFunnel.subscribe(app, {modules: modules});
+    </script>
 
-<h1>GabDecker</h1>
-
-<div style='display: inline-block; margin: auto; padding: 1em 2em; border: solid blue;'>
-
-<p>Future home of <a href='./'>GabDecker</a>, a <a href='https://tweetdeck.twitter.com/'>TweetDeck</a>-like interface to <a href='https://gab.ai/'>Gab.ai</a>.</p>
-
-<img src='images/deck-with-frog-671x425.jpg' width='671' height='425' alt='Deck with Frog'/>
-
-<p><a href='news/'>News</a></p>
-
-<p><a href='api/'>Gab API Explorer</a></p>
-
-<p>&copy; 2018 Bill St. Clair<br/>
-  <a href='https://github.com/melon-love/gabdecker'>GitHub</a></p>
-</div>
-
-</center>
+   <noscript>
+    <center>
+      <h1>GabDecker</h1>
+      <div style='display: inline-block; margin: auto;'>
+        <p><a href='./'>GabDecker</a> is a <a href='https://tweetdeck.twitter.com/'>TweetDeck</a>-like interface to <a href='https://gab.com/'>Gab.com</a>.</p>
+        <p style='color: red; font-size: 120%;'>GabDecker requires a JavaScript-enabled browser to get more than this static page.</p>
+        <img src='images/deck-with-frog-671x425.jpg' width='671' height='425' alt='Deck with Frog'/>
+        <p><a href='news/'>News</a></p>
+        <p><a href='api/'>Gab API Explorer</a></p>
+        <p>&copy; 2018 Bill St. Clair<br/>
+          <a href='https://github.com/melon-love/gabdecker'>GitHub</a></p>
+      </div>
+    </center>
+   </noscript>
+   
 
 </body>
 </html>
