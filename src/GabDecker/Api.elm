@@ -1,5 +1,5 @@
 module GabDecker.Api exposing
-    ( Backend
+    ( Backend(..)
     , Error
     , downvotePost
     , followUser

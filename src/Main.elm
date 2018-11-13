@@ -51,6 +51,7 @@ import Gab.Types
         , SavedToken
         , User
         )
+import GabDecker.Api exposing (Backend(..))
 import Http
 import Json.Decode as JD exposing (Decoder, Value)
 import Json.Encode as JE
@@ -81,21 +82,6 @@ import Time exposing (Posix)
 import Url exposing (Url)
 
 
-type Thing
-    = ValueThing Value
-    | UserThing Value
-    | UserListThing Value
-    | ActivityLogListThing Value
-    | PostThing Value
-    | PostedThing Value
-    | ImageUploadThing Value
-
-
-nullThing : Thing
-nullThing =
-    ValueThing JE.null
-
-
 allScopes : List ( String, String )
 allScopes =
     [ ( "Read", "read" )
@@ -107,7 +93,9 @@ allScopes =
 
 
 type alias Model =
-    { key : Key
+    { useSimulator : Bool
+    , backend : Maybe Backend
+    , key : Key
     , funnelState : PortFunnels.State
     , token : Maybe SavedToken
     , state : Maybe String
@@ -163,8 +151,8 @@ localStoragePrefix =
     "gab-api-example"
 
 
-init : () -> Url -> Key -> ( Model, Cmd Msg )
-init _ url key =
+init : Value -> Url -> Key -> ( Model, Cmd Msg )
+init flags url key =
     let
         tokenAndState =
             receiveTokenAndState url
@@ -203,7 +191,20 @@ init _ url key =
                     )
 
         model =
-            { key = key
+            let
+                useSimulator =
+                    JE.encode 0 flags == "undefined"
+
+                backend =
+                    if useSimulator then
+                        Just SimulatedBackend
+
+                    else
+                        Nothing
+            in
+            { useSimulator = useSimulator
+            , backend = backend
+            , key = key
             , funnelState = PortFunnels.initialState localStoragePrefix
             , token = savedToken
             , state = state
@@ -481,6 +482,21 @@ fontSize scale =
 
 pageBody : Model -> Element Msg
 pageBody model =
+    case model.backend of
+        Nothing ->
+            loginPage model
+
+        Just _ ->
+            mainPage model
+
+
+mainPage : Model -> Element Msg
+mainPage model =
+    text "Hello World!"
+
+
+loginPage : Model -> Element Msg
+loginPage model =
     row
         [ width Element.fill
         , fontSize 1
