@@ -1,7 +1,7 @@
 module GabDecker.Types exposing
     ( Feed
     , FeedGetter(..)
-    , FeedType
+    , FeedType(..)
     , feedTypeToGetter
     )
 
@@ -18,15 +18,16 @@ type FeedType
     = HomeFeed
     | UserFeed String
     | GroupFeed String
+    | TopicFeed String
     | PopularFeed
 
 
 type alias Feed msg =
     { getter : FeedGetter msg
     , feedType : FeedType
-    , before : Maybe String
     , description : String
     , feed : ActivityLogList
+    , error : Maybe Api.Error
     }
 
 
@@ -41,6 +42,9 @@ feedTypeToGetter feedType backend tagger =
 
         GroupFeed groupid ->
             FeedGetterWithBefore <| Api.groupFeed backend tagger groupid
+
+        TopicFeed topicid ->
+            FeedGetterWithBefore <| Api.topicFeed backend tagger topicid
 
         PopularFeed ->
             FeedGetter <| Api.popularFeed backend tagger

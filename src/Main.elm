@@ -45,16 +45,19 @@ import Gab.EncodeDecode as ED
 import Gab.Types
     exposing
         ( ActivityLog
+        , ActivityLogList
         , Post
         , PostForm
         , RequestParts
         , SavedToken
         , User
         )
-import GabDecker.Api exposing (Backend(..))
+import GabDecker.Api as Api exposing (Backend(..))
+import GabDecker.Types as Types exposing (Feed, FeedGetter(..), FeedType(..))
 import Http
 import Json.Decode as JD exposing (Decoder, Value)
 import Json.Encode as JE
+import List.Extra as LE
 import OAuth exposing (Token(..))
 import OAuthMiddleware
     exposing
@@ -109,6 +112,7 @@ type alias Model =
     , receivedScopes : List String
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
+    , feeds : List (Feed Msg)
     }
 
 
@@ -126,6 +130,7 @@ type Msg
     | ReceiveLoggedInUser (Result Http.Error User)
     | PersistResponseToken ResponseToken Posix
     | ProcessLocalStorage Value
+    | ReceiveFeed FeedType (Result Api.Error ActivityLogList)
 
 
 {-| GitHub requires the "User-Agent" header.
@@ -218,6 +223,10 @@ init flags url key =
             , receivedScopes = scopes
             , tokenAuthorization = Nothing
             , username = "xossbow"
+            , feeds =
+                feedTypesToFeeds
+                    [ HomeFeed, UserFeed "a", PopularFeed ]
+                    backend
             }
     in
     model
@@ -235,7 +244,73 @@ init flags url key =
 
                     else
                         Cmd.none
+            , Cmd.batch <|
+                List.map feedGetMore model.feeds
             ]
+
+
+feedTypesToFeeds : List FeedType -> Maybe Backend -> List (Feed Msg)
+feedTypesToFeeds feedTypes maybeBackend =
+    case maybeBackend of
+        Nothing ->
+            []
+
+        Just backend ->
+            List.map (feedTypeToFeed backend) feedTypes
+
+
+feedTypeToFeed : Backend -> FeedType -> Feed Msg
+feedTypeToFeed backend feedType =
+    { getter = Types.feedTypeToGetter feedType backend (ReceiveFeed feedType)
+    , feedType = feedType
+    , description = feedTypeDescription feedType
+    , feed = { data = [], no_more = False }
+    , error = Nothing
+    }
+
+
+feedTypeDescription : FeedType -> String
+feedTypeDescription feedType =
+    case feedType of
+        HomeFeed ->
+            "Home"
+
+        UserFeed user ->
+            "User: " ++ user
+
+        -- Need to look up group name
+        GroupFeed groupid ->
+            "Group: " ++ groupid
+
+        -- Need to look up topic name
+        TopicFeed groupid ->
+            "Topic: " ++ groupid
+
+        PopularFeed ->
+            "Popular"
+
+
+feedGetMore : Feed Msg -> Cmd Msg
+feedGetMore feed =
+    if feed.feed.no_more then
+        Cmd.none
+
+    else
+        case feed.getter of
+            FeedGetter cmd ->
+                cmd
+
+            FeedGetterWithBefore f ->
+                let
+                    before =
+                        case LE.last feed.feed.data of
+                            Nothing ->
+                                ""
+
+                            Just log ->
+                                log.published_at
+                in
+                f before
 
 
 storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
@@ -390,6 +465,48 @@ update msg model =
 
                 Ok res ->
                     res
+
+        ReceiveFeed feedType result ->
+            { model | feeds = updateFeeds feedType result model.feeds }
+                |> withNoCmd
+
+
+updateFeeds : FeedType -> Result Api.Error ActivityLogList -> List (Feed Msg) -> List (Feed Msg)
+updateFeeds feedType result feeds =
+    let
+        loop tail res =
+            case tail of
+                [] ->
+                    List.reverse res
+
+                feed :: rest ->
+                    if feed.feedType == feedType then
+                        List.concat
+                            [ List.reverse res
+                            , [ updateFeed result feed ]
+                            , rest
+                            ]
+
+                    else
+                        loop rest (feed :: res)
+    in
+    loop feeds []
+
+
+updateFeed : Result Api.Error ActivityLogList -> Feed Msg -> Feed Msg
+updateFeed result feed =
+    case result of
+        Err err ->
+            { feed | error = Just err }
+
+        Ok activities ->
+            { feed
+                | error = Nothing
+                , feed =
+                    { data = List.append feed.feed.data activities.data
+                    , no_more = activities.no_more
+                    }
+            }
 
 
 tokenKey : String

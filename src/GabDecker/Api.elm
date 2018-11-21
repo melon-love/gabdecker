@@ -13,6 +13,7 @@ module GabDecker.Api exposing
     , popularUsers
     , postImage
     , repost
+    , topicFeed
     , upvotePost
     , userFeed
     , userFollowers
@@ -166,7 +167,7 @@ homeFeed backend tagger before =
                     json =
                         whichJson before
                 in
-                Http.get ("json/feeds/home" ++ json) activityLogListDecoder
+                Http.get ("json/feeds/home/" ++ json) activityLogListDecoder
 
 
 userFeed : Backend -> (Result Error ActivityLogList -> msg) -> String -> String -> Cmd msg
@@ -187,6 +188,11 @@ userFeed backend tagger username before =
 
 groupFeed : Backend -> (Result Error ActivityLogList -> msg) -> String -> String -> Cmd msg
 groupFeed backend tagger groupid before =
+    unimplemented tagger
+
+
+topicFeed : Backend -> (Result Error ActivityLogList -> msg) -> String -> String -> Cmd msg
+topicFeed backend tagger topicid before =
     unimplemented tagger
 
 
