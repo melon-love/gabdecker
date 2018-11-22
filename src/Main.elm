@@ -15,6 +15,8 @@
 module Main exposing (main)
 
 import Browser exposing (Document, UrlRequest(..))
+import Browser.Dom as Dom exposing (Viewport)
+import Browser.Events as Events
 import Browser.Navigation as Navigation exposing (Key)
 import Char
 import Cmd.Extra exposing (withCmd, withCmds, withNoCmd)
@@ -99,6 +101,7 @@ allScopes =
 
 type alias Model =
     { useSimulator : Bool
+    , windowHeight : Int
     , backend : Maybe Backend
     , key : Key
     , funnelState : PortFunnels.State
@@ -132,6 +135,7 @@ type Msg
     | ReceiveLoggedInUser (Result Http.Error User)
     | PersistResponseToken ResponseToken Posix
     | ProcessLocalStorage Value
+    | WindowResize Int Int
     | ReceiveFeed FeedType (Result Api.Error ActivityLogList)
 
 
@@ -147,10 +151,18 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = PortFunnels.subscriptions ProcessLocalStorage
+        , subscriptions = subscriptions
         , onUrlRequest = HandleUrlRequest
         , onUrlChange = HandleUrlChange
         }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ PortFunnels.subscriptions ProcessLocalStorage model
+        , Events.onResize WindowResize
+        ]
 
 
 localStoragePrefix : String
@@ -212,6 +224,7 @@ init flags url key =
             { useSimulator = useSimulator
             , backend = backend
             , key = key
+            , windowHeight = 1024
             , funnelState = PortFunnels.initialState localStoragePrefix
             , token = savedToken
             , state = state
@@ -246,9 +259,19 @@ init flags url key =
 
                     else
                         Cmd.none
+            , Task.perform getViewport Dom.getViewport
             , Cmd.batch <|
                 List.map feedGetMore model.feeds
             ]
+
+
+getViewport : Viewport -> Msg
+getViewport viewport =
+    let
+        vp =
+            viewport.viewport
+    in
+    WindowResize (round vp.width) (round vp.height)
 
 
 feedTypesToFeeds : List FeedType -> Maybe Backend -> List (Feed Msg)
@@ -474,6 +497,9 @@ update msg model =
                 Ok res ->
                     res
 
+        WindowResize _ h ->
+            { model | windowHeight = h } |> withNoCmd
+
         ReceiveFeed feedType result ->
             { model | feeds = updateFeeds feedType result model.feeds }
                 |> withNoCmd
@@ -628,7 +654,7 @@ mainPage model =
         , fontSize 1
         ]
     <|
-        List.map feedColumn model.feeds
+        List.map (feedColumn model.windowHeight) model.feeds
 
 
 zeroes =
@@ -639,8 +665,15 @@ zeroes =
     }
 
 
-feedColumn : Feed Msg -> Element Msg
-feedColumn feed =
+{-| 20 has no rhyme or reason other than it works.
+-}
+headerHeight : Int
+headerHeight =
+    (round <| 1.5 * baseFontSize) + 20
+
+
+feedColumn : Int -> Feed Msg -> Element Msg
+feedColumn windowHeight feed =
     let
         colw =
             width <| px feed.columnWidth
@@ -667,7 +700,9 @@ feedColumn feed =
         , row []
             [ column
                 [ colw
-                , height <| px 1024
+
+                -- This needs to be the adjusted window height, not 1024
+                , height <| px (windowHeight - headerHeight)
                 , Element.scrollbarX
                 ]
               <|
