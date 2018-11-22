@@ -28,6 +28,7 @@ type alias Feed msg =
     , description : String
     , feed : ActivityLogList
     , error : Maybe Api.Error
+    , columnWidth : Int
     }
 
 

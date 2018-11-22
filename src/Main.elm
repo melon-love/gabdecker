@@ -22,7 +22,8 @@ import CustomElement.FileListener as File exposing (File)
 import Dict exposing (Dict)
 import Element
     exposing
-        ( Color
+        ( Attribute
+        , Color
         , Element
         , centerX
         , column
@@ -39,6 +40,7 @@ import Element
         , textColumn
         , width
         )
+import Element.Border as Border
 import Element.Font as Font
 import Gab
 import Gab.EncodeDecode as ED
@@ -259,6 +261,11 @@ feedTypesToFeeds feedTypes maybeBackend =
             List.map (feedTypeToFeed backend) feedTypes
 
 
+columnWidth : Int
+columnWidth =
+    250
+
+
 feedTypeToFeed : Backend -> FeedType -> Feed Msg
 feedTypeToFeed backend feedType =
     { getter = Types.feedTypeToGetter feedType backend (ReceiveFeed feedType)
@@ -266,6 +273,7 @@ feedTypeToFeed backend feedType =
     , description = feedTypeDescription feedType
     , feed = { data = [], no_more = False }
     , error = Nothing
+    , columnWidth = columnWidth
     }
 
 
@@ -589,7 +597,7 @@ simpleImage src description ( w, h ) =
 
 baseFontSize : Float
 baseFontSize =
-    24
+    12
 
 
 fontSize : Float -> Element.Attr decorative msg
@@ -607,22 +615,145 @@ pageBody model =
             mainPage model
 
 
+fillWidth : Attribute msg
+fillWidth =
+    width Element.fill
+
+
 mainPage : Model -> Element Msg
 mainPage model =
-    text "Hello World!"
+    row
+        [ fillWidth
+        , height Element.fill
+        , fontSize 1
+        ]
+    <|
+        List.map feedColumn model.feeds
+
+
+zeroes =
+    { right = 0
+    , left = 0
+    , top = 0
+    , bottom = 0
+    }
+
+
+feedColumn : Feed Msg -> Element Msg
+feedColumn feed =
+    let
+        colw =
+            width <| px feed.columnWidth
+    in
+    column
+        [ colw
+        , height Element.fill
+        , Border.width 1
+        ]
+        [ row
+            [ fillWidth
+            , Border.widthEach { zeroes | bottom = 1 }
+            ]
+            [ column [ colw ]
+                [ row
+                    [ padding 10
+                    , fontSize 1.5
+                    , Font.bold
+                    , centerX
+                    ]
+                    [ text feed.description ]
+                ]
+            ]
+        , row []
+            [ column
+                [ colw
+                , height <| px 1024
+                , Element.scrollbarX
+                ]
+              <|
+                List.map (postRow feed.columnWidth) feed.feed.data
+            ]
+        ]
+
+
+userPadding : Attribute msg
+userPadding =
+    Element.paddingEach
+        { top = 0
+        , right = 0
+        , bottom = 4
+        , left = 0
+        }
+
+
+postBorder : Attribute msg
+postBorder =
+    Border.widthEach
+        { bottom = 1
+        , left = 0
+        , right = 0
+        , top = 1
+        }
+
+
+postRow : Int -> ActivityLog -> Element Msg
+postRow cw log =
+    let
+        pad =
+            5
+
+        colw =
+            width <| px (cw - 2 * pad)
+
+        actuser =
+            log.actuser
+    in
+    row
+        [ postBorder
+        , fillWidth
+        , padding pad
+        ]
+        [ column [ colw ]
+            [ row
+                [ Font.bold
+                , userPadding
+                ]
+                [ text actuser.name
+                , text " ("
+                , text actuser.username
+                , text ")"
+                ]
+            , row
+                []
+                [ Element.textColumn
+                    [ colw ]
+                    [ paragraph
+                        [ Element.clipY ]
+                        [ text <|
+                            case log.post.body_html of
+                                Nothing ->
+                                    log.post.body
+
+                                Just html ->
+                                    html
+                        ]
+                    ]
+                ]
+            ]
+        ]
 
 
 loginPage : Model -> Element Msg
 loginPage model =
     row
-        [ width Element.fill
-        , fontSize 1
+        [ fillWidth
+        , fontSize 2
         ]
         [ column [ centerX, spacing 10 ]
             [ row
                 [ centerX
                 , padding 20
-                , fontSize 1.5
+                , fontSize 3
                 , Font.bold
                 ]
                 [ text "GabDecker" ]
@@ -644,7 +775,7 @@ loginPage model =
             , row [ centerX ]
                 [ simpleLink "api/" "Gab API Explorer" ]
             , row [ centerX ]
-                [ column [ centerX, spacing 6, fontSize 0.75 ]
+                [ column [ centerX, spacing 6, fontSize 1.5 ]
                     [ row [ centerX ]
                         [ text <| copyright ++ " 2018 Bill St. Clair" ]
                     , row [ centerX ]
