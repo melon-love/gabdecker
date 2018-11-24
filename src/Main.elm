@@ -1,8 +1,8 @@
 ----------------------------------------------------------------------
 --
--- example.elm
--- Example of using the Gab API client.
--- Copyright (c) 2017-2018 Bill St. Clair <billstclair@gmail.com>
+-- Main.elm
+-- GabDecker top-level
+-- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
 -- Some rights reserved.
 -- Distributed under the MIT License
 -- See LICENSE.txt
@@ -21,6 +21,7 @@ import Browser.Navigation as Navigation exposing (Key)
 import Char
 import Cmd.Extra exposing (withCmd, withCmds, withNoCmd)
 import CustomElement.FileListener as File exposing (File)
+import DateFormat as DF
 import Dict exposing (Dict)
 import Element
     exposing
@@ -42,23 +43,38 @@ import Element
         , textColumn
         , width
         )
+import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Input exposing (button)
 import Gab
 import Gab.EncodeDecode as ED
 import Gab.Types
     exposing
         ( ActivityLog
         , ActivityLogList
+        , Attachment(..)
+        , MediaRecord
         , Post
         , PostForm
+        , RelatedPosts(..)
         , RequestParts
         , SavedToken
         , User
         )
 import GabDecker.Api as Api exposing (Backend(..))
+import GabDecker.Elements
+    exposing
+        ( gray
+        , heightImage
+        , lightgray
+        , newTabLink
+        , simpleImage
+        , simpleLink
+        )
 import GabDecker.Types as Types exposing (Feed, FeedGetter(..), FeedType(..))
 import Http
+import Iso8601
 import Json.Decode as JD exposing (Decoder, Value)
 import Json.Encode as JE
 import List.Extra as LE
@@ -85,7 +101,7 @@ import PortFunnels exposing (FunnelDict, Handler(..))
 import String
 import String.Extra as SE
 import Task
-import Time exposing (Posix)
+import Time exposing (Posix, Zone)
 import Url exposing (Url)
 
 
@@ -105,6 +121,7 @@ type alias Model =
     , backend : Maybe Backend
     , key : Key
     , funnelState : PortFunnels.State
+    , here : Zone
     , token : Maybe SavedToken
     , state : Maybe String
     , msg : Maybe String
@@ -136,6 +153,8 @@ type Msg
     | PersistResponseToken ResponseToken Posix
     | ProcessLocalStorage Value
     | WindowResize Int Int
+    | Here Zone
+    | Login
     | ReceiveFeed FeedType (Result Api.Error ActivityLogList)
 
 
@@ -226,6 +245,7 @@ init flags url key =
             , key = key
             , windowHeight = 1024
             , funnelState = PortFunnels.initialState localStoragePrefix
+            , here = Time.utc
             , token = savedToken
             , state = state
             , msg = msg
@@ -260,6 +280,7 @@ init flags url key =
                     else
                         Cmd.none
             , Task.perform getViewport Dom.getViewport
+            , Task.perform Here Time.here
             , Cmd.batch <|
                 List.map feedGetMore model.feeds
             ]
@@ -500,6 +521,13 @@ update msg model =
         WindowResize _ h ->
             { model | windowHeight = h } |> withNoCmd
 
+        Here zone ->
+            { model | here = zone } |> withNoCmd
+
+        Login ->
+            -- TODO
+            model |> withNoCmd
+
         ReceiveFeed feedType result ->
             { model | feeds = updateFeeds feedType result model.feeds }
                 |> withNoCmd
@@ -577,50 +605,6 @@ view model =
     }
 
 
-itou : Int -> Float
-itou i =
-    toFloat i / 255
-
-
-rgbi : Int -> Int -> Int -> Color
-rgbi r g b =
-    Element.rgb (itou r) (itou g) (itou b)
-
-
-lightBlue : Color
-lightBlue =
-    rgbi 0xAD 0xD8 0xE6
-
-
-blue : Color
-blue =
-    Element.rgb 0 0 1
-
-
-{-| Color highlighting is temporary, until Font.underline becomes decorative.
--}
-simpleLink : String -> String -> Element msg
-simpleLink url label =
-    link
-        [ Font.color blue
-        , Element.mouseOver [ Font.color lightBlue ]
-        ]
-        { url = url
-        , label = text label
-        }
-
-
-simpleImage : String -> String -> ( Int, Int ) -> Element msg
-simpleImage src description ( w, h ) =
-    image
-        [ width (px w)
-        , height (px h)
-        ]
-        { src = src
-        , description = description
-        }
-
-
 baseFontSize : Float
 baseFontSize =
     12
@@ -654,7 +638,7 @@ mainPage model =
         , fontSize 1
         ]
     <|
-        List.map (feedColumn model.windowHeight) model.feeds
+        List.map (feedColumn model.windowHeight model.here) model.feeds
 
 
 zeroes =
@@ -672,8 +656,8 @@ headerHeight =
     (round <| 1.5 * baseFontSize) + 20
 
 
-feedColumn : Int -> Feed Msg -> Element Msg
-feedColumn windowHeight feed =
+feedColumn : Int -> Zone -> Feed Msg -> Element Msg
+feedColumn windowHeight here feed =
     let
         colw =
             width <| px feed.columnWidth
@@ -706,7 +690,7 @@ feedColumn windowHeight feed =
                 , Element.scrollbarX
                 ]
               <|
-                List.map (postRow feed.columnWidth) feed.feed.data
+                List.map (postRow feed.columnWidth here) feed.feed.data
             ]
         ]
 
@@ -731,17 +715,35 @@ postBorder =
         }
 
 
-postRow : Int -> ActivityLog -> Element Msg
-postRow cw log =
+postRow : Int -> Zone -> ActivityLog -> Element Msg
+postRow cw here log =
     let
         pad =
             5
 
+        cwp =
+            cw - 2 * pad
+
         colw =
-            width <| px (cw - 2 * pad)
+            width <| px cwp
+
+        post =
+            log.post
+
+        user =
+            post.user
+
+        username =
+            user.username
 
         actuser =
             log.actuser
+
+        actusername =
+            actuser.username
+
+        repost =
+            log.type_ == "repost"
     in
     row
         [ postBorder
@@ -749,33 +751,176 @@ postRow cw log =
         , padding pad
         ]
         [ column [ colw ]
-            [ row
+            [ if not repost then
+                text ""
+
+              else
+                row
+                    [ colw
+                    , userPadding
+                    , Border.widthEach { zeroes | bottom = 1 }
+                    , Border.color gray
+                    ]
+                    [ heightImage "images/refresh-arrow.svg" "refresh" 10
+                    , newTabLink ("https://gab.com/" ++ actusername)
+                        (" " ++ actuser.name ++ " reposted")
+                    ]
+            , row
                 [ Font.bold
                 , userPadding
                 ]
-                [ text actuser.name
-                , text " ("
-                , text actuser.username
-                , text ")"
+                [ column [ Element.paddingEach { zeroes | right = 5 } ]
+                    [ row []
+                        [ heightImage user.picture_url username 40 ]
+                    ]
+                , column []
+                    [ row [ Element.paddingEach { zeroes | bottom = 5 } ]
+                        [ text " "
+                        , text user.name
+                        , text " ("
+                        , newTabLink ("https://gab.com/" ++ username) <|
+                            embiggen username
+                        , text ")"
+                        ]
+                    , let
+                        url =
+                            "https://gab.com/"
+                                ++ username
+                                ++ "/posts/"
+                                ++ String.fromInt post.id
+                      in
+                      row []
+                        [ newTabLink url <|
+                            iso8601ToString here post.created_at
+                        ]
+                    ]
                 ]
             , row
                 []
                 [ Element.textColumn
                     [ colw ]
-                    [ paragraph
-                        [ Element.clipY ]
-                        [ text <|
-                            case log.post.body_html of
-                                Nothing ->
-                                    log.post.body
+                  <|
+                    case post.body_html of
+                        Nothing ->
+                            [ paragraph
+                                [ Element.clipY
+                                , paragraphPadding
+                                ]
+                                [ text post.body ]
+                            ]
 
-                                Just html ->
-                                    html
-                        ]
+                        Just html ->
+                            htmlBodyElements html
+                ]
+            , row []
+                [ column [ colw ] <|
+                    case post.attachment of
+                        MediaAttachment records ->
+                            List.map (mediaRow colw) records
+
+                        _ ->
+                            [ text "" ]
+                ]
+            , row []
+                [ column
+                    [ colw
+                    , Element.paddingEach { zeroes | left = 5, right = 5 }
+                    , Background.color lightgray
+                    ]
+                    [ if not post.is_quote then
+                        text ""
+
+                      else
+                        case post.related of
+                            RelatedPosts { parent } ->
+                                case parent of
+                                    Nothing ->
+                                        text ""
+
+                                    Just parentPost ->
+                                        postRow (cwp - 10) here <|
+                                            { log
+                                                | post = parentPost
+                                                , type_ = "post"
+                                            }
                     ]
                 ]
             ]
         ]
+
+
+mediaRow : Attribute msg -> MediaRecord -> Element msg
+mediaRow colw record =
+    row []
+        [ image
+            [ colw
+            , Element.paddingEach { zeroes | top = 5 }
+            ]
+            { src = record.url_thumbnail
+            , description = "image"
+            }
+        ]
+
+
+embiggen : String -> String
+embiggen string =
+    if 3 <= String.length string then
+        string
+
+    else
+        " " ++ string ++ " "
+
+
+stringRemove : String -> String -> String
+stringRemove substring string =
+    String.split substring string
+        |> String.concat
+
+
+removeEmptyHead : List String -> List String
+removeEmptyHead strings =
+    case strings of
+        [] ->
+            []
+
+        first :: rest ->
+            if first == "" then
+                rest
+
+            else
+                strings
+
+
+paragraphPadding : Attribute msg
+paragraphPadding =
+    Element.paddingEach <| { zeroes | top = 4, bottom = 4 }
+
+
+htmlBodyElements : String -> List (Element Msg)
+htmlBodyElements html =
+    let
+        par : List (Element Msg) -> Element Msg
+        par elements =
+            paragraph
+                [ Element.clipY
+                , paragraphPadding
+                ]
+                elements
+    in
+    -- Still have to deal with single <br />
+    stringRemove "</p>" html
+        |> String.split "<p>"
+        |> removeEmptyHead
+        |> List.map (\s -> String.split "<br /><br />" s)
+        |> List.concat
+        |> List.map parseLinks
+        |> List.map par
+
+
+parseLinks : String -> List (Element msg)
+parseLinks string =
+    text string
+        |> List.singleton
 
 
 loginPage : Model -> Element Msg
@@ -801,6 +946,14 @@ loginPage model =
                 , text "."
                 ]
             , row [ centerX ]
+                [ text "This is a work in progress." ]
+            , row [ centerX ]
+                [ button []
+                    { onPress = Just Login
+                    , label = text "Login"
+                    }
+                ]
+            , row [ centerX ]
                 [ simpleImage "images/deck-with-frog-671x425.jpg"
                     "Deck with Frog"
                     ( 671, 425 )
@@ -820,6 +973,48 @@ loginPage model =
                     ]
                 ]
             ]
+        ]
+
+
+iso8601ToString : Zone -> String -> String
+iso8601ToString zone iso8601 =
+    case Iso8601.toTime iso8601 of
+        Err _ ->
+            iso8601
+
+        Ok time ->
+            timeString zone time ++ " - " ++ dateString zone time
+
+
+colonToken : DF.Token
+colonToken =
+    DF.text ":"
+
+
+spaceToken : DF.Token
+spaceToken =
+    DF.text " "
+
+
+dateString : Zone -> Posix -> String
+dateString =
+    DF.format
+        [ DF.monthNameAbbreviated
+        , spaceToken
+        , DF.dayOfMonthNumber
+        , spaceToken
+        , DF.yearNumber
+        ]
+
+
+{-| Convert a zoned time to a string in the format "HH:MM"
+-}
+timeString : Zone -> Posix -> String
+timeString =
+    DF.format
+        [ DF.hourMilitaryFixed
+        , colonToken
+        , DF.minuteFixed
         ]
 
 
