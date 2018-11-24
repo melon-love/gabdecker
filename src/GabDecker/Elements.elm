@@ -15,14 +15,18 @@
 module GabDecker.Elements exposing
     ( blue
     , gray
+    , green
     , heightImage
     , lightBlue
     , lightgray
+    , linkColor
+    , linkHoverColor
     , newTabLink
     , rgbi
     , simpleImage
     , simpleLink
     , styledLink
+    , turquoise
     , widthImage
     )
 
@@ -61,6 +65,16 @@ rgbi r g b =
     Element.rgb (itou r) (itou g) (itou b)
 
 
+turquoise : Color
+turquoise =
+    rgbi 0 0xFF 0xFF
+
+
+green : Color
+green =
+    rgbi 0 0xFF 0
+
+
 lightBlue : Color
 lightBlue =
     rgbi 0xAD 0xD8 0xE6
@@ -79,6 +93,14 @@ gray =
 lightgray : Color
 lightgray =
     rgbi 0xF0 0xF0 0xF0
+
+
+linkColor =
+    blue
+
+
+linkHoverColor =
+    lightBlue
 
 
 {-| Color highlighting is temporary, until Font.underline becomes decorative.

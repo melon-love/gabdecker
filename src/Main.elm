@@ -70,13 +70,15 @@ import GabDecker.Elements
         ( gray
         , heightImage
         , lightgray
+        , linkColor
+        , linkHoverColor
         , newTabLink
         , simpleImage
         , simpleLink
         )
 import GabDecker.Parsers as Parsers
 import GabDecker.Types as Types exposing (Feed, FeedGetter(..), FeedType(..))
-import Http
+import Http exposing (Error(..))
 import Iso8601
 import Json.Decode as JD exposing (Decoder, Value)
 import Json.Encode as JE
@@ -299,6 +301,13 @@ init flags url key =
                         Cmd.none
             , Task.perform getViewport Dom.getViewport
             , Task.perform Here Time.here
+            , case savedToken of
+                Nothing ->
+                    Cmd.none
+
+                Just st ->
+                    Http.send ReceiveLoggedInUser <|
+                        Gab.me st.token
             , Cmd.batch <|
                 List.map feedGetMore model.feeds
             ]
@@ -387,7 +396,7 @@ storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model,
 storageHandler response state model =
     case response of
         LocalStorage.GetResponse { key, value } ->
-            if key /= tokenKey then
+            if key /= tokenKey || model.backend /= Nothing then
                 model |> withNoCmd
 
             else
@@ -401,8 +410,11 @@ storageHandler response state model =
                                 { model | msg = Just <| JD.errorToString err }
                                     |> withNoCmd
 
-                            Ok savedToken ->
+                            Ok st ->
                                 let
+                                    savedToken =
+                                        { st | token = mungeToken st.token }
+
                                     backend =
                                         Just <|
                                             RealBackend savedToken.token
@@ -418,14 +430,47 @@ storageHandler response state model =
                                     , feeds = feeds
                                 }
                                     |> withCmds
-                                        [ Http.send ReceiveLoggedInUser <|
-                                            Gab.me savedToken.token
+                                        [ if model.backend == Nothing then
+                                            Cmd.none
+
+                                          else
+                                            Http.send ReceiveLoggedInUser <|
+                                                Gab.me savedToken.token
                                         , Cmd.batch <|
                                             List.map feedGetMore feeds
                                         ]
 
         _ ->
             model |> withNoCmd
+
+
+enableMungeToken : Bool
+enableMungeToken =
+    False
+
+
+{-| For testing bad token errors.
+
+Set `enableMungeToken` to `False` for delivery.
+
+-}
+mungeToken : Token -> Token
+mungeToken token =
+    if enableMungeToken then
+        OAuth.tokenToString token
+            |> (\s -> s ++ "x")
+            |> OAuth.tokenFromString
+            |> (\mt ->
+                    case mt of
+                        Nothing ->
+                            token
+
+                        Just t ->
+                            t
+               )
+
+    else
+        token
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -447,12 +492,18 @@ update msg model =
 
         ReceiveLoggedInUser result ->
             case result of
-                Err _ ->
-                    { model | msg = Just "Error getting logged-in user name." }
-                        |> withNoCmd
+                Err err ->
+                    let
+                        ( mdl, cmd ) =
+                            processReceivedError err model
+                    in
+                    { mdl
+                        | msg = Just "Error getting logged-in user name."
+                    }
+                        |> withCmd cmd
 
                 Ok user ->
-                    { model | loggedInUser = Just user.username }
+                    { model | loggedInUser = Debug.log "username" <| Just user.username }
                         |> withNoCmd
 
         PersistResponseToken token time ->
@@ -504,8 +555,41 @@ update msg model =
                             )
 
         ReceiveFeed feedType result ->
-            { model | feeds = updateFeeds feedType result model.feeds }
-                |> withNoCmd
+            let
+                ( mdl, cmd ) =
+                    case result of
+                        Err err ->
+                            case err.httpError of
+                                Just httpError ->
+                                    processReceivedError httpError model
+
+                                _ ->
+                                    model |> withNoCmd
+
+                        _ ->
+                            model |> withNoCmd
+            in
+            { mdl | feeds = updateFeeds feedType result mdl.feeds }
+                |> withCmd cmd
+
+
+processReceivedError : Http.Error -> Model -> ( Model, Cmd Msg )
+processReceivedError err model =
+    case err of
+        BadPayload _ _ ->
+            let
+                mdl =
+                    { model | backend = Nothing }
+            in
+            mdl
+                |> withCmd
+                    (localStorageSend
+                        (LocalStorage.put tokenKey Nothing)
+                        mdl
+                    )
+
+        _ ->
+            model |> withNoCmd
 
 
 updateFeeds : FeedType -> Result Api.Error ActivityLogList -> List (Feed Msg) -> List (Feed Msg)
@@ -916,7 +1000,10 @@ loginPage model =
             , row [ centerX ]
                 [ text "This is a work in progress." ]
             , row [ centerX ]
-                [ button []
+                [ button
+                    [ Font.color linkColor
+                    , Element.mouseOver [ Font.color linkHoverColor ]
+                    ]
                     { onPress = Just Login
                     , label = text "Login"
                     }

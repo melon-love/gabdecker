@@ -2,7 +2,6 @@
 
 This is a place to collect things left to do for GabDecker.
 
-* Handle bad saved token error by returning to login page.
 * Load more, reload.
 * Linked Group/Topic below data line.
 * Allow configuration of the columns.
@@ -11,6 +10,7 @@ This is a place to collect things left to do for GabDecker.
 * Open clicked image in overlay pane.
 * Link user image to profile page.
 * HTML elements, "`&amp;`" -> "`&`".
+* Single `<br />` -> multiple `row`s.
 * Add Notifications feed to `Gab` module, then add feed here.
 
 ## Bugs
