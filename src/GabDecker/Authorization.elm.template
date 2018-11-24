@@ -35,8 +35,8 @@ json =
   "authorizationUri": "https://api.gab.com/oauth/authorize",
   "tokenUri": "https://api.gab.com/oauth/token",
   "apiUri": "https://api.gab.com/v1.0/",
-  "clientId": "bf0ea35a-34d8-4a2a-8e83-43953cce83ac",
-  "redirectUri": "https://xossbow.com/oath/gab/",
+  "clientId": "your clientid",
+  "redirectUri": "your redirect uri",
   "scopes": {"Read": "read",
              "Notifications": "notifications",
              "Post": "write-post"
