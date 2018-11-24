@@ -27,6 +27,8 @@
 --
 -- Link user image to profile page.
 --
+-- HTML elements, "&amp;" -> "&".
+--
 -- There is still no API for getting comments or group or topic feeds,
 -- and posting still gets an error 429 (too many
 -- requests). @developers?
@@ -85,6 +87,7 @@ import Gab.Types
         , User
         )
 import GabDecker.Api as Api exposing (Backend(..))
+import GabDecker.Authorization as Auth
 import GabDecker.Elements
     exposing
         ( gray
@@ -152,7 +155,6 @@ type alias Model =
     , replyType : String
     , reply : Maybe Value
     , redirectBackUri : String
-    , authorization : Maybe Authorization
     , scopes : List String
     , receivedScopes : List String
     , tokenAuthorization : Maybe TokenAuthorization
@@ -171,7 +173,6 @@ type UploadingState
 type Msg
     = HandleUrlRequest UrlRequest
     | HandleUrlChange Url
-    | ReceiveAuthorization (Result Http.Error Authorization)
     | ReceiveLoggedInUser (Result Http.Error User)
     | PersistResponseToken ResponseToken Posix
     | ProcessLocalStorage Value
@@ -254,14 +255,24 @@ init flags url key =
         model =
             let
                 useSimulator =
-                    JE.encode 0 flags == "undefined"
+                    JE.encode 0 flags
+                        == "undefined"
+                        || Auth.useSimulator
 
-                backend =
+                redirectBackUri =
+                    locationToRedirectBackUri url
+
+                ( backend, authorization ) =
                     if useSimulator then
-                        Just SimulatedBackend
+                        ( Just SimulatedBackend, Nothing )
 
                     else
-                        Nothing
+                        case Auth.authorization redirectBackUri of
+                            Err _ ->
+                                ( Just SimulatedBackend, Nothing )
+
+                            Ok auth ->
+                                ( Nothing, Just auth )
             in
             { useSimulator = useSimulator
             , backend = backend
@@ -275,11 +286,10 @@ init flags url key =
             , loggedInUser = Nothing
             , replyType = "Token"
             , reply = reply
-            , redirectBackUri = locationToRedirectBackUri url
-            , authorization = Nothing
+            , redirectBackUri = redirectBackUri
             , scopes = scopes
             , receivedScopes = scopes
-            , tokenAuthorization = Nothing
+            , tokenAuthorization = authorization
             , username = "xossbow"
             , feeds =
                 feedTypesToFeeds
@@ -289,9 +299,7 @@ init flags url key =
     in
     model
         |> withCmds
-            [ Http.send ReceiveAuthorization <|
-                getAuthorization False "authorization.json"
-            , Navigation.replaceUrl key "#"
+            [ Navigation.replaceUrl key "#"
             , case token of
                 Just t ->
                     Task.perform (PersistResponseToken t) Time.now
@@ -420,28 +428,6 @@ storageHandler response state model =
             model |> withNoCmd
 
 
-{-| TODO: add checkboxes to UI to select scopes.
--}
-lookupProvider : Model -> Model
-lookupProvider model =
-    case model.authorization of
-        Nothing ->
-            model
-
-        Just auth ->
-            { model
-                | tokenAuthorization =
-                    Just
-                        { authorization = auth
-
-                        -- This will be overridden by the user checkboxes
-                        , scope = List.map Tuple.second <| Dict.toList auth.scopes
-                        , state = Nothing
-                        , redirectBackUri = model.redirectBackUri
-                        }
-            }
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -458,53 +444,6 @@ update msg model =
 
         HandleUrlChange url ->
             model |> withNoCmd
-
-        ReceiveAuthorization result ->
-            case result of
-                Err err ->
-                    { model | msg = Just <| Debug.toString err }
-                        |> withNoCmd
-
-                Ok authorization ->
-                    let
-                        ( replyType, reply ) =
-                            case ( model.reply, model.msg ) of
-                                ( Nothing, Nothing ) ->
-                                    ( "Authorization"
-                                    , Just <|
-                                        authorizationEncoder
-                                            { authorization
-                                                | clientId = "not telling"
-                                                , redirectUri = "don't ask"
-                                            }
-                                    )
-
-                                _ ->
-                                    ( model.replyType
-                                    , model.reply
-                                    )
-                    in
-                    lookupProvider
-                        { model
-                            | authorization = Just authorization
-                            , scopes =
-                                if model.token == Nothing then
-                                    List.map Tuple.second <| Dict.toList authorization.scopes
-
-                                else
-                                    model.scopes
-                            , replyType = replyType
-                            , reply = reply
-                        }
-                        |> withCmd
-                            (case model.token of
-                                Nothing ->
-                                    Cmd.none
-
-                                Just token ->
-                                    Http.send ReceiveLoggedInUser <|
-                                        Gab.me token.token
-                            )
 
         ReceiveLoggedInUser result ->
             case result of
@@ -548,8 +487,21 @@ update msg model =
             { model | here = zone } |> withNoCmd
 
         Login ->
-            -- TODO
-            model |> withNoCmd
+            case model.tokenAuthorization of
+                Nothing ->
+                    { model | msg = Just "Failure to parse authorization." }
+                        |> withNoCmd
+
+                Just authorization ->
+                    model
+                        |> withCmd
+                            (case authorize { authorization | scope = model.scopes } of
+                                Nothing ->
+                                    Cmd.none
+
+                                Just url ->
+                                    Navigation.load <| Url.toString url
+                            )
 
         ReceiveFeed feedType result ->
             { model | feeds = updateFeeds feedType result model.feeds }
@@ -656,9 +608,9 @@ fillWidth =
 mainPage : Model -> Element Msg
 mainPage model =
     row
-        [ fillWidth
-        , height Element.fill
+        [ height Element.fill
         , fontSize 1
+        , Border.widthEach { zeroes | right = 1 }
         ]
     <|
         List.map (feedColumn model.windowHeight model.here) model.feeds
@@ -707,8 +659,6 @@ feedColumn windowHeight here feed =
         , row []
             [ column
                 [ colw
-
-                -- This needs to be the adjusted window height, not 1024
                 , height <| px (windowHeight - headerHeight)
                 , Element.scrollbarX
                 ]

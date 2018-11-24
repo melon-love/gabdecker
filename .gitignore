@@ -1,4 +1,5 @@
 elm-stuff
+src/GabDecker/Authorization.elm
 site/authorization.json
 site/simulator.html
 site/elm.js

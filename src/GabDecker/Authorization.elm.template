@@ -1,0 +1,61 @@
+----------------------------------------------------------------------
+--
+-- Authorization.elm
+-- The Gab.Authorization instance for logging in
+-- This file must be copied to Authoriation.elm, and
+-- the `json` string filled in with your server information.
+-- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
+-- Some rights reserved.
+-- Distributed under the MIT License
+-- See LICENSE.txt
+--
+----------------------------------------------------------------------
+
+
+module GabDecker.Authorization exposing (authorization, useSimulator)
+
+import Json.Decode as JD
+import OAuthMiddleware exposing (Authorization)
+import OAuthMiddleware.EncodeDecode exposing (authorizationDecoder)
+
+
+{-| Set this true while debugging to always start in the simulator.
+-}
+useSimulator : Bool
+useSimulator =
+    False
+
+
+{-| Fill in your `clientId`, and `redirectUri` below
+-}
+json : String
+json =
+    """
+{ "name": "Gab",
+  "authorizationUri": "https://api.gab.com/oauth/authorize",
+  "tokenUri": "https://api.gab.com/oauth/token",
+  "apiUri": "https://api.gab.com/v1.0/",
+  "clientId": "bf0ea35a-34d8-4a2a-8e83-43953cce83ac",
+  "redirectUri": "https://xossbow.com/oath/gab/",
+  "scopes": {"Read": "read",
+             "Notifications": "notifications",
+             "Post": "write-post"
+            }
+}
+"""
+
+
+{-| This is used by Main.elm to login to the Gab API server.
+-}
+authorization : Result String Authorization
+authorization =
+    let
+        res =
+            JD.decodeString authorizationDecoder json
+    in
+    case res of
+        Ok auth ->
+            Ok auth
+
+        Err err ->
+            Err <| JD.errorToString err

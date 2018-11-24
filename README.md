@@ -2,11 +2,15 @@
 
 [GabDecker.com](https://gabdecker.com/) is a [TweetDeck](https://tweetdeck.twitter.com/)-like interface to [Gab.com](https://gab.com/).
 
-Other than persistence and file uploading, the code will run in `elm reactor`:
+Other than persistence and file uploading, the code will run in `elm reactor`. But you need to copy `src/GabDecker/Authorization.elm.template` to `src/GabDecker/Authorization.elm` and fill in your middleware server information.
 
 ```
 git clone git@github.com:melon-love/gabdecker.git
 cd gabdecker
+cp src/GabDecker/Authorization.elm.template \
+   src/GabDecker/Authorization.elm
+# Edit src/GabDecker/Authorization.elm
+# for your middleware server
 elm reactor
 ```
 
