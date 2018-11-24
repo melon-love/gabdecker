@@ -11,23 +11,16 @@
 --
 -- Near-term TODO list:
 --
--- Convert URLs and @<username> to links.
---
--- Enable login and live data.
---
+-- Handle bad saved token error by returning to login page.
+-- Load more, reload.
 -- Linked Group/Topic below data line.
---
 -- Allow configuration of the columns.
---
 -- Post / reply / quote / upvote / downvote / repost
---
--- Font size and column width.
---
+-- Font size and column width preferences.
 -- Open clicked image in overlay pane.
---
 -- Link user image to profile page.
---
 -- HTML elements, "&amp;" -> "&".
+-- Add Notifications feed to `Gab` module.
 --
 -- There is still no API for getting comments or group or topic feeds,
 -- and posting still gets an error 429 (too many
@@ -213,6 +206,11 @@ localStoragePrefix =
     "gab-api-example"
 
 
+initialFeeds : List FeedType
+initialFeeds =
+    [ HomeFeed, UserFeed "a", PopularFeed ]
+
+
 init : Value -> Url -> Key -> ( Model, Cmd Msg )
 init flags url key =
     let
@@ -255,9 +253,7 @@ init flags url key =
         model =
             let
                 useSimulator =
-                    JE.encode 0 flags
-                        == "undefined"
-                        || Auth.useSimulator
+                    Auth.useSimulator
 
                 redirectBackUri =
                     locationToRedirectBackUri url
@@ -272,7 +268,16 @@ init flags url key =
                                 ( Just SimulatedBackend, Nothing )
 
                             Ok auth ->
-                                ( Nothing, Just auth )
+                                let
+                                    be =
+                                        case savedToken of
+                                            Nothing ->
+                                                Nothing
+
+                                            Just st ->
+                                                Just <| RealBackend st.token
+                                in
+                                ( be, Just auth )
             in
             { useSimulator = useSimulator
             , backend = backend
@@ -292,9 +297,7 @@ init flags url key =
             , tokenAuthorization = authorization
             , username = "xossbow"
             , feeds =
-                feedTypesToFeeds
-                    [ HomeFeed, UserFeed "a", PopularFeed ]
-                    backend
+                feedTypesToFeeds initialFeeds backend
             }
     in
     model
@@ -415,14 +418,27 @@ storageHandler response state model =
                                     |> withNoCmd
 
                             Ok savedToken ->
-                                ( { model
+                                let
+                                    backend =
+                                        Just <|
+                                            RealBackend savedToken.token
+
+                                    feeds =
+                                        feedTypesToFeeds initialFeeds backend
+                                in
+                                { model
                                     | token = Just savedToken
                                     , scopes = savedToken.scope
                                     , receivedScopes = savedToken.scope
-                                  }
-                                , Http.send ReceiveLoggedInUser <|
-                                    Gab.me savedToken.token
-                                )
+                                    , backend = backend
+                                    , feeds = feeds
+                                }
+                                    |> withCmds
+                                        [ Http.send ReceiveLoggedInUser <|
+                                            Gab.me savedToken.token
+                                        , Cmd.batch <|
+                                            List.map feedGetMore feeds
+                                        ]
 
         _ ->
             model |> withNoCmd
