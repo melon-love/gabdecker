@@ -10,7 +10,7 @@ This is a place to collect things left to do for GabDecker.
 * Font size and column width preferences.
 * Open clicked image in overlay pane.
 * Link user image to profile page.
-* HTML elements, "&amp;" -> "&".
+* HTML elements, "`&amp;`" -> "`&`".
 * Add Notifications feed to `Gab` module, then add feed here.
 
 ## Bugs
