@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd site
+rsyncit -av --exclude authorization.json .

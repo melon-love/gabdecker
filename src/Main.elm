@@ -829,7 +829,8 @@ postRow cw here log =
                                 [ Element.clipY
                                 , paragraphPadding
                                 ]
-                                [ text post.body ]
+                              <|
+                                Parsers.parseElements post.body
                             ]
 
                         Just html ->
