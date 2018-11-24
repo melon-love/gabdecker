@@ -9,6 +9,28 @@
 --
 -- Search for TODO to see remaining work.
 --
+-- Near-term TODO list:
+--
+-- Convert URLs and @<username> to links.
+--
+-- Enable login and live data.
+--
+-- Linked Group/Topic below data line.
+--
+-- Allow configuration of the columns.
+--
+-- Post / reply / quote / upvote / downvote / repost
+--
+-- Font size and column width.
+--
+-- Open clicked image in overlay pane.
+--
+-- Link user image to profile page.
+--
+-- There is still no API for getting comments or group or topic feeds,
+-- and posting still gets an error 429 (too many
+-- requests). @developers?
+--
 ----------------------------------------------------------------------
 
 
@@ -72,6 +94,7 @@ import GabDecker.Elements
         , simpleImage
         , simpleLink
         )
+import GabDecker.Parsers as Parsers
 import GabDecker.Types as Types exposing (Feed, FeedGetter(..), FeedType(..))
 import Http
 import Iso8601
@@ -913,14 +936,8 @@ htmlBodyElements html =
         |> removeEmptyHead
         |> List.map (\s -> String.split "<br /><br />" s)
         |> List.concat
-        |> List.map parseLinks
+        |> List.map Parsers.parseElements
         |> List.map par
-
-
-parseLinks : String -> List (Element msg)
-parseLinks string =
-    text string
-        |> List.singleton
 
 
 loginPage : Model -> Element Msg
@@ -999,9 +1016,9 @@ spaceToken =
 dateString : Zone -> Posix -> String
 dateString =
     DF.format
-        [ DF.monthNameAbbreviated
+        [ DF.dayOfMonthNumber
         , spaceToken
-        , DF.dayOfMonthNumber
+        , DF.monthNameAbbreviated
         , spaceToken
         , DF.yearNumber
         ]

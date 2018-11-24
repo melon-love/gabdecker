@@ -12,12 +12,22 @@
 
 module GabDecker.Parsers exposing
     ( PartialParse(..)
+    , allOneParsers
+    , atUserOneParser
+    , atUserParser
+    , fullyParse
+    , htmlOneParser
+    , htmlParser
+    , multiParseString
+    , parseElements
+    , parseOne
     , parseString
     , subParse
     , subParseOne
+    , wrapPartialParses
     )
 
-import Element as E exposing (Element)
+import Element as E exposing (Element, text)
 import GabDecker.Elements
     exposing
         ( heightImage
@@ -25,7 +35,8 @@ import GabDecker.Elements
         , simpleImage
         , simpleLink
         )
-import Parser as P exposing (Parser)
+import Parser as P exposing ((|.), (|=), Parser, Step(..))
+import Set exposing (Set)
 
 
 type PartialParse a
@@ -34,11 +45,27 @@ type PartialParse a
 
 
 type alias OneParser a =
-    Parser ( String, a, String )
+    Parser ( String, Maybe a, String )
 
 
-fullyParse : (String -> a) -> List (PartialParse a) -> List a
-fullyParse wrapper parses =
+{-| This is the only function you'll probably ever need.
+
+The others are exported for testing in `elm repl`.
+
+-}
+parseElements : String -> List (Element msg)
+parseElements string =
+    fullyParse text allOneParsers string
+
+
+fullyParse : (String -> a) -> List (OneParser a) -> String -> List a
+fullyParse wrapper parsers string =
+    multiParseString parsers string
+        |> wrapPartialParses wrapper
+
+
+wrapPartialParses : (String -> a) -> List (PartialParse a) -> List a
+wrapPartialParses wrapper parses =
     let
         realize p =
             case p of
@@ -49,6 +76,18 @@ fullyParse wrapper parses =
                     a
     in
     List.map realize parses
+
+
+multiParseString : List (OneParser a) -> String -> List (PartialParse a)
+multiParseString parsers string =
+    case parsers of
+        [] ->
+            []
+
+        parser :: rest ->
+            List.foldl (\p res -> subParse p res)
+                (parseString parser string)
+                rest
 
 
 subParse : OneParser a -> List (PartialParse a) -> List (PartialParse a)
@@ -79,10 +118,16 @@ parseString parser string =
                     Err _ ->
                         List.reverse <| Unparsed s :: res
 
-                    Ok ( prefix, a, suffix ) ->
+                    Ok ( prefix, ma, suffix ) ->
                         loop suffix <|
                             List.concat
-                                [ if prefix == "" then
+                                [ case ma of
+                                    Nothing ->
+                                        []
+
+                                    Just a ->
+                                        [ Parsed a ]
+                                , if prefix == "" then
                                     []
 
                                   else
@@ -91,3 +136,99 @@ parseString parser string =
                                 ]
     in
     loop string []
+
+
+parseOne : Parser a -> Parser ( String, Maybe a, String )
+parseOne parser =
+    P.oneOf
+        [ P.succeed
+            (\start a end whole ->
+                ( String.slice 0 start whole
+                , a
+                , String.slice end (String.length whole) whole
+                )
+            )
+            |= P.getOffset
+            |= (parser |> P.andThen (\a -> P.succeed <| Just a))
+            |= P.getOffset
+            |= P.getSource
+        , P.chompIf (\_ -> True)
+            |> P.andThen
+                (\_ -> P.lazy (\_ -> parseOne parser))
+        , P.succeed (\source -> ( source, Nothing, "" ))
+            |= P.getSource
+        ]
+
+
+atUserParser : Parser (Element msg)
+atUserParser =
+    P.variable
+        { start = (==) '@'
+        , inner = \c -> c == '_' || Char.isAlphaNum c
+        , reserved = Set.empty
+        }
+        |> P.andThen
+            (\s ->
+                P.succeed <|
+                    newTabLink ("https://gab.com/" ++ String.dropLeft 1 s)
+                        s
+            )
+
+
+atUserOneParser : OneParser (Element msg)
+atUserOneParser =
+    parseOne atUserParser
+
+
+sharpParser : Parser (Element msg)
+sharpParser =
+    P.variable
+        { start = (==) '#'
+        , inner = \c -> c == '_' || Char.isAlphaNum c
+        , reserved = Set.empty
+        }
+        |> P.andThen
+            (\s ->
+                P.succeed <|
+                    newTabLink ("https://gab.com/hash/" ++ String.dropLeft 1 s)
+                        s
+            )
+
+
+sharpOneParser : OneParser (Element msg)
+sharpOneParser =
+    parseOne sharpParser
+
+
+htmlParser : Parser (Element msg)
+htmlParser =
+    (P.succeed String.slice
+        |= P.getOffset
+        |. P.symbol "http"
+        |. P.oneOf [ P.chompIf ((==) 's'), P.succeed () ]
+        |. P.symbol "://"
+        |. nonWhitespace
+        |= P.getOffset
+        |= P.getSource
+    )
+        |> P.andThen (\s -> P.succeed <| newTabLink s s)
+
+
+htmlOneParser : OneParser (Element msg)
+htmlOneParser =
+    parseOne htmlParser
+
+
+r : Char
+r =
+    Char.fromCode 0x0D
+
+
+allOneParsers : List (OneParser (Element msg))
+allOneParsers =
+    [ htmlOneParser, atUserOneParser, sharpOneParser ]
+
+
+nonWhitespace : Parser ()
+nonWhitespace =
+    P.chompWhile (\c -> not <| List.member c [ ' ', '\t', '\n', r ])
