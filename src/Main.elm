@@ -77,7 +77,14 @@ import GabDecker.Elements
         , simpleLink
         )
 import GabDecker.Parsers as Parsers
-import GabDecker.Types as Types exposing (Feed, FeedGetter(..), FeedType(..))
+import GabDecker.Types as Types
+    exposing
+        ( ApiError
+        , Feed
+        , FeedGetter(..)
+        , FeedType(..)
+        )
+import Html.Attributes
 import Http exposing (Error(..))
 import Iso8601
 import Json.Decode as JD exposing (Decoder, Value)
@@ -123,6 +130,9 @@ allScopes =
 type alias Model =
     { useSimulator : Bool
     , windowHeight : Int
+    , columnWidth : Int
+    , fontSize : Float
+    , maxPosts : Int
     , backend : Maybe Backend
     , key : Key
     , funnelState : PortFunnels.State
@@ -150,7 +160,8 @@ type UploadingState
 
 
 type Msg
-    = HandleUrlRequest UrlRequest
+    = NoOp
+    | HandleUrlRequest UrlRequest
     | HandleUrlChange Url
     | ReceiveLoggedInUser (Result Http.Error User)
     | PersistResponseToken ResponseToken Posix
@@ -158,7 +169,9 @@ type Msg
     | WindowResize Int Int
     | Here Zone
     | Login
-    | ReceiveFeed FeedType (Result Api.Error ActivityLogList)
+    | LoadMore String (Feed Msg)
+    | RefreshFeed FeedType (Result ApiError ActivityLogList)
+    | ReceiveFeed FeedType (Result ApiError ActivityLogList)
 
 
 {-| GitHub requires the "User-Agent" header.
@@ -269,6 +282,9 @@ init flags url key =
             , backend = backend
             , key = key
             , windowHeight = 1024
+            , columnWidth = defaultColumnWidth
+            , fontSize = defaultFontSize
+            , maxPosts = defaultMaxPosts
             , funnelState = PortFunnels.initialState localStoragePrefix
             , here = Time.utc
             , token = savedToken
@@ -283,7 +299,7 @@ init flags url key =
             , tokenAuthorization = authorization
             , username = "xossbow"
             , feeds =
-                feedTypesToFeeds initialFeeds backend
+                feedTypesToFeeds defaultColumnWidth initialFeeds backend
             }
     in
     model
@@ -322,24 +338,24 @@ getViewport viewport =
     WindowResize (round vp.width) (round vp.height)
 
 
-feedTypesToFeeds : List FeedType -> Maybe Backend -> List (Feed Msg)
-feedTypesToFeeds feedTypes maybeBackend =
+feedTypesToFeeds : Int -> List FeedType -> Maybe Backend -> List (Feed Msg)
+feedTypesToFeeds columnWidth feedTypes maybeBackend =
     case maybeBackend of
         Nothing ->
             []
 
         Just backend ->
-            List.map (feedTypeToFeed backend) feedTypes
+            List.map (feedTypeToFeed columnWidth backend) feedTypes
 
 
-columnWidth : Int
-columnWidth =
+defaultColumnWidth : Int
+defaultColumnWidth =
     250
 
 
-feedTypeToFeed : Backend -> FeedType -> Feed Msg
-feedTypeToFeed backend feedType =
-    { getter = Types.feedTypeToGetter feedType backend (ReceiveFeed feedType)
+feedTypeToFeed : Int -> Backend -> FeedType -> Feed Msg
+feedTypeToFeed columnWidth backend feedType =
+    { getter = Api.feedTypeToGetter feedType backend
     , feedType = feedType
     , description = feedTypeDescription feedType
     , feed = { data = [], no_more = False }
@@ -348,25 +364,25 @@ feedTypeToFeed backend feedType =
     }
 
 
-feedTypeDescription : FeedType -> String
+feedTypeDescription : FeedType -> Element Msg
 feedTypeDescription feedType =
     case feedType of
         HomeFeed ->
-            "Home"
+            newTabLink "https://gab.com/" "Home"
 
         UserFeed user ->
-            "User: " ++ user
+            newTabLink ("https://gab.com/" ++ user) <| "User: " ++ user
 
         -- Need to look up group name
         GroupFeed groupid ->
-            "Group: " ++ groupid
+            text <| "Group: " ++ groupid
 
         -- Need to look up topic name
-        TopicFeed groupid ->
-            "Topic: " ++ groupid
+        TopicFeed topicid ->
+            text <| "Topic: " ++ topicid
 
         PopularFeed ->
-            "Popular"
+            newTabLink "https://gab.com/popular" "Popular"
 
 
 feedGetMore : Feed Msg -> Cmd Msg
@@ -375,9 +391,13 @@ feedGetMore feed =
         Cmd.none
 
     else
+        let
+            receiver =
+                ReceiveFeed feed.feedType
+        in
         case feed.getter of
-            FeedGetter cmd ->
-                cmd
+            FeedGetter f ->
+                f receiver
 
             FeedGetterWithBefore f ->
                 let
@@ -389,7 +409,7 @@ feedGetMore feed =
                             Just log ->
                                 log.published_at
                 in
-                f before
+                f receiver before
 
 
 storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
@@ -420,7 +440,9 @@ storageHandler response state model =
                                             RealBackend savedToken.token
 
                                     feeds =
-                                        feedTypesToFeeds initialFeeds backend
+                                        feedTypesToFeeds model.columnWidth
+                                            initialFeeds
+                                            backend
                                 in
                                 { model
                                     | token = Just savedToken
@@ -476,6 +498,9 @@ mungeToken token =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        NoOp ->
+            model |> withNoCmd
+
         HandleUrlRequest request ->
             ( model
             , case request of
@@ -503,7 +528,7 @@ update msg model =
                         |> withCmd cmd
 
                 Ok user ->
-                    { model | loggedInUser = Debug.log "username" <| Just user.username }
+                    { model | loggedInUser = Just user.username }
                         |> withNoCmd
 
         PersistResponseToken token time ->
@@ -554,23 +579,58 @@ update msg model =
                                     Navigation.load <| Url.toString url
                             )
 
-        ReceiveFeed feedType result ->
-            let
-                ( mdl, cmd ) =
-                    case result of
-                        Err err ->
-                            case err.httpError of
-                                Just httpError ->
-                                    processReceivedError httpError model
+        LoadMore before feed ->
+            case feed.getter of
+                FeedGetter getter ->
+                    model |> withCmd (getter (RefreshFeed feed.feedType))
 
-                                _ ->
-                                    model |> withNoCmd
+                FeedGetterWithBefore getter ->
+                    let
+                        tagger =
+                            if before == "" then
+                                RefreshFeed
+
+                            else
+                                ReceiveFeed
+                    in
+                    model |> withCmd (getter (tagger feed.feedType) before)
+
+        RefreshFeed feedType result ->
+            receiveFeed True feedType result model
+
+        ReceiveFeed feedType result ->
+            receiveFeed False feedType result model
+
+
+receiveFeed : Bool -> FeedType -> Result ApiError ActivityLogList -> Model -> ( Model, Cmd Msg )
+receiveFeed scrollToTop feedType result model =
+    let
+        ( mdl, cmd ) =
+            case result of
+                Err err ->
+                    case err.httpError of
+                        Just httpError ->
+                            processReceivedError httpError model
 
                         _ ->
                             model |> withNoCmd
-            in
-            { mdl | feeds = updateFeeds feedType result mdl.feeds }
-                |> withCmd cmd
+
+                _ ->
+                    model |> withNoCmd
+    in
+    let
+        ( id, feeds ) =
+            updateFeeds model.maxPosts feedType result mdl.feeds
+    in
+    { mdl | feeds = feeds }
+        |> withCmds
+            [ cmd
+            , if scrollToTop && Debug.log "id" id /= "" then
+                Task.attempt (\_ -> NoOp) (Dom.setViewportOf id 0 0)
+
+              else
+                Cmd.none
+            ]
 
 
 processReceivedError : Http.Error -> Model -> ( Model, Cmd Msg )
@@ -592,30 +652,32 @@ processReceivedError err model =
             model |> withNoCmd
 
 
-updateFeeds : FeedType -> Result Api.Error ActivityLogList -> List (Feed Msg) -> List (Feed Msg)
-updateFeeds feedType result feeds =
+updateFeeds : Int -> FeedType -> Result ApiError ActivityLogList -> List (Feed Msg) -> ( String, List (Feed Msg) )
+updateFeeds maxPosts feedType result feeds =
     let
-        loop tail res =
+        loop i tail res =
             case tail of
                 [] ->
-                    List.reverse res
+                    ( "", List.reverse res )
 
                 feed :: rest ->
                     if feed.feedType == feedType then
-                        List.concat
+                        ( columnId i
+                        , List.concat
                             [ List.reverse res
-                            , [ updateFeed result feed ]
+                            , [ updateFeed maxPosts result feed ]
                             , rest
                             ]
+                        )
 
                     else
-                        loop rest (feed :: res)
+                        loop (i + 1) rest (feed :: res)
     in
-    loop feeds []
+    loop 0 feeds []
 
 
-updateFeed : Result Api.Error ActivityLogList -> Feed Msg -> Feed Msg
-updateFeed result feed =
+updateFeed : Int -> Result ApiError ActivityLogList -> Feed Msg -> Feed Msg
+updateFeed maxPosts result feed =
     case result of
         Err err ->
             { feed | error = Just err }
@@ -624,10 +686,88 @@ updateFeed result feed =
             { feed
                 | error = Nothing
                 , feed =
-                    { data = List.append feed.feed.data activities.data
+                    { data = mergeFeedData maxPosts activities.data feed
                     , no_more = activities.no_more
                     }
             }
+
+
+{-| (<same id>, <published\_at compare>)
+-}
+type alias PostOrder =
+    ( Bool, Order )
+
+
+merge : (a -> a -> PostOrder) -> List a -> List a -> List a
+merge comparef a b =
+    let
+        loop : List a -> List a -> List a -> List a
+        loop ar br res =
+            case ( ar, br ) of
+                ( [], _ ) ->
+                    List.concat [ List.reverse res, br ]
+
+                ( _, [] ) ->
+                    List.concat [ List.reverse res, ar ]
+
+                ( af :: atail, bf :: btail ) ->
+                    case comparef af bf of
+                        ( True, _ ) ->
+                            loop atail btail (af :: res)
+
+                        ( False, GT ) ->
+                            loop ar btail (bf :: res)
+
+                        _ ->
+                            loop atail br (af :: res)
+    in
+    loop a b []
+
+
+compareActivityLogs : ActivityLog -> ActivityLog -> PostOrder
+compareActivityLogs a b =
+    if a.id == b.id then
+        ( True, EQ )
+
+    else
+        let
+            pa =
+                a.published_at
+
+            pb =
+                b.published_at
+        in
+        if pa > pb then
+            ( False, LT )
+
+        else if pa == pb then
+            ( False, EQ )
+
+        else
+            ( False, GT )
+
+
+mergeFeedData : Int -> List ActivityLog -> Feed Msg -> List ActivityLog
+mergeFeedData maxPosts data feed =
+    case feed.feedType of
+        PopularFeed ->
+            data
+
+        _ ->
+            let
+                res =
+                    merge compareActivityLogs data feed.feed.data
+            in
+            case ( List.head data, List.head res ) of
+                ( Just d, Just r ) ->
+                    if d.id == r.id then
+                        List.take maxPosts res
+
+                    else
+                        res
+
+                _ ->
+                    res
 
 
 tokenKey : String
@@ -664,13 +804,18 @@ view model =
     }
 
 
-baseFontSize : Float
-baseFontSize =
+defaultMaxPosts : Int
+defaultMaxPosts =
+    100
+
+
+defaultFontSize : Float
+defaultFontSize =
     12
 
 
-fontSize : Float -> Element.Attr decorative msg
-fontSize scale =
+fontSize : Float -> Float -> Element.Attr decorative msg
+fontSize baseFontSize scale =
     Font.size <| round (scale * baseFontSize)
 
 
@@ -693,11 +838,14 @@ mainPage : Model -> Element Msg
 mainPage model =
     row
         [ height Element.fill
-        , fontSize 1
+        , fontSize model.fontSize 1
         , Border.widthEach { zeroes | right = 1 }
         ]
     <|
-        List.map (feedColumn model.windowHeight model.here) model.feeds
+        List.map2 (feedColumn model.windowHeight model.fontSize model.here)
+            model.feeds
+        <|
+            List.range 0 (List.length model.feeds - 1)
 
 
 zeroes =
@@ -710,13 +858,28 @@ zeroes =
 
 {-| 20 has no rhyme or reason other than it works.
 -}
-headerHeight : Int
-headerHeight =
+headerHeight : Float -> Int
+headerHeight baseFontSize =
     (round <| 1.5 * baseFontSize) + 20
 
 
-feedColumn : Int -> Zone -> Feed Msg -> Element Msg
-feedColumn windowHeight here feed =
+idAttribute : String -> Attribute msg
+idAttribute id =
+    Element.htmlAttribute <| Html.Attributes.id id
+
+
+columnId : Int -> String
+columnId idx =
+    "column" ++ String.fromInt idx
+
+
+columnIdAttribute : Int -> Attribute msg
+columnIdAttribute idx =
+    idAttribute <| columnId idx
+
+
+feedColumn : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
+feedColumn windowHeight baseFontSize here feed id =
     let
         colw =
             width <| px feed.columnWidth
@@ -733,23 +896,52 @@ feedColumn windowHeight here feed =
             [ column [ colw ]
                 [ row
                     [ padding 10
-                    , fontSize 1.5
+                    , fontSize baseFontSize 1.5
                     , Font.bold
                     , centerX
                     ]
-                    [ text feed.description ]
+                    [ standardButton
+                        (heightImage "images/refresh-arrow.svg" "refresh" 15)
+                        (LoadMore "" feed)
+                    , text " "
+                    , feed.description
+                    ]
                 ]
             ]
         , row []
             [ column
                 [ colw
-                , height <| px (windowHeight - headerHeight)
+                , height <| px (windowHeight - headerHeight baseFontSize)
+                , columnIdAttribute id
                 , Element.scrollbarX
                 ]
               <|
-                List.map (postRow feed.columnWidth here) feed.feed.data
+                List.concat
+                    [ List.map (postRow feed.columnWidth here) feed.feed.data
+                    , [ moreRow colw feed ]
+                    ]
             ]
         ]
+
+
+moreRow : Attribute Msg -> Feed Msg -> Element Msg
+moreRow colw feed =
+    if feed.feed.no_more then
+        text ""
+
+    else
+        case LE.last feed.feed.data of
+            Nothing ->
+                text ""
+
+            Just log ->
+                row
+                    [ centerX
+                    , padding 5
+                    ]
+                    [ textButton "Load More"
+                        (LoadMore log.published_at feed)
+                    ]
 
 
 userPadding : Attribute msg
@@ -977,15 +1169,19 @@ htmlBodyElements html =
 
 loginPage : Model -> Element Msg
 loginPage model =
+    let
+        baseFontSize =
+            model.fontSize
+    in
     row
         [ fillWidth
-        , fontSize 2
+        , fontSize baseFontSize 2
         ]
         [ column [ centerX, spacing 10 ]
             [ row
                 [ centerX
                 , padding 20
-                , fontSize 3
+                , fontSize baseFontSize 3
                 , Font.bold
                 ]
                 [ text "GabDecker" ]
@@ -1000,14 +1196,7 @@ loginPage model =
             , row [ centerX ]
                 [ text "This is a work in progress." ]
             , row [ centerX ]
-                [ button
-                    [ Font.color linkColor
-                    , Element.mouseOver [ Font.color linkHoverColor ]
-                    ]
-                    { onPress = Just Login
-                    , label = text "Login"
-                    }
-                ]
+                [ textButton "Login" Login ]
             , row [ centerX ]
                 [ simpleImage "images/deck-with-frog-671x425.jpg"
                     "Deck with Frog"
@@ -1018,7 +1207,7 @@ loginPage model =
             , row [ centerX ]
                 [ simpleLink "api/" "Gab API Explorer" ]
             , row [ centerX ]
-                [ column [ centerX, spacing 6, fontSize 1.5 ]
+                [ column [ centerX, spacing 6, fontSize baseFontSize 1.5 ]
                     [ row [ centerX ]
                         [ text <| copyright ++ " 2018 Bill St. Clair" ]
                     , row [ centerX ]
@@ -1029,6 +1218,25 @@ loginPage model =
                 ]
             ]
         ]
+
+
+standardButton : Element Msg -> Msg -> Element Msg
+standardButton label msg =
+    button
+        [ Font.color linkColor
+        , Element.mouseOver
+            [ Font.color linkHoverColor
+            , Background.color linkHoverColor
+            ]
+        ]
+        { onPress = Just msg
+        , label = label
+        }
+
+
+textButton : String -> Msg -> Element Msg
+textButton label msg =
+    standardButton (text label) msg
 
 
 iso8601ToString : Zone -> String -> String

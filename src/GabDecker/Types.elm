@@ -1,17 +1,29 @@
 module GabDecker.Types exposing
-    ( Feed
+    ( ApiError
+    , Feed
     , FeedGetter(..)
+    , FeedTagger
     , FeedType(..)
-    , feedTypeToGetter
     )
 
+import Element exposing (Element)
 import Gab.Types exposing (ActivityLogList)
-import GabDecker.Api as Api exposing (Backend)
+import Http
+
+
+type alias ApiError =
+    { httpError : Maybe Http.Error
+    , message : String
+    }
+
+
+type alias FeedTagger msg =
+    Result ApiError ActivityLogList -> msg
 
 
 type FeedGetter msg
-    = FeedGetterWithBefore (String -> Cmd msg)
-    | FeedGetter (Cmd msg)
+    = FeedGetterWithBefore (FeedTagger msg -> String -> Cmd msg)
+    | FeedGetter (FeedTagger msg -> Cmd msg)
 
 
 type FeedType
@@ -25,27 +37,8 @@ type FeedType
 type alias Feed msg =
     { getter : FeedGetter msg
     , feedType : FeedType
-    , description : String
+    , description : Element msg
     , feed : ActivityLogList
-    , error : Maybe Api.Error
+    , error : Maybe ApiError
     , columnWidth : Int
     }
-
-
-feedTypeToGetter : FeedType -> Backend -> (Result Api.Error ActivityLogList -> msg) -> FeedGetter msg
-feedTypeToGetter feedType backend tagger =
-    case feedType of
-        HomeFeed ->
-            FeedGetterWithBefore <| Api.homeFeed backend tagger
-
-        UserFeed username ->
-            FeedGetterWithBefore <| Api.userFeed backend tagger username
-
-        GroupFeed groupid ->
-            FeedGetterWithBefore <| Api.groupFeed backend tagger groupid
-
-        TopicFeed topicid ->
-            FeedGetterWithBefore <| Api.topicFeed backend tagger topicid
-
-        PopularFeed ->
-            FeedGetter <| Api.popularFeed backend tagger

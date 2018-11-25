@@ -2,7 +2,6 @@
 
 This is a place to collect things left to do for GabDecker.
 
-* Load more, reload.
 * Linked Group/Topic below data line.
 * Allow configuration of the columns.
 * Post / reply / quote / upvote / downvote / repost
