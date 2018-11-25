@@ -863,11 +863,11 @@ zeroes =
     }
 
 
-{-| 20 has no rhyme or reason other than it works.
+{-| 40 has no rhyme or reason other than it works.
 -}
 headerHeight : Float -> Int
 headerHeight baseFontSize =
-    (round <| 1.5 * baseFontSize) + 20
+    (round <| 1.5 * baseFontSize) + 40
 
 
 idAttribute : String -> Attribute msg
