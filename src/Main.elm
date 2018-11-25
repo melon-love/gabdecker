@@ -836,13 +836,17 @@ fillWidth =
     width Element.fill
 
 
+borderColor =
+    lightgray
+
+
 mainPage : Model -> Element Msg
 mainPage model =
     row
         [ height Element.fill
         , fontSize model.fontSize 1
         , Border.width 5
-        , Border.color lightgray
+        , Border.color borderColor
         ]
     <|
         List.map2 (feedColumn model.windowHeight model.fontSize model.here)
@@ -884,7 +888,7 @@ columnIdAttribute idx =
 columnBorderAttributes : List (Attribute msg)
 columnBorderAttributes =
     [ Border.width 5
-    , Border.color lightgray
+    , Border.color borderColor
     ]
 
 
@@ -906,7 +910,7 @@ feedColumn windowHeight baseFontSize here feed id =
         [ row
             [ fillWidth
             , Border.widthEach { zeroes | bottom = 1 }
-            , Border.color lightgray
+            , Border.color borderColor
             ]
             [ column [ colw ]
                 [ row
@@ -979,6 +983,11 @@ postBorder =
         }
 
 
+nameBottomPadding : Attribute msg
+nameBottomPadding =
+    Element.paddingEach { zeroes | bottom = 3 }
+
+
 postRow : Int -> Zone -> ActivityLog -> Element Msg
 postRow cw here log =
     let
@@ -986,7 +995,7 @@ postRow cw here log =
             5
 
         cwp =
-            cw - 2 * pad
+            cw - 2 * pad - 6
 
         colw =
             width <| px cwp
@@ -1011,7 +1020,7 @@ postRow cw here log =
     in
     row
         [ postBorder
-        , Border.color lightgray
+        , Border.color borderColor
         , fillWidth
         , padding pad
         ]
@@ -1024,7 +1033,7 @@ postRow cw here log =
                     [ colw
                     , userPadding
                     , Border.widthEach { zeroes | bottom = 1 }
-                    , Border.color lightgray
+                    , Border.color borderColor
                     ]
                     [ heightImage "images/refresh-arrow.svg" "refresh" 10
                     , newTabLink ("https://gab.com/" ++ actusername)
@@ -1039,14 +1048,34 @@ postRow cw here log =
                         [ heightImage user.picture_url username 40 ]
                     ]
                 , column []
-                    [ row [ Element.paddingEach { zeroes | bottom = 5 } ]
-                        [ text " "
-                        , text user.name
+                    [ row [ nameBottomPadding ]
+                        [ text user.name
                         , text " ("
                         , newTabLink ("https://gab.com/" ++ username) <|
                             embiggen username
                         , text ")"
                         ]
+                    , case post.group of
+                        Just { id, title } ->
+                            let
+                                url =
+                                    "http://gab.com/groups/" ++ id
+                            in
+                            row [ nameBottomPadding ]
+                                [ newTabLink url <| "Group: " ++ title ]
+
+                        _ ->
+                            case post.topic of
+                                Just { id, title } ->
+                                    let
+                                        url =
+                                            "http://gab.com/topic/" ++ id
+                                    in
+                                    row [ nameBottomPadding ]
+                                        [ newTabLink url <| "Topic: " ++ title ]
+
+                                _ ->
+                                    text ""
                     , let
                         url =
                             "https://gab.com/"

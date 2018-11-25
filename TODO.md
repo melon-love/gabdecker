@@ -2,7 +2,6 @@
 
 This is a place to collect things left to do for GabDecker.
 
-* Linked Group/Topic below data line.
 * Allow configuration of the columns.
 * Post / reply / quote / upvote / downvote / repost
 * Font size and column width preferences.
@@ -11,6 +10,7 @@ This is a place to collect things left to do for GabDecker.
 * HTML elements, "`&amp;`" -> "`&`".
 * Single `<br />` -> multiple `row`s.
 * Add Notifications feed to `Gab` module, then add feed here.
+* Auto-load more near end of scrolling a column.
 
 ## Bugs
 
