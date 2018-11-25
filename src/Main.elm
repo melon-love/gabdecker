@@ -1202,11 +1202,13 @@ htmlBodyElements html =
                 ]
                 elements
     in
-    -- Still have to deal with single <br />
+    -- may want to convert single <br/ > to row instead of paragraph.
     stringRemove "</p>" html
         |> String.split "<p>"
         |> removeEmptyHead
         |> List.map (\s -> String.split "<br /><br />" s)
+        |> List.concat
+        |> List.map (\s -> String.split "<br />" s)
         |> List.concat
         |> List.map Parsers.parseElements
         |> List.map par
