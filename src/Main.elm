@@ -350,7 +350,7 @@ feedTypesToFeeds columnWidth feedTypes maybeBackend =
 
 defaultColumnWidth : Int
 defaultColumnWidth =
-    250
+    350
 
 
 feedTypeToFeed : Int -> Backend -> FeedType -> Feed Msg
@@ -636,6 +636,8 @@ receiveFeed scrollToTop feedType result model =
 processReceivedError : Http.Error -> Model -> ( Model, Cmd Msg )
 processReceivedError err model =
     case err of
+        -- I don't know why we get BadPayload for a bad token, but we do.
+        -- Currently, this remove the saved token and forces a new login.
         BadPayload _ _ ->
             let
                 mdl =
@@ -811,7 +813,7 @@ defaultMaxPosts =
 
 defaultFontSize : Float
 defaultFontSize =
-    12
+    15
 
 
 fontSize : Float -> Float -> Element.Attr decorative msg
@@ -839,7 +841,8 @@ mainPage model =
     row
         [ height Element.fill
         , fontSize model.fontSize 1
-        , Border.widthEach { zeroes | right = 1 }
+        , Border.width 5
+        , Border.color lightgray
         ]
     <|
         List.map2 (feedColumn model.windowHeight model.fontSize model.here)
@@ -878,6 +881,13 @@ columnIdAttribute idx =
     idAttribute <| columnId idx
 
 
+columnBorderAttributes : List (Attribute msg)
+columnBorderAttributes =
+    [ Border.width 5
+    , Border.color lightgray
+    ]
+
+
 feedColumn : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
 feedColumn windowHeight baseFontSize here feed id =
     let
@@ -885,13 +895,18 @@ feedColumn windowHeight baseFontSize here feed id =
             width <| px feed.columnWidth
     in
     column
-        [ colw
-        , height Element.fill
-        , Border.width 1
-        ]
+        (List.concat
+            [ [ colw
+              , height Element.fill
+              , Border.width 5
+              ]
+            , columnBorderAttributes
+            ]
+        )
         [ row
             [ fillWidth
             , Border.widthEach { zeroes | bottom = 1 }
+            , Border.color lightgray
             ]
             [ column [ colw ]
                 [ row
@@ -996,6 +1011,7 @@ postRow cw here log =
     in
     row
         [ postBorder
+        , Border.color lightgray
         , fillWidth
         , padding pad
         ]
@@ -1008,7 +1024,7 @@ postRow cw here log =
                     [ colw
                     , userPadding
                     , Border.widthEach { zeroes | bottom = 1 }
-                    , Border.color gray
+                    , Border.color lightgray
                     ]
                     [ heightImage "images/refresh-arrow.svg" "refresh" 10
                     , newTabLink ("https://gab.com/" ++ actusername)
@@ -1051,13 +1067,7 @@ postRow cw here log =
                   <|
                     case post.body_html of
                         Nothing ->
-                            [ paragraph
-                                [ Element.clipY
-                                , paragraphPadding
-                                ]
-                              <|
-                                Parsers.parseElements post.body
-                            ]
+                            htmlBodyElements <| newlinesToPs post.body
 
                         Just html ->
                             htmlBodyElements html
@@ -1144,6 +1154,12 @@ removeEmptyHead strings =
 paragraphPadding : Attribute msg
 paragraphPadding =
     Element.paddingEach <| { zeroes | top = 4, bottom = 4 }
+
+
+newlinesToPs : String -> String
+newlinesToPs string =
+    String.split "\n" string
+        |> String.join "<p>"
 
 
 htmlBodyElements : String -> List (Element Msg)
