@@ -13,7 +13,7 @@ This is a place to collect things left to do for GabDecker.
 * Open clicked image in overlay pane.
 * Link user image to profile page.
 * HTML elements, "`&amp;`" -> "`&`".
-* <strong>foo</strong>, <blockquote>foo</blockquote>, italics
+* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, italics.
 * Single `<br />` -> multiple `row`s.
 * Add Notifications feed to `Gab` module, then add feed here.
 * Auto-load more near end of scrolling a column.
