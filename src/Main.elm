@@ -1069,11 +1069,11 @@ postRow cw here log =
                     ]
                 , column []
                     [ row [ nameBottomPadding ]
-                        [ text user.name
-                        , text " ("
-                        , newTabLink ("https://gab.com/" ++ username) <|
-                            embiggen username
-                        , text ")"
+                        [ newTabLink ("https://gab.com/" ++ username) <|
+                            user.name
+                                ++ " ("
+                                ++ embiggen username
+                                ++ ")"
                         ]
                     , case post.group of
                         Just { id, title } ->
@@ -1136,10 +1136,7 @@ postRow cw here log =
                     , Element.paddingEach { zeroes | left = 5, right = 5 }
                     , Background.color lightgray
                     ]
-                    [ if not post.is_quote then
-                        text ""
-
-                      else
+                    [ if post.is_quote then
                         case post.related of
                             RelatedPosts { parent } ->
                                 case parent of
@@ -1152,6 +1149,9 @@ postRow cw here log =
                                                 | post = parentPost
                                                 , type_ = "post"
                                             }
+
+                      else
+                        text ""
                     ]
                 ]
             ]
