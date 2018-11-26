@@ -1274,8 +1274,13 @@ loginPage model =
             , row [ centerX ]
                 [ simpleLink "api/" "Gab API Explorer" ]
             , row [ centerX ]
-                [ column [ centerX, spacing 6, fontSize baseFontSize 1.5 ]
+                [ column [ centerX, spacing 6, fontSize baseFontSize 1 ]
                     [ row [ centerX ]
+                        [ text "Icons by "
+                        , simpleLink "https://www.flaticon.com/authors/gregor-cresnar"
+                            "Gregor Cresnar"
+                        ]
+                    , row [ centerX ]
                         [ text <| copyright ++ " 2018 Bill St. Clair" ]
                     , row [ centerX ]
                         [ simpleLink "https://github.com/melon-love/gabdecker"
