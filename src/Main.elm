@@ -926,7 +926,10 @@ feedColumn windowHeight baseFontSize here feed id =
                     , centerX
                     ]
                     [ standardButton
-                        (heightImage "images/refresh-arrow.svg" "refresh" 15)
+                        (heightImage "images/reload.svg"
+                            "refresh"
+                            (round (4 * baseFontSize / 3))
+                        )
                         (LoadMore "" feed)
                     , text " "
                     , feed.description
