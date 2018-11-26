@@ -892,7 +892,7 @@ columnIdAttribute idx =
 
 columnBorderAttributes : List (Attribute msg)
 columnBorderAttributes =
-    [ Border.width 5
+    [ Border.width 3
     , Border.color borderColor
     ]
 

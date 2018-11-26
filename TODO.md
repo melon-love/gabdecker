@@ -12,8 +12,8 @@ This is a place to collect things left to do for GabDecker.
 * <strong>foo</strong>, <blockquote>foo</blockquote>, italics
 * Single `<br />` -> multiple `row`s.
 * Add Notifications feed to `Gab` module, then add feed here.
-* Eliminate horizontal scrolling of whole column.
 * Auto-load more near end of scrolling a column.
+* Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Dark mode
 
 ## Bugs
