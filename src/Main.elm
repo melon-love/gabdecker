@@ -1114,7 +1114,7 @@ postRow baseFontSize cw here log =
                 []
                 [ Element.textColumn
                     [ colw
-                    , paragraphLineSpacing baseFontSize
+                    , paragraphSpacing baseFontSize
                     ]
                   <|
                     case post.body_html of
@@ -1210,12 +1210,12 @@ paragraphPadding =
 
 paragraphSpacing : Float -> Attribute msg
 paragraphSpacing baseFontSize =
-    spacing <| round (3 * baseFontSize / 4)
+    spacing <| round (0.6 * baseFontSize)
 
 
 paragraphLineSpacing : Float -> Attribute msg
 paragraphLineSpacing baseFontSize =
-    spacing <| round (0.3 * baseFontSize)
+    spacing <| round (0.4 * baseFontSize)
 
 
 newlinesToPs : String -> String
