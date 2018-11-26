@@ -75,6 +75,7 @@ import GabDecker.Elements
         , newTabLink
         , simpleImage
         , simpleLink
+        , verylightgray
         )
 import GabDecker.Parsers as Parsers
 import GabDecker.Types as Types
@@ -840,6 +841,10 @@ borderColor =
     lightgray
 
 
+headerBackgroundColor =
+    verylightgray
+
+
 mainPage : Model -> Element Msg
 mainPage model =
     row
@@ -911,6 +916,7 @@ feedColumn windowHeight baseFontSize here feed id =
             [ fillWidth
             , Border.widthEach { zeroes | bottom = 1 }
             , Border.color borderColor
+            , Background.color headerBackgroundColor
             ]
             [ column [ colw ]
                 [ row
@@ -933,6 +939,7 @@ feedColumn windowHeight baseFontSize here feed id =
                 , height <| px (windowHeight - headerHeight baseFontSize)
                 , columnIdAttribute id
                 , Element.scrollbarX
+                , Element.clipX
                 ]
               <|
                 List.concat
@@ -956,9 +963,19 @@ moreRow colw feed =
             Just log ->
                 row
                     [ centerX
-                    , padding 5
+                    , Element.paddingEach
+                        { zeroes
+                            | top = 20
+                            , bottom = 20
+                            , left = 5
+                            , right = 5
+                        }
                     ]
-                    [ textButton "Load More"
+                    [ let
+                        nbsps =
+                            nbsp ++ nbsp ++ nbsp
+                      in
+                      textButton (nbsps ++ "Load More" ++ nbsps)
                         (LoadMore log.published_at feed)
                     ]
 
@@ -1272,8 +1289,7 @@ standardButton label msg =
     button
         [ Font.color linkColor
         , Element.mouseOver
-            [ Font.color linkHoverColor
-            , Background.color linkHoverColor
+            [ Background.color linkHoverColor
             ]
         ]
         { onPress = Just msg
@@ -1331,3 +1347,8 @@ timeString =
 copyright : String
 copyright =
     String.fromList [ Char.fromCode 0xA9 ]
+
+
+nbsp : String
+nbsp =
+    String.fromList [ Char.fromCode 0xA0 ]

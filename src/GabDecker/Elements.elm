@@ -27,6 +27,7 @@ module GabDecker.Elements exposing
     , simpleLink
     , styledLink
     , turquoise
+    , verylightgray
     , widthImage
     )
 
@@ -92,7 +93,12 @@ gray =
 
 lightgray : Color
 lightgray =
-    rgbi 0xF0 0xF0 0xF0
+    rgbi 0xE0 0xE0 0xE0
+
+
+verylightgray : Color
+verylightgray =
+    rgbi 0xF4 0xF4 0xF4
 
 
 linkColor =
