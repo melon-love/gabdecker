@@ -3,7 +3,6 @@
 This is a place to collect things left to do for GabDecker.
 
 * Allow configuration of the columns.
-* Increase line and paragraph spacing.
 * Post / reply / quote / upvote / downvote / repost
 * Font size and column width preferences.
 * Add Notifications feed to `Gab` module, then add feed here.

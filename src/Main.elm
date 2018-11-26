@@ -946,7 +946,8 @@ feedColumn windowHeight baseFontSize here feed id =
                 ]
               <|
                 List.concat
-                    [ List.map (postRow feed.columnWidth here) feed.feed.data
+                    [ List.map (postRow baseFontSize feed.columnWidth here)
+                        feed.feed.data
                     , [ moreRow colw feed ]
                     ]
             ]
@@ -1008,8 +1009,8 @@ nameBottomPadding =
     Element.paddingEach { zeroes | bottom = 3 }
 
 
-postRow : Int -> Zone -> ActivityLog -> Element Msg
-postRow cw here log =
+postRow : Float -> Int -> Zone -> ActivityLog -> Element Msg
+postRow baseFontSize cw here log =
     let
         pad =
             5
@@ -1112,14 +1113,16 @@ postRow cw here log =
             , row
                 []
                 [ Element.textColumn
-                    [ colw ]
+                    [ colw
+                    , paragraphLineSpacing baseFontSize
+                    ]
                   <|
                     case post.body_html of
                         Nothing ->
-                            htmlBodyElements <| newlinesToPs post.body
+                            htmlBodyElements baseFontSize <| newlinesToPs post.body
 
                         Just html ->
-                            htmlBodyElements html
+                            htmlBodyElements baseFontSize html
                 ]
             , row []
                 [ column [ colw ] <|
@@ -1144,7 +1147,7 @@ postRow cw here log =
                                         text ""
 
                                     Just parentPost ->
-                                        postRow (cwp - 10) here <|
+                                        postRow baseFontSize (cwp - 10) here <|
                                             { log
                                                 | post = parentPost
                                                 , type_ = "post"
@@ -1205,20 +1208,31 @@ paragraphPadding =
     Element.paddingEach <| { zeroes | top = 4, bottom = 4 }
 
 
+paragraphSpacing : Float -> Attribute msg
+paragraphSpacing baseFontSize =
+    spacing <| round (3 * baseFontSize / 4)
+
+
+paragraphLineSpacing : Float -> Attribute msg
+paragraphLineSpacing baseFontSize =
+    spacing <| round (0.3 * baseFontSize)
+
+
 newlinesToPs : String -> String
 newlinesToPs string =
     String.split "\n" string
         |> String.join "<p>"
 
 
-htmlBodyElements : String -> List (Element Msg)
-htmlBodyElements html =
+htmlBodyElements : Float -> String -> List (Element Msg)
+htmlBodyElements baseFontSize html =
     let
         par : List (Element Msg) -> Element Msg
         par elements =
             paragraph
                 [ Element.clipY
                 , paragraphPadding
+                , paragraphLineSpacing baseFontSize
                 ]
                 elements
     in
