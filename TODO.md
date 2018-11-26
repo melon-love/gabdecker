@@ -15,7 +15,7 @@ This is a place to collect things left to do for GabDecker.
 * Open clicked image in overlay pane.
 * Link user image to profile page.
 * HTML elements, "`&amp;`" -> "`&`".
-* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, italics.
+* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`, `<u>foo</u>`.
 * Single `<br />` -> multiple `row`s.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.

@@ -1215,7 +1215,7 @@ paragraphSpacing baseFontSize =
 
 paragraphLineSpacing : Float -> Attribute msg
 paragraphLineSpacing baseFontSize =
-    spacing <| round (0.4 * baseFontSize)
+    spacing <| round (1.0 * baseFontSize)
 
 
 newlinesToPs : String -> String
@@ -1232,7 +1232,9 @@ htmlBodyElements baseFontSize html =
             paragraph
                 [ Element.clipY
                 , paragraphPadding
-                , paragraphLineSpacing baseFontSize
+
+                -- This works nicely in Chrome, but not in other browsers.
+                --, paragraphLineSpacing baseFontSize
                 ]
                 elements
     in
