@@ -886,6 +886,11 @@ columnBorderAttributes =
     ]
 
 
+columnPadding : Int
+columnPadding =
+    10
+
+
 feedColumn : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
 feedColumn windowHeight baseFontSize here feed id =
     let
@@ -909,7 +914,7 @@ feedColumn windowHeight baseFontSize here feed id =
             ]
             [ column [ colw ]
                 [ row
-                    [ padding 10
+                    [ padding columnPadding
                     , fontSize baseFontSize 1.5
                     , Font.bold
                     , centerX
@@ -930,6 +935,11 @@ feedColumn windowHeight baseFontSize here feed id =
                 [ colw
                 , height <| px (windowHeight - headerHeight baseFontSize)
                 , columnIdAttribute id
+                , Element.paddingEach
+                    { zeroes
+                        | left = columnPadding
+                        , right = columnPadding
+                    }
                 , Element.scrollbarX
                 , Element.clipX
                 ]
@@ -1010,6 +1020,9 @@ postRow baseFontSize cw here log =
         colw =
             width <| px cwp
 
+        mediaw =
+            width <| px (cwp - 2 * columnPadding)
+
         post =
             log.post
 
@@ -1040,7 +1053,7 @@ postRow baseFontSize cw here log =
 
               else
                 row
-                    [ colw
+                    [ mediaw
                     , userPadding
                     , Border.widthEach { zeroes | bottom = 1 }
                     , Border.color styleColors.border
@@ -1051,9 +1064,13 @@ postRow baseFontSize cw here log =
                     ]
             , row
                 [ Font.bold
+                , mediaw
                 , userPadding
                 ]
-                [ column [ Element.paddingEach { zeroes | right = 5 } ]
+                [ column
+                    [ Element.paddingEach
+                        { zeroes | right = 5 }
+                    ]
                     [ row []
                         [ heightImage user.picture_url username 40 ]
                     ]
@@ -1102,7 +1119,7 @@ postRow baseFontSize cw here log =
             , row
                 []
                 [ Element.textColumn
-                    [ colw
+                    [ mediaw
                     , paragraphSpacing baseFontSize
                     ]
                   <|
@@ -1117,14 +1134,14 @@ postRow baseFontSize cw here log =
                 [ column [ colw ] <|
                     case post.attachment of
                         MediaAttachment records ->
-                            List.map (mediaRow colw) records
+                            List.map (mediaRow mediaw) records
 
                         _ ->
                             [ text "" ]
                 ]
             , row []
                 [ column
-                    [ colw
+                    [ mediaw
                     , Element.paddingEach { zeroes | left = 5, right = 5 }
                     , Background.color styleColors.quotedPost
                     ]
