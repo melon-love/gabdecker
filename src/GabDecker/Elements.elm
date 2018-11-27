@@ -13,21 +13,14 @@
 
 
 module GabDecker.Elements exposing
-    ( blue
-    , gray
-    , green
+    ( colors
     , heightImage
-    , lightBlue
-    , lightgray
-    , linkColor
-    , linkHoverColor
     , newTabLink
     , rgbi
     , simpleImage
     , simpleLink
+    , styleColors
     , styledLink
-    , turquoise
-    , verylightgray
     , widthImage
     )
 
@@ -66,47 +59,24 @@ rgbi r g b =
     Element.rgb (itou r) (itou g) (itou b)
 
 
-turquoise : Color
-turquoise =
-    rgbi 0 0xFF 0xFF
+colors =
+    { turquoise = rgbi 0 0xFF 0xFF
+    , green = rgbi 0 0xFF 0
+    , lightBlue = rgbi 0xAD 0xD8 0xE6
+    , blue = Element.rgb 0 0 1
+    , gray = rgbi 0x80 0x80 0x80
+    , lightgray = rgbi 0xE0 0xE0 0xE0
+    , verylightgray = rgbi 0xF4 0xF4 0xF4
+    }
 
 
-green : Color
-green =
-    rgbi 0 0xFF 0
-
-
-lightBlue : Color
-lightBlue =
-    rgbi 0xAD 0xD8 0xE6
-
-
-blue : Color
-blue =
-    Element.rgb 0 0 1
-
-
-gray : Color
-gray =
-    rgbi 0x80 0x80 0x80
-
-
-lightgray : Color
-lightgray =
-    rgbi 0xE0 0xE0 0xE0
-
-
-verylightgray : Color
-verylightgray =
-    rgbi 0xF4 0xF4 0xF4
-
-
-linkColor =
-    blue
-
-
-linkHoverColor =
-    lightBlue
+styleColors =
+    { link = colors.blue
+    , linkHover = colors.lightBlue
+    , border = colors.lightgray
+    , headerBackground = colors.verylightgray
+    , quotedPost = colors.lightgray
+    }
 
 
 {-| Color highlighting is temporary, until Font.underline becomes decorative.
@@ -120,8 +90,8 @@ styledLink newTab attributes url label =
         link
     )
         (List.concat
-            [ [ Font.color blue
-              , Element.mouseOver [ Font.color lightBlue ]
+            [ [ Font.color styleColors.link
+              , Element.mouseOver [ Font.color styleColors.linkHover ]
               ]
             , attributes
             ]

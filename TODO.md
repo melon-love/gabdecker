@@ -9,6 +9,7 @@ This is a place to collect things left to do for GabDecker.
 * Increase inter-row spacing in paragraphs.
   I tried to do this with `spacing`, as documented, and that works in Chrome,
   but not in Brave, Safari, or Firefox.
+* Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
 * Lookup user name for column header.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.

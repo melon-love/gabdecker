@@ -67,15 +67,12 @@ import GabDecker.Api as Api exposing (Backend(..))
 import GabDecker.Authorization as Auth
 import GabDecker.Elements
     exposing
-        ( gray
+        ( colors
         , heightImage
-        , lightgray
-        , linkColor
-        , linkHoverColor
         , newTabLink
         , simpleImage
         , simpleLink
-        , verylightgray
+        , styleColors
         )
 import GabDecker.Parsers as Parsers
 import GabDecker.Types as Types
@@ -837,21 +834,13 @@ fillWidth =
     width Element.fill
 
 
-borderColor =
-    lightgray
-
-
-headerBackgroundColor =
-    verylightgray
-
-
 mainPage : Model -> Element Msg
 mainPage model =
     row
         [ height Element.fill
         , fontSize model.fontSize 1
         , Border.width 5
-        , Border.color borderColor
+        , Border.color styleColors.border
         ]
     <|
         List.map2 (feedColumn model.windowHeight model.fontSize model.here)
@@ -893,7 +882,7 @@ columnIdAttribute idx =
 columnBorderAttributes : List (Attribute msg)
 columnBorderAttributes =
     [ Border.width 3
-    , Border.color borderColor
+    , Border.color styleColors.border
     ]
 
 
@@ -915,8 +904,8 @@ feedColumn windowHeight baseFontSize here feed id =
         [ row
             [ fillWidth
             , Border.widthEach { zeroes | bottom = 1 }
-            , Border.color borderColor
-            , Background.color headerBackgroundColor
+            , Border.color styleColors.border
+            , Background.color styleColors.headerBackground
             ]
             [ column [ colw ]
                 [ row
@@ -926,7 +915,7 @@ feedColumn windowHeight baseFontSize here feed id =
                     , centerX
                     ]
                     [ standardButton
-                        (heightImage "images/reload.svg"
+                        (heightImage icons.reload
                             "refresh"
                             (round (4 * baseFontSize / 3))
                         )
@@ -1041,7 +1030,7 @@ postRow baseFontSize cw here log =
     in
     row
         [ postBorder
-        , Border.color borderColor
+        , Border.color styleColors.border
         , fillWidth
         , padding pad
         ]
@@ -1054,9 +1043,9 @@ postRow baseFontSize cw here log =
                     [ colw
                     , userPadding
                     , Border.widthEach { zeroes | bottom = 1 }
-                    , Border.color borderColor
+                    , Border.color styleColors.border
                     ]
-                    [ heightImage "images/refresh-arrow.svg" "refresh" 10
+                    [ heightImage icons.refresh "refresh" 10
                     , newTabLink ("https://gab.com/" ++ actusername)
                         (" " ++ actuser.name ++ " reposted")
                     ]
@@ -1137,7 +1126,7 @@ postRow baseFontSize cw here log =
                 [ column
                     [ colw
                     , Element.paddingEach { zeroes | left = 5, right = 5 }
-                    , Background.color lightgray
+                    , Background.color styleColors.quotedPost
                     ]
                     [ if post.is_quote then
                         case post.related of
@@ -1318,9 +1307,9 @@ loginPage model =
 standardButton : Element Msg -> Msg -> Element Msg
 standardButton label msg =
     button
-        [ Font.color linkColor
+        [ Font.color styleColors.link
         , Element.mouseOver
-            [ Background.color linkHoverColor
+            [ Background.color styleColors.linkHover
             ]
         ]
         { onPress = Just msg
@@ -1383,3 +1372,19 @@ copyright =
 nbsp : String
 nbsp =
     String.fromList [ Char.fromCode 0xA0 ]
+
+
+icons =
+    { reload = "images/reload.svg"
+    , refresh = "images/refresh-arrow.svg"
+    , close = "images/cancel.svg"
+    , like = "images/like.svg"
+    , dislike = "images/dislike.svg"
+    , settings = "images/settings.svg"
+    , user = "images/avatar.svg"
+    , home = "images/house.svg"
+    , popular = "images/star.svg"
+    , notifications = "images/glasses.svg"
+    , next = "images/next-1.svg"
+    , previous = "images/back.svg"
+    }
