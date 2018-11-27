@@ -1215,13 +1215,15 @@ paragraphSpacing baseFontSize =
 
 paragraphLineSpacing : Float -> Attribute msg
 paragraphLineSpacing baseFontSize =
-    spacing <| round (1.0 * baseFontSize)
+    spacing <| round (0.4 * baseFontSize)
 
 
 newlinesToPs : String -> String
 newlinesToPs string =
-    String.split "\n" string
+    String.split "\n\n" string
         |> String.join "<p>"
+        |> String.split "\n"
+        |> String.join "<br />"
 
 
 htmlBodyElements : Float -> String -> List (Element Msg)
@@ -1239,15 +1241,20 @@ htmlBodyElements baseFontSize html =
                 elements
     in
     -- may want to convert single <br/ > to row instead of paragraph.
-    stringRemove "</p>" html
+    splitIntoParagraphs html
+        |> List.map Parsers.parseElements
+        |> List.map par
+
+
+splitIntoParagraphs : String -> List String
+splitIntoParagraphs string =
+    stringRemove "</p>" string
         |> String.split "<p>"
         |> removeEmptyHead
         |> List.map (\s -> String.split "<br /><br />" s)
         |> List.concat
         |> List.map (\s -> String.split "<br />" s)
         |> List.concat
-        |> List.map Parsers.parseElements
-        |> List.map par
 
 
 loginPage : Model -> Element Msg

@@ -4,8 +4,11 @@ This is a place to collect things left to do for GabDecker.
 
 * Allow configuration of the columns.
 * Post / reply / quote / upvote / downvote / repost
-* Font size and column width preferences.
 * Add Notifications feed to `Gab` module, then add feed here.
+* Font size and column width preferences.
+* Increase inter-row spacing in paragraphs.
+  I tried to do this with `spacing`, as documented, and that works in Chrome,
+  but not in Brave, Safari, or Firefox.
 * Lookup user name for column header.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.
@@ -21,6 +24,7 @@ This is a place to collect things left to do for GabDecker.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Visual signal that loading is in progress.
 * Dark mode
+* Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 
 ## Bugs
 
