@@ -30,6 +30,7 @@ import Element
         ( Attribute
         , Color
         , Element
+        , alignRight
         , centerX
         , column
         , el
@@ -132,6 +133,7 @@ allScopes =
 type alias Model =
     { showDialog : Bool
     , useSimulator : Bool
+    , windowWidth : Int
     , windowHeight : Int
     , columnWidth : Int
     , fontSize : Float
@@ -153,6 +155,7 @@ type alias Model =
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
     , feeds : List (Feed Msg)
+    , closedFeed : Maybe (Feed Msg)
     }
 
 
@@ -176,6 +179,7 @@ type Msg
     | Login
     | LoadMore String (Feed Msg)
     | LoadAll
+    | CloseFeed (Feed Msg)
     | ExpandNewFeed
     | RefreshFeed FeedType (Result ApiError ActivityLogList)
     | ReceiveFeed FeedType (Result ApiError ActivityLogList)
@@ -289,6 +293,7 @@ init flags url key =
             , useSimulator = useSimulator
             , backend = backend
             , key = key
+            , windowWidth = 1260
             , windowHeight = 1024
             , columnWidth = defaultColumnWidth
             , fontSize = defaultFontSize
@@ -309,6 +314,7 @@ init flags url key =
             , username = "xossbow"
             , feeds =
                 feedTypesToFeeds defaultColumnWidth initialFeeds backend
+            , closedFeed = Nothing
             }
     in
     model
@@ -568,8 +574,12 @@ update msg model =
                 Ok res ->
                     res
 
-        WindowResize _ h ->
-            { model | windowHeight = h } |> withNoCmd
+        WindowResize w h ->
+            { model
+                | windowWidth = w
+                , windowHeight = h
+            }
+                |> withNoCmd
 
         Here zone ->
             { model | here = zone } |> withNoCmd
@@ -596,6 +606,19 @@ update msg model =
 
         LoadAll ->
             loadAll model
+
+        CloseFeed feed ->
+            let
+                feedType =
+                    feed.feedType
+            in
+            { model
+                | feeds =
+                    List.filter (\f -> feedType /= f.feedType)
+                        model.feeds
+                , closedFeed = Just feed
+            }
+                |> withNoCmd
 
         ExpandNewFeed ->
             model |> withNoCmd
@@ -877,20 +900,45 @@ fillWidth =
 
 mainPage : Model -> Element Msg
 mainPage model =
+    let
+        ccw =
+            controlColumnWidth model.controlColumnState model.fontSize
+
+        contentWidth =
+            model.columnWidth * List.length model.feeds
+    in
     row
-        [ height Element.fill
-        , fontSize model.fontSize 1
-        , Border.width 5
+        [ fontSize model.fontSize 1
+        , Border.widthEach
+            { zeroes
+                | left = 5
+                , right =
+                    if [] == model.feeds then
+                        5
+
+                    else
+                        0
+            }
         , Border.color styleColors.border
         ]
-    <|
-        List.concat
-            [ [ controlColumn model ]
-            , List.map2 (feedColumn model.windowHeight model.fontSize model.here)
-                model.feeds
-              <|
-                List.range 0 (List.length model.feeds - 1)
+        [ column [ height Element.fill ]
+            -- 13? Don't know, but it works.
+            [ row [ height <| px (model.windowHeight - 13) ]
+                [ controlColumn ccw model
+                ]
             ]
+        , column []
+            [ row
+                [ Element.scrollbarY
+                , width <| px (min (model.windowWidth - ccw) contentWidth)
+                ]
+                (List.map2 (feedColumn model.windowHeight model.fontSize model.here)
+                    model.feeds
+                 <|
+                    List.range 0 (List.length model.feeds - 1)
+                )
+            ]
+        ]
 
 
 dialogConfig =
@@ -944,23 +992,17 @@ controlColumnWidth state baseFontSize =
             round (baseFontSize * 20)
 
 
-controlColumn : Model -> Element Msg
-controlColumn model =
+controlColumn : Int -> Model -> Element Msg
+controlColumn columnWidth model =
     let
-        baseFontSize =
-            model.fontSize
-
         state =
             model.controlColumnState
-
-        columnWidth =
-            controlColumnWidth state baseFontSize
 
         colw =
             width <| px columnWidth
 
         iconHeight =
-            userIconHeight baseFontSize
+            userIconHeight model.fontSize
     in
     column
         (List.concat
@@ -1052,6 +1094,9 @@ feedColumn windowHeight baseFontSize here feed id =
     let
         colw =
             width <| px feed.columnWidth
+
+        iconHeight =
+            userIconHeight baseFontSize
     in
     column
         (List.concat
@@ -1074,15 +1119,20 @@ feedColumn windowHeight baseFontSize here feed id =
                     , fontSize baseFontSize 1.5
                     , Font.bold
                     , centerX
+                    , width Element.fill
                     ]
-                    [ standardButton
-                        (heightImage icons.reload
-                            "Refresh"
-                            (userIconHeight baseFontSize)
+                    [ row [ centerX ]
+                        [ standardButton
+                            (heightImage icons.reload "Refresh" iconHeight)
+                            (LoadMore "" feed)
+                        , text " "
+                        , feed.description
+                        ]
+                    , el [ alignRight ]
+                        (standardButton
+                            (heightImage icons.close "Close" iconHeight)
+                            (CloseFeed feed)
                         )
-                        (LoadMore "" feed)
-                    , text " "
-                    , feed.description
                     ]
                 ]
             ]
