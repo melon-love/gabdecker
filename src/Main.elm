@@ -707,12 +707,29 @@ addNewFeed feedType model =
                             |> withNoCmd
 
                     Nothing ->
-                        addit
-                            (feedTypeToFeed model.loggedInUser
-                                model.columnWidth
-                                backend
-                                feedType
-                            )
+                        let
+                            blankUser =
+                                case feedType of
+                                    UserFeed username ->
+                                        username == ""
+
+                                    _ ->
+                                        False
+                        in
+                        if blankUser then
+                            { model
+                                | dialogError =
+                                    Just "Username may not be blank."
+                            }
+                                |> withNoCmd
+
+                        else
+                            addit
+                                (feedTypeToFeed model.loggedInUser
+                                    model.columnWidth
+                                    backend
+                                    feedType
+                                )
 
 
 loadAll : Model -> ( Model, Cmd Msg )
@@ -1063,7 +1080,7 @@ addFeedChoices model =
             findFeed PopularFeed model
 
         ( username, userFeed ) =
-            case Debug.log "loggedInUser" model.loggedInUser of
+            case model.loggedInUser of
                 Nothing ->
                     ( "", Nothing )
 
