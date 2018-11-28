@@ -857,12 +857,25 @@ pageTitle =
     "GabDecker"
 
 
+focusStyle : Element.Option
+focusStyle =
+    Element.focusStyle
+        { borderColor = Nothing
+        , backgroundColor = Nothing
+        , shadow = Nothing
+        }
+
+
 view : Model -> Document Msg
 view model =
     { title = pageTitle
     , body =
         [ bootstrap
-        , Element.layout [] <| pageBody model
+        , Element.layoutWith
+            { options = [ focusStyle ] }
+            []
+          <|
+            pageBody model
         , dialog model
         ]
     }
@@ -1531,9 +1544,7 @@ standardButton : Element Msg -> Msg -> Element Msg
 standardButton label msg =
     button
         [ Font.color styleColors.link
-        , Element.mouseOver
-            [ Background.color styleColors.linkHover
-            ]
+        , Element.mouseOver [ Background.color styleColors.linkHover ]
         ]
         { onPress = Just msg
         , label = label
