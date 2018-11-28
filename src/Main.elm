@@ -23,7 +23,6 @@ import Char
 import Cmd.Extra exposing (withCmd, withCmds, withNoCmd)
 import CustomElement.FileListener as File exposing (File)
 import DateFormat as DF
-import Dialog
 import Dict exposing (Dict)
 import Element
     exposing
@@ -32,6 +31,7 @@ import Element
         , Element
         , alignRight
         , centerX
+        , centerY
         , column
         , el
         , height
@@ -133,6 +133,7 @@ allScopes =
 
 type alias Model =
     { showDialog : Bool
+    , dialogError : Maybe String
     , useSimulator : Bool
     , windowWidth : Int
     , windowHeight : Int
@@ -294,6 +295,7 @@ init flags url key =
                                 ( be, Just auth )
             in
             { showDialog = False
+            , dialogError = Nothing
             , useSimulator = useSimulator
             , backend = backend
             , key = key
@@ -378,7 +380,7 @@ feedTypeToFeed username columnWidth backend feedType =
     let
         ft =
             if feedType == LoggedInUserFeed then
-                case Debug.log "loggedInUser" username of
+                case username of
                     Nothing ->
                         feedType
 
@@ -492,7 +494,7 @@ storageHandler response state model =
                                     , feeds = feeds
                                 }
                                     |> withCmds
-                                        [ if model.backend == Nothing then
+                                        [ if backend == Nothing then
                                             Cmd.none
 
                                           else
@@ -542,7 +544,11 @@ update msg model =
             model |> withNoCmd
 
         CloseDialog ->
-            { model | showDialog = False } |> withNoCmd
+            { model
+                | showDialog = False
+                , dialogError = Nothing
+            }
+                |> withNoCmd
 
         HandleUrlRequest request ->
             ( model
@@ -648,6 +654,7 @@ update msg model =
         AddFeed ->
             { model
                 | showDialog = True
+                , dialogError = Nothing
                 , addedUserFeedName = ""
             }
                 |> withNoCmd
@@ -672,6 +679,7 @@ addNewFeed feedType model =
             { model
                 | feeds = List.concat [ model.feeds, [ feed ] ]
                 , showDialog = False
+                , dialogError = Nothing
                 , lastClosedFeed = Nothing
             }
                 |> withCmd (feedGetMore feed)
@@ -690,12 +698,21 @@ addNewFeed feedType model =
                 model |> withNoCmd
 
             Just backend ->
-                addit
-                    (feedTypeToFeed model.loggedInUser
-                        model.columnWidth
-                        backend
-                        feedType
-                    )
+                case findFeed feedType model of
+                    Just _ ->
+                        { model
+                            | dialogError =
+                                Just "That feed is already displayed."
+                        }
+                            |> withNoCmd
+
+                    Nothing ->
+                        addit
+                            (feedTypeToFeed model.loggedInUser
+                                model.columnWidth
+                                backend
+                                feedType
+                            )
 
 
 loadAll : Model -> ( Model, Cmd Msg )
@@ -754,7 +771,7 @@ receiveFeed scrollToTop feedType result model =
     { mdl | feeds = feeds }
         |> withCmds
             [ cmd
-            , if scrollToTop && Debug.log "id" id /= "" then
+            , if scrollToTop && id /= "" then
                 Task.attempt (\_ -> NoOp) (Dom.setViewportOf id 0 0)
 
               else
@@ -939,15 +956,21 @@ focusStyle =
 
 view : Model -> Document Msg
 view model =
+    let
+        body =
+            pageBody model
+    in
     { title = pageTitle
     , body =
-        [ bootstrap
-        , Element.layoutWith
+        [ Element.layoutWith
             { options = [ focusStyle ] }
-            []
-          <|
-            pageBody model
-        , dialog model
+            (if model.showDialog then
+                [ Element.inFront <| dialog model ]
+
+             else
+                []
+            )
+            body
         ]
     }
 
@@ -1008,7 +1031,7 @@ mainPage model =
         [ column [ height Element.fill ]
             -- 13? Don't know, but it works.
             [ row [ height <| px (model.windowHeight - 13) ]
-                [ controlColumn ccw model
+                [ controlColumn ccw model -- Doesn't work in Brave or Safari
                 ]
             ]
         , column []
@@ -1040,7 +1063,7 @@ addFeedChoices model =
             findFeed PopularFeed model
 
         ( username, userFeed ) =
-            case model.loggedInUser of
+            case Debug.log "loggedInUser" model.loggedInUser of
                 Nothing ->
                     ( "", Nothing )
 
@@ -1081,38 +1104,41 @@ addFeedChoices model =
         ]
 
 
-addFeedBody : Model -> Element Msg
-addFeedBody model =
+dialog : Model -> Element Msg
+dialog model =
     let
         iconHeight =
             userIconHeight model.fontSize
 
         addButton feedType =
             el [ Font.size <| 7 * iconHeight // 4 ] <|
-                standardButton (text "+")
+                textButton "+"
                     "Add Feed"
                     (AddNewFeed feedType)
 
         addUserFeedRow =
-            { element =
-                row []
-                    [ el [ Font.bold ] <| text "User "
-                    , Input.text [ width <| px 200 ]
-                        { onChange = AddedUserFeedName
-                        , text = model.addedUserFeedName
-                        , placeholder =
-                            Just <|
-                                Input.placeholder []
-                                    (text "username")
-                        , label = Input.labelHidden "User Feed Name"
-                        }
-                    ]
-            , feedType = UserFeed model.addedUserFeedName
+            { label = "User: "
+            , element =
+                Input.text [ width <| px 200 ]
+                    { onChange = AddedUserFeedName
+                    , text = model.addedUserFeedName
+                    , placeholder =
+                        Just <|
+                            Input.placeholder []
+                                (text "username")
+                    , label = Input.labelHidden "User Feed Name"
+                    }
+            , feedType = Just <| UserFeed model.addedUserFeedName
             }
 
         makeRow ( label, feedType ) =
-            { element = el [ Font.bold ] (text <| label ++ " Feed")
-            , feedType = feedType
+            { label = ""
+            , element =
+                el [ Font.bold ] <|
+                    textButton label
+                        "Add Feed"
+                        (AddNewFeed feedType)
+            , feedType = Nothing
             }
 
         choices =
@@ -1121,19 +1147,69 @@ addFeedBody model =
         data =
             addUserFeedRow :: List.map makeRow choices
     in
-    Element.table [ spacing 10, centerX ]
-        { data = data
-        , columns =
-            [ { header = text ""
-              , width = Element.fill
-              , view = \x -> x.element
-              }
-            , { header = text ""
-              , width = Element.fill
-              , view = \x -> addButton x.feedType
-              }
+    column
+        [ Border.width 5
+        , centerX
+        , centerY
+        , Background.color colors.white
+        , Element.paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
+        ]
+        [ row [ width Element.fill ]
+            [ row
+                [ centerX
+                , centerY
+                , Font.bold
+                , fontSize model.fontSize 1.5
+                ]
+                [ text "Add Feed" ]
+            , el [ alignRight ]
+                (standardButton
+                    (heightImage icons.close "Close" iconHeight)
+                    "Close Feed"
+                    CloseDialog
+                )
             ]
-        }
+        , case model.dialogError of
+            Nothing ->
+                text ""
+
+            Just err ->
+                row
+                    [ Element.paddingEach { zeroes | top = 10 }
+                    , Font.color colors.red
+                    ]
+                    [ text err ]
+        , row []
+            [ Element.table
+                [ spacing 10, centerX ]
+                { data = data
+                , columns =
+                    [ { header = text ""
+                      , width = Element.shrink
+                      , view =
+                            \x ->
+                                el [ Font.bold, Element.centerY ]
+                                    (text x.label)
+                      }
+                    , { header = text ""
+                      , width = Element.shrink
+                      , view = \x -> x.element
+                      }
+                    , { header = text ""
+                      , width = Element.shrink
+                      , view =
+                            \x ->
+                                case x.feedType of
+                                    Nothing ->
+                                        text ""
+
+                                    Just ft ->
+                                        addButton ft
+                      }
+                    ]
+                }
+            ]
+        ]
 
 
 addFeedHeader : Model -> Element Msg
@@ -1154,36 +1230,6 @@ okButton =
         , onClick CloseDialog
         ]
         [ Html.text "OK" ]
-
-
-dialogConfig : Model -> Dialog.Config Msg
-dialogConfig model =
-    { closeMessage = Just CloseDialog
-    , containerClass = Nothing
-    , header = Just (Element.layout [] <| addFeedHeader model)
-    , body = Just (Element.layout [] <| addFeedBody model)
-    , footer = Nothing
-    }
-
-
-bootstrap : Html msg
-bootstrap =
-    Html.node "link"
-        [ href "css/bootstrap.min.css"
-        , rel "stylesheet"
-        ]
-        []
-
-
-dialog : Model -> Html Msg
-dialog model =
-    Dialog.view
-        (if model.showDialog then
-            Just <| dialogConfig model
-
-         else
-            Nothing
-        )
 
 
 type ExpandedState
