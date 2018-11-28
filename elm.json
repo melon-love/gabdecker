@@ -7,6 +7,7 @@
     "dependencies": {
         "direct": {
             "Janiczek/cmd-extra": "1.0.0",
+            "alex-tan/elm-dialog": "1.0.0",
             "billstclair/elm-custom-element": "1.2.0",
             "billstclair/elm-localstorage": "6.0.3",
             "billstclair/elm-oauth-middleware": "2.0.1",
@@ -32,6 +33,7 @@
             "elm/regex": "1.0.0",
             "elm/virtual-dom": "1.0.2",
             "elm-community/dict-extra": "2.4.0",
+            "etaque/elm-response": "3.1.0",
             "truqu/elm-base64": "2.0.4"
         }
     },

@@ -23,6 +23,7 @@ import Char
 import Cmd.Extra exposing (withCmd, withCmds, withNoCmd)
 import CustomElement.FileListener as File exposing (File)
 import DateFormat as DF
+import Dialog
 import Dict exposing (Dict)
 import Element
     exposing
@@ -73,6 +74,7 @@ import GabDecker.Elements
         , simpleImage
         , simpleLink
         , styleColors
+        , widthImage
         )
 import GabDecker.Parsers as Parsers
 import GabDecker.Types as Types
@@ -82,7 +84,9 @@ import GabDecker.Types as Types
         , FeedGetter(..)
         , FeedType(..)
         )
-import Html.Attributes
+import Html exposing (Html)
+import Html.Attributes exposing (class, href, rel)
+import Html.Events exposing (onClick)
 import Http exposing (Error(..))
 import Iso8601
 import Json.Decode as JD exposing (Decoder, Value)
@@ -126,7 +130,8 @@ allScopes =
 
 
 type alias Model =
-    { useSimulator : Bool
+    { showDialog : Bool
+    , useSimulator : Bool
     , windowHeight : Int
     , columnWidth : Int
     , fontSize : Float
@@ -134,6 +139,7 @@ type alias Model =
     , backend : Maybe Backend
     , key : Key
     , funnelState : PortFunnels.State
+    , controlColumnState : ExpandedState
     , here : Zone
     , token : Maybe SavedToken
     , state : Maybe String
@@ -159,6 +165,7 @@ type UploadingState
 
 type Msg
     = NoOp
+    | CloseDialog
     | HandleUrlRequest UrlRequest
     | HandleUrlChange Url
     | ReceiveLoggedInUser (Result Http.Error User)
@@ -168,6 +175,8 @@ type Msg
     | Here Zone
     | Login
     | LoadMore String (Feed Msg)
+    | LoadAll
+    | ExpandNewFeed
     | RefreshFeed FeedType (Result ApiError ActivityLogList)
     | ReceiveFeed FeedType (Result ApiError ActivityLogList)
 
@@ -276,7 +285,8 @@ init flags url key =
                                 in
                                 ( be, Just auth )
             in
-            { useSimulator = useSimulator
+            { showDialog = False
+            , useSimulator = useSimulator
             , backend = backend
             , key = key
             , windowHeight = 1024
@@ -284,6 +294,7 @@ init flags url key =
             , fontSize = defaultFontSize
             , maxPosts = defaultMaxPosts
             , funnelState = PortFunnels.initialState localStoragePrefix
+            , controlColumnState = ContractedState
             , here = Time.utc
             , token = savedToken
             , state = state
@@ -499,6 +510,9 @@ update msg model =
         NoOp ->
             model |> withNoCmd
 
+        CloseDialog ->
+            { model | showDialog = False } |> withNoCmd
+
         HandleUrlRequest request ->
             ( model
             , case request of
@@ -578,26 +592,49 @@ update msg model =
                             )
 
         LoadMore before feed ->
-            case feed.getter of
-                FeedGetter getter ->
-                    model |> withCmd (getter (RefreshFeed feed.feedType))
+            loadMore before feed model
 
-                FeedGetterWithBefore getter ->
-                    let
-                        tagger =
-                            if before == "" then
-                                RefreshFeed
+        LoadAll ->
+            loadAll model
 
-                            else
-                                ReceiveFeed
-                    in
-                    model |> withCmd (getter (tagger feed.feedType) before)
+        ExpandNewFeed ->
+            model |> withNoCmd
 
         RefreshFeed feedType result ->
             receiveFeed True feedType result model
 
         ReceiveFeed feedType result ->
             receiveFeed False feedType result model
+
+
+loadAll : Model -> ( Model, Cmd Msg )
+loadAll model =
+    let
+        getone feed res =
+            (loadMore "" feed model
+                |> Tuple.second
+            )
+                :: res
+    in
+    model |> withCmds (List.foldr getone [] model.feeds)
+
+
+loadMore : String -> Feed Msg -> Model -> ( Model, Cmd Msg )
+loadMore before feed model =
+    case feed.getter of
+        FeedGetter getter ->
+            model |> withCmd (getter (RefreshFeed feed.feedType))
+
+        FeedGetterWithBefore getter ->
+            let
+                tagger =
+                    if before == "" then
+                        RefreshFeed
+
+                    else
+                        ReceiveFeed
+            in
+            model |> withCmd (getter (tagger feed.feedType) before)
 
 
 receiveFeed : Bool -> FeedType -> Result ApiError ActivityLogList -> Model -> ( Model, Cmd Msg )
@@ -800,7 +837,11 @@ pageTitle =
 view : Model -> Document Msg
 view model =
     { title = pageTitle
-    , body = [ Element.layout [] <| pageBody model ]
+    , body =
+        [ bootstrap
+        , Element.layout [] <| pageBody model
+        , dialog model
+        ]
     }
 
 
@@ -843,10 +884,111 @@ mainPage model =
         , Border.color styleColors.border
         ]
     <|
-        List.map2 (feedColumn model.windowHeight model.fontSize model.here)
-            model.feeds
-        <|
-            List.range 0 (List.length model.feeds - 1)
+        List.concat
+            [ [ controlColumn model ]
+            , List.map2 (feedColumn model.windowHeight model.fontSize model.here)
+                model.feeds
+              <|
+                List.range 0 (List.length model.feeds - 1)
+            ]
+
+
+dialogConfig =
+    { closeMessage = Just CloseDialog
+    , containerClass = Nothing
+    , header = Just (Html.text "Dialog")
+    , body = Just (Html.text "Hello World!")
+    , footer =
+        Just
+            (Html.button
+                [ class "btn btn-success"
+                , onClick CloseDialog
+                ]
+                [ Html.text "OK" ]
+            )
+    }
+
+
+bootstrap : Html msg
+bootstrap =
+    Html.node "link"
+        [ href "css/bootstrap.min.css"
+        , rel "stylesheet"
+        ]
+        []
+
+
+dialog : Model -> Html Msg
+dialog model =
+    Dialog.view
+        (if model.showDialog then
+            Just dialogConfig
+
+         else
+            Nothing
+        )
+
+
+type ExpandedState
+    = ContractedState
+    | ExpandedState
+
+
+controlColumnWidth : ExpandedState -> Float -> Int
+controlColumnWidth state baseFontSize =
+    case state of
+        ContractedState ->
+            userIconHeight baseFontSize + 2 * columnPadding
+
+        ExpandedState ->
+            round (baseFontSize * 20)
+
+
+controlColumn : Model -> Element Msg
+controlColumn model =
+    let
+        baseFontSize =
+            model.fontSize
+
+        state =
+            model.controlColumnState
+
+        columnWidth =
+            controlColumnWidth state baseFontSize
+
+        colw =
+            width <| px columnWidth
+
+        iconHeight =
+            userIconHeight baseFontSize
+    in
+    column
+        (List.concat
+            [ [ colw
+              , height Element.fill
+              , padding columnPadding
+              , Border.widthEach
+                    { zeroes
+                        | top = columnBorderWidth
+                        , bottom = columnBorderWidth
+                    }
+              , Background.color styleColors.headerBackground
+              , spacing 10
+              ]
+            , columnBorderAttributes True
+            ]
+        )
+        [ row [ centerX ]
+            [ standardButton
+                (widthImage icons.reload "Refresh" iconHeight)
+                LoadAll
+            ]
+        , row
+            [ Font.size <| 7 * iconHeight // 4
+            , centerX
+            ]
+            [ standardButton (text "+") ExpandNewFeed ]
+        ]
 
 
 zeroes =
@@ -879,9 +1021,13 @@ columnIdAttribute idx =
     idAttribute <| columnId idx
 
 
-columnBorderAttributes : List (Attribute msg)
-columnBorderAttributes =
-    [ Border.width 3
+columnBorderAttributes : Bool -> List (Attribute msg)
+columnBorderAttributes isControlColumn =
+    [ if isControlColumn then
+        Border.widthEach { zeroes | top = 3, bottom = 3 }
+
+      else
+        Border.width 3
     , Border.color styleColors.border
     ]
 
@@ -889,6 +1035,16 @@ columnBorderAttributes =
 columnPadding : Int
 columnPadding =
     10
+
+
+userIconHeight : Float -> Int
+userIconHeight baseFontSize =
+    round (4 * baseFontSize / 3)
+
+
+columnBorderWidth : Int
+columnBorderWidth =
+    5
 
 
 feedColumn : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
@@ -901,9 +1057,9 @@ feedColumn windowHeight baseFontSize here feed id =
         (List.concat
             [ [ colw
               , height Element.fill
-              , Border.width 5
+              , Border.width columnBorderWidth
               ]
-            , columnBorderAttributes
+            , columnBorderAttributes False
             ]
         )
         [ row
@@ -921,8 +1077,8 @@ feedColumn windowHeight baseFontSize here feed id =
                     ]
                     [ standardButton
                         (heightImage icons.reload
-                            "refresh"
-                            (round (4 * baseFontSize / 3))
+                            "Refresh"
+                            (userIconHeight baseFontSize)
                         )
                         (LoadMore "" feed)
                     , text " "
