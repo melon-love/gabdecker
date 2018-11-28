@@ -49,7 +49,8 @@ import Element
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Element.Input exposing (button)
+import Element.Input as Input exposing (button)
+import Element.Lazy as Lazy
 import Gab
 import Gab.EncodeDecode as ED
 import Gab.Types
@@ -154,8 +155,9 @@ type alias Model =
     , receivedScopes : List String
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
+    , addedUserFeedName : String
     , feeds : List (Feed Msg)
-    , closedFeed : Maybe (Feed Msg)
+    , lastClosedFeed : Maybe (Feed Msg)
     }
 
 
@@ -181,6 +183,8 @@ type Msg
     | LoadAll
     | CloseFeed (Feed Msg)
     | AddFeed
+    | AddedUserFeedName String
+    | AddNewFeed FeedType
     | RefreshFeed FeedType (Result ApiError ActivityLogList)
     | ReceiveFeed FeedType (Result ApiError ActivityLogList)
 
@@ -289,7 +293,7 @@ init flags url key =
                                 in
                                 ( be, Just auth )
             in
-            { showDialog = True
+            { showDialog = False
             , useSimulator = useSimulator
             , backend = backend
             , key = key
@@ -312,9 +316,10 @@ init flags url key =
             , receivedScopes = scopes
             , tokenAuthorization = authorization
             , username = "xossbow"
+            , addedUserFeedName = ""
             , feeds =
-                feedTypesToFeeds defaultColumnWidth initialFeeds backend
-            , closedFeed = Nothing
+                feedTypesToFeeds Nothing defaultColumnWidth initialFeeds backend
+            , lastClosedFeed = Nothing
             }
     in
     model
@@ -353,14 +358,14 @@ getViewport viewport =
     WindowResize (round vp.width) (round vp.height)
 
 
-feedTypesToFeeds : Int -> List FeedType -> Maybe Backend -> List (Feed Msg)
-feedTypesToFeeds columnWidth feedTypes maybeBackend =
+feedTypesToFeeds : Maybe String -> Int -> List FeedType -> Maybe Backend -> List (Feed Msg)
+feedTypesToFeeds username columnWidth feedTypes maybeBackend =
     case maybeBackend of
         Nothing ->
             []
 
         Just backend ->
-            List.map (feedTypeToFeed columnWidth backend) feedTypes
+            List.map (feedTypeToFeed username columnWidth backend) feedTypes
 
 
 defaultColumnWidth : Int
@@ -368,11 +373,24 @@ defaultColumnWidth =
     350
 
 
-feedTypeToFeed : Int -> Backend -> FeedType -> Feed Msg
-feedTypeToFeed columnWidth backend feedType =
-    { getter = Api.feedTypeToGetter feedType backend
-    , feedType = feedType
-    , description = feedTypeDescription feedType
+feedTypeToFeed : Maybe String -> Int -> Backend -> FeedType -> Feed Msg
+feedTypeToFeed username columnWidth backend feedType =
+    let
+        ft =
+            if feedType == LoggedInUserFeed then
+                case Debug.log "loggedInUser" username of
+                    Nothing ->
+                        feedType
+
+                    Just name ->
+                        UserFeed name
+
+            else
+                feedType
+    in
+    { getter = Api.feedTypeToGetter ft backend
+    , feedType = ft
+    , description = feedTypeDescription ft
     , feed = { data = [], no_more = False }
     , error = Nothing
     , columnWidth = columnWidth
@@ -398,6 +416,9 @@ feedTypeDescription feedType =
 
         PopularFeed ->
             newTabLink "https://gab.com/popular" "Popular"
+
+        _ ->
+            text "Shouldn't happen"
 
 
 feedGetMore : Feed Msg -> Cmd Msg
@@ -425,6 +446,9 @@ feedGetMore feed =
                                 log.published_at
                 in
                 f receiver before
+
+            FeedGetterUnused ->
+                Cmd.none
 
 
 storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
@@ -455,7 +479,8 @@ storageHandler response state model =
                                             RealBackend savedToken.token
 
                                     feeds =
-                                        feedTypesToFeeds model.columnWidth
+                                        feedTypesToFeeds model.loggedInUser
+                                            model.columnWidth
                                             initialFeeds
                                             backend
                                 in
@@ -616,18 +641,61 @@ update msg model =
                 | feeds =
                     List.filter (\f -> feedType /= f.feedType)
                         model.feeds
-                , closedFeed = Just feed
+                , lastClosedFeed = Just feed
             }
                 |> withNoCmd
 
         AddFeed ->
-            model |> withNoCmd
+            { model
+                | showDialog = True
+                , addedUserFeedName = ""
+            }
+                |> withNoCmd
+
+        AddedUserFeedName username ->
+            { model | addedUserFeedName = username } |> withNoCmd
+
+        AddNewFeed feedType ->
+            addNewFeed feedType model
 
         RefreshFeed feedType result ->
             receiveFeed True feedType result model
 
         ReceiveFeed feedType result ->
             receiveFeed False feedType result model
+
+
+addNewFeed : FeedType -> Model -> ( Model, Cmd Msg )
+addNewFeed feedType model =
+    let
+        addit feed =
+            { model
+                | feeds = List.concat [ model.feeds, [ feed ] ]
+                , showDialog = False
+                , lastClosedFeed = Nothing
+            }
+                |> withCmd (feedGetMore feed)
+    in
+    if feedType == LastClosedFeed then
+        case model.lastClosedFeed of
+            Nothing ->
+                model |> withNoCmd
+
+            Just feed ->
+                addit feed
+
+    else
+        case model.backend of
+            Nothing ->
+                model |> withNoCmd
+
+            Just backend ->
+                addit
+                    (feedTypeToFeed model.loggedInUser
+                        model.columnWidth
+                        backend
+                        feedType
+                    )
 
 
 loadAll : Model -> ( Model, Cmd Msg )
@@ -658,6 +726,9 @@ loadMore before feed model =
                         ReceiveFeed
             in
             model |> withCmd (getter (tagger feed.feedType) before)
+
+        FeedGetterUnused ->
+            model |> withNoCmd
 
 
 receiveFeed : Bool -> FeedType -> Result ApiError ActivityLogList -> Model -> ( Model, Cmd Msg )
@@ -954,9 +1025,115 @@ mainPage model =
         ]
 
 
+findFeed : FeedType -> Model -> Maybe (Feed Msg)
+findFeed feedType model =
+    LE.find (\f -> feedType == f.feedType) model.feeds
+
+
+addFeedChoices : Model -> List ( String, FeedType )
+addFeedChoices model =
+    let
+        homeFeed =
+            findFeed HomeFeed model
+
+        popularFeed =
+            findFeed PopularFeed model
+
+        ( username, userFeed ) =
+            case model.loggedInUser of
+                Nothing ->
+                    ( "", Nothing )
+
+                Just name ->
+                    ( name
+                    , findFeed (UserFeed name) model
+                    )
+    in
+    List.concat
+        [ case homeFeed of
+            Nothing ->
+                [ ( "Home", HomeFeed ) ]
+
+            _ ->
+                []
+        , case popularFeed of
+            Nothing ->
+                [ ( "Popular", PopularFeed ) ]
+
+            _ ->
+                []
+        , case userFeed of
+            Nothing ->
+                if username == "" then
+                    []
+
+                else
+                    [ ( "Your Posts", LoggedInUserFeed ) ]
+
+            _ ->
+                []
+        , case model.lastClosedFeed of
+            Just feed ->
+                [ ( "Last Closed", LastClosedFeed ) ]
+
+            _ ->
+                []
+        ]
+
+
 addFeedBody : Model -> Element Msg
 addFeedBody model =
-    text "Hello World!"
+    let
+        iconHeight =
+            userIconHeight model.fontSize
+
+        addButton feedType =
+            el [ Font.size <| 7 * iconHeight // 4 ] <|
+                standardButton (text "+")
+                    "Add Feed"
+                    (AddNewFeed feedType)
+
+        addUserFeedRow =
+            { element =
+                row []
+                    [ el [ Font.bold ] <| text "User "
+                    , Input.text [ width <| px 200 ]
+                        { onChange = AddedUserFeedName
+                        , text = model.addedUserFeedName
+                        , placeholder =
+                            Just <|
+                                Input.placeholder []
+                                    (text "username")
+                        , label = Input.labelHidden "User Feed Name"
+                        }
+                    ]
+            , feedType = UserFeed model.addedUserFeedName
+            }
+
+        makeRow ( label, feedType ) =
+            { element = el [ Font.bold ] (text <| label ++ " Feed")
+            , feedType = feedType
+            }
+
+        choices =
+            addFeedChoices model
+
+        data =
+            addUserFeedRow :: List.map makeRow choices
+    in
+    Element.table [ spacing 10, centerX ]
+        { data = data
+        , columns =
+            [ { header = text ""
+              , width = Element.fill
+              , view = \x -> x.element
+              }
+            , { header = text ""
+              , width = Element.fill
+              , view = \x -> addButton x.feedType
+              }
+            ]
+        }
 
 
 addFeedHeader : Model -> Element Msg
@@ -1129,6 +1306,11 @@ columnBorderWidth =
 
 feedColumn : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
 feedColumn windowHeight baseFontSize here feed id =
+    Lazy.lazy5 feedColumnInternal windowHeight baseFontSize here feed id
+
+
+feedColumnInternal : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
+feedColumnInternal windowHeight baseFontSize here feed id =
     let
         colw =
             width <| px feed.columnWidth

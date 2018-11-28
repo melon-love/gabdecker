@@ -24,6 +24,7 @@ type alias FeedTagger msg =
 type FeedGetter msg
     = FeedGetterWithBefore (FeedTagger msg -> String -> Cmd msg)
     | FeedGetter (FeedTagger msg -> Cmd msg)
+    | FeedGetterUnused
 
 
 type FeedType
@@ -32,6 +33,8 @@ type FeedType
     | GroupFeed String
     | TopicFeed String
     | PopularFeed
+    | LastClosedFeed
+    | LoggedInUserFeed
 
 
 type alias Feed msg =

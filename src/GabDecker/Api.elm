@@ -76,6 +76,9 @@ feedTypeToGetter feedType backend =
         PopularFeed ->
             FeedGetter <| popularFeed backend
 
+        _ ->
+            FeedGetterUnused
+
 
 unimplemented : (Result ApiError x -> msg) -> Cmd msg
 unimplemented tagger =
