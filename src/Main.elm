@@ -86,7 +86,7 @@ import GabDecker.Types as Types
         , FeedType(..)
         )
 import Html exposing (Html)
-import Html.Attributes exposing (class, href, rel)
+import Html.Attributes as Attributes exposing (class, href, rel)
 import Html.Events exposing (onClick)
 import Http exposing (Error(..))
 import Iso8601
@@ -180,7 +180,7 @@ type Msg
     | LoadMore String (Feed Msg)
     | LoadAll
     | CloseFeed (Feed Msg)
-    | ExpandNewFeed
+    | AddFeed
     | RefreshFeed FeedType (Result ApiError ActivityLogList)
     | ReceiveFeed FeedType (Result ApiError ActivityLogList)
 
@@ -620,7 +620,7 @@ update msg model =
             }
                 |> withNoCmd
 
-        ExpandNewFeed ->
+        AddFeed ->
             model |> withNoCmd
 
         RefreshFeed feedType result ->
@@ -1036,13 +1036,14 @@ controlColumn columnWidth model =
         [ row [ centerX ]
             [ standardButton
                 (widthImage icons.reload "Refresh" iconHeight)
+                "Refresh All Feeds"
                 LoadAll
             ]
         , row
             [ Font.size <| 7 * iconHeight // 4
             , centerX
             ]
-            [ standardButton (text "+") ExpandNewFeed ]
+            [ standardButton (text "+") "Add New Feed" AddFeed ]
         ]
 
 
@@ -1063,7 +1064,12 @@ headerHeight baseFontSize =
 
 idAttribute : String -> Attribute msg
 idAttribute id =
-    Element.htmlAttribute <| Html.Attributes.id id
+    Element.htmlAttribute <| Attributes.id id
+
+
+titleAttribute : String -> Attribute msg
+titleAttribute string =
+    Element.htmlAttribute <| Attributes.title string
 
 
 columnId : Int -> String
@@ -1137,6 +1143,7 @@ feedColumn windowHeight baseFontSize here feed id =
                     [ row [ centerX ]
                         [ standardButton
                             (heightImage icons.reload "Refresh" iconHeight)
+                            "Refresh Feed"
                             (LoadMore "" feed)
                         , text " "
                         , feed.description
@@ -1144,6 +1151,7 @@ feedColumn windowHeight baseFontSize here feed id =
                     , el [ alignRight ]
                         (standardButton
                             (heightImage icons.close "Close" iconHeight)
+                            "Close Feed"
                             (CloseFeed feed)
                         )
                     ]
@@ -1198,6 +1206,7 @@ moreRow colw feed =
                             nbsp ++ nbsp ++ nbsp
                       in
                       textButton (nbsps ++ "Load More" ++ nbsps)
+                        ""
                         (LoadMore log.published_at feed)
                     ]
 
@@ -1511,7 +1520,7 @@ loginPage model =
             , row [ centerX ]
                 [ text "This is a work in progress." ]
             , row [ centerX ]
-                [ textButton "Login" Login ]
+                [ textButton "Login" "" Login ]
             , row [ centerX ]
                 [ simpleImage "images/deck-with-frog-671x425.jpg"
                     "Deck with Frog"
@@ -1540,20 +1549,21 @@ loginPage model =
         ]
 
 
-standardButton : Element Msg -> Msg -> Element Msg
-standardButton label msg =
+standardButton : Element Msg -> String -> Msg -> Element Msg
+standardButton label title msg =
     button
         [ Font.color styleColors.link
         , Element.mouseOver [ Background.color styleColors.linkHover ]
+        , titleAttribute title
         ]
         { onPress = Just msg
         , label = label
         }
 
 
-textButton : String -> Msg -> Element Msg
-textButton label msg =
-    standardButton (text label) msg
+textButton : String -> String -> Msg -> Element Msg
+textButton label title msg =
+    standardButton (text label) title msg
 
 
 iso8601ToString : Zone -> String -> String
