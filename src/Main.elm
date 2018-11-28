@@ -1168,7 +1168,7 @@ dialog model =
         [ Border.width 5
         , centerX
         , centerY
-        , Background.color colors.white
+        , Background.color colors.verylightgray
         , Element.paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
         ]
         [ row [ width Element.fill ]
