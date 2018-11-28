@@ -20,10 +20,15 @@ This is a place to collect things left to do for GabDecker.
 * Link user image to profile page.
 * HTML elements, "`&amp;`" -> "`&`".
 * `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`, `<u>foo</u>`.
+* Mark the boundary between just loaded posts and older ones.
 * Single `<br />` -> multiple `row`s.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Visual signal that loading is in progress.
+* One ad per column, unless paid to eliminate them.
+  Gotta make money off of this somehow.
+  Save only Gab username and expiration date.
+  Warn on the screen when expiration date approaches.
 * Dark mode
 * Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 

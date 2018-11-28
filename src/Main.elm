@@ -289,7 +289,7 @@ init flags url key =
                                 in
                                 ( be, Just auth )
             in
-            { showDialog = False
+            { showDialog = True
             , useSimulator = useSimulator
             , backend = backend
             , key = key
@@ -954,19 +954,38 @@ mainPage model =
         ]
 
 
-dialogConfig =
+addFeedBody : Model -> Element Msg
+addFeedBody model =
+    text "Hello World!"
+
+
+addFeedHeader : Model -> Element Msg
+addFeedHeader model =
+    el
+        [ centerX
+        , Font.bold
+        , fontSize model.fontSize 1.5
+        ]
+    <|
+        text "Add Feed"
+
+
+okButton : Html Msg
+okButton =
+    Html.button
+        [ class "btn btn-success"
+        , onClick CloseDialog
+        ]
+        [ Html.text "OK" ]
+
+
+dialogConfig : Model -> Dialog.Config Msg
+dialogConfig model =
     { closeMessage = Just CloseDialog
     , containerClass = Nothing
-    , header = Just (Html.text "Dialog")
-    , body = Just (Html.text "Hello World!")
-    , footer =
-        Just
-            (Html.button
-                [ class "btn btn-success"
-                , onClick CloseDialog
-                ]
-                [ Html.text "OK" ]
-            )
+    , header = Just (Element.layout [] <| addFeedHeader model)
+    , body = Just (Element.layout [] <| addFeedBody model)
+    , footer = Nothing
     }
 
 
@@ -983,7 +1002,7 @@ dialog : Model -> Html Msg
 dialog model =
     Dialog.view
         (if model.showDialog then
-            Just dialogConfig
+            Just <| dialogConfig model
 
          else
             Nothing
