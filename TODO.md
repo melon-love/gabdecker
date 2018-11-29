@@ -2,10 +2,11 @@
 
 This is a place to collect things left to do for GabDecker.
 
-* Allow configuration of the columns.
+* Change the feed column order.
 * Post / reply / quote / upvote / downvote / repost
 * Add Notifications feed to `Gab` module, then add feed here.
 * Font size and column width preferences.
+* Encode the preferences as a string, so you can paste them into another browser.
 * Increase inter-row spacing in paragraphs.
   I tried to do this with `spacing`, as documented, and that works in Chrome,
   but not in Brave, Safari, or Firefox.

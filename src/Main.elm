@@ -78,6 +78,7 @@ import GabDecker.Elements
         , styleColors
         , widthImage
         )
+import GabDecker.EncodeDecode as ED
 import GabDecker.Parsers as Parsers
 import GabDecker.Types as Types
     exposing
@@ -157,6 +158,7 @@ type alias Model =
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
     , addedUserFeedName : String
+    , feedTypes : List FeedType
     , feeds : List (Feed Msg)
     , lastClosedFeed : Maybe (Feed Msg)
     }
@@ -319,6 +321,7 @@ init flags url key =
             , tokenAuthorization = authorization
             , username = "xossbow"
             , addedUserFeedName = ""
+            , feedTypes = initialFeeds
             , feeds =
                 feedTypesToFeeds Nothing defaultColumnWidth initialFeeds backend
             , lastClosedFeed = Nothing
@@ -332,11 +335,8 @@ init flags url key =
                     Task.perform (PersistResponseToken t) Time.now
 
                 Nothing ->
-                    if tokenAndState == NoToken then
-                        localStorageSend (LocalStorage.get tokenKey) model
-
-                    else
-                        Cmd.none
+                    Cmd.none
+            , localStorageSend (LocalStorage.get feedsKey) model
             , Task.perform getViewport Dom.getViewport
             , Task.perform Here Time.here
             , case savedToken of
@@ -453,56 +453,89 @@ feedGetMore feed =
                 Cmd.none
 
 
+receiveToken : Maybe Value -> Model -> ( Model, Cmd Msg )
+receiveToken mv model =
+    case mv of
+        Nothing ->
+            model |> withNoCmd
+
+        Just value ->
+            case JD.decodeValue ED.savedTokenDecoder value of
+                Err err ->
+                    { model | msg = Just <| JD.errorToString err }
+                        |> withNoCmd
+
+                Ok st ->
+                    let
+                        savedToken =
+                            { st | token = mungeToken st.token }
+
+                        backend =
+                            Just <|
+                                RealBackend savedToken.token
+
+                        feeds =
+                            feedTypesToFeeds model.loggedInUser
+                                model.columnWidth
+                                model.feedTypes
+                                backend
+                    in
+                    { model
+                        | token = Just savedToken
+                        , scopes = savedToken.scope
+                        , receivedScopes = savedToken.scope
+                        , backend = backend
+                        , feeds = feeds
+                    }
+                        |> withCmds
+                            [ if backend == Nothing then
+                                Cmd.none
+
+                              else
+                                Http.send ReceiveLoggedInUser <|
+                                    Gab.me savedToken.token
+                            , Cmd.batch <|
+                                List.map feedGetMore feeds
+                            ]
+
+
+receiveFeeds : Maybe Value -> Model -> ( Model, Cmd Msg )
+receiveFeeds value model =
+    let
+        cmd =
+            case model.token of
+                Nothing ->
+                    localStorageSend (LocalStorage.get tokenKey) model
+
+                _ ->
+                    Cmd.none
+    in
+    case value of
+        Nothing ->
+            model |> withCmd cmd
+
+        Just v ->
+            case Debug.log "decodeFeedTypes" <| ED.decodeFeedTypes v of
+                Err _ ->
+                    model |> withCmd cmd
+
+                Ok feedTypes ->
+                    { model | feedTypes = feedTypes }
+                        |> withCmd cmd
+
+
 storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
 storageHandler response state model =
-    case response of
+    case Debug.log "response" response of
         LocalStorage.GetResponse { key, value } ->
-            if key /= tokenKey || model.backend /= Nothing then
-                model |> withNoCmd
+            if key == tokenKey && model.backend == Nothing then
+                receiveToken value model
+
+            else if key == feedsKey then
+                receiveFeeds value model
 
             else
-                case value of
-                    Nothing ->
-                        model |> withNoCmd
-
-                    Just v ->
-                        case JD.decodeValue ED.savedTokenDecoder v of
-                            Err err ->
-                                { model | msg = Just <| JD.errorToString err }
-                                    |> withNoCmd
-
-                            Ok st ->
-                                let
-                                    savedToken =
-                                        { st | token = mungeToken st.token }
-
-                                    backend =
-                                        Just <|
-                                            RealBackend savedToken.token
-
-                                    feeds =
-                                        feedTypesToFeeds model.loggedInUser
-                                            model.columnWidth
-                                            initialFeeds
-                                            backend
-                                in
-                                { model
-                                    | token = Just savedToken
-                                    , scopes = savedToken.scope
-                                    , receivedScopes = savedToken.scope
-                                    , backend = backend
-                                    , feeds = feeds
-                                }
-                                    |> withCmds
-                                        [ if backend == Nothing then
-                                            Cmd.none
-
-                                          else
-                                            Http.send ReceiveLoggedInUser <|
-                                                Gab.me savedToken.token
-                                        , Cmd.batch <|
-                                            List.map feedGetMore feeds
-                                        ]
+                model |> withNoCmd
 
         _ ->
             model |> withNoCmd
@@ -642,14 +675,16 @@ update msg model =
             let
                 feedType =
                     feed.feedType
-            in
-            { model
-                | feeds =
+
+                feeds =
                     List.filter (\f -> feedType /= f.feedType)
                         model.feeds
+            in
+            { model
+                | feeds = feeds
                 , lastClosedFeed = Just feed
             }
-                |> withNoCmd
+                |> withCmd (saveFeeds feeds model)
 
         AddFeed ->
             { model
@@ -672,17 +707,36 @@ update msg model =
             receiveFeed False feedType result model
 
 
+saveFeeds : List (Feed Msg) -> Model -> Cmd Msg
+saveFeeds feeds model =
+    let
+        value =
+            List.map .feedType feeds
+                |> ED.encodeFeedTypes
+    in
+    localStorageSend
+        (LocalStorage.put feedsKey <| Just value)
+        model
+
+
 addNewFeed : FeedType -> Model -> ( Model, Cmd Msg )
 addNewFeed feedType model =
     let
         addit feed =
+            let
+                feeds =
+                    List.concat [ model.feeds, [ feed ] ]
+            in
             { model
-                | feeds = List.concat [ model.feeds, [ feed ] ]
+                | feeds = feeds
                 , showDialog = False
                 , dialogError = Nothing
                 , lastClosedFeed = Nothing
             }
-                |> withCmd (feedGetMore feed)
+                |> withCmds
+                    [ feedGetMore feed
+                    , saveFeeds feeds model
+                    ]
     in
     if feedType == LastClosedFeed then
         case model.lastClosedFeed of
@@ -938,6 +992,11 @@ mergeFeedData maxPosts data feed =
 tokenKey : String
 tokenKey =
     "token"
+
+
+feedsKey : String
+feedsKey =
+    "feeds"
 
 
 funnelDict : FunnelDict Model Msg
