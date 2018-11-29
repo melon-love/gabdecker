@@ -15,7 +15,7 @@
 module GabDecker.Authorization exposing (authorization, useSimulator)
 
 import Json.Decode as JD
-import OAuthMiddleware exposing (Authorization)
+import OAuthMiddleware exposing (TokenAuthorization)
 import OAuthMiddleware.EncodeDecode exposing (authorizationDecoder)
 
 
