@@ -2043,16 +2043,16 @@ nbsp =
 
 
 icons =
-    { reload = "icons/reload.svg"
-    , refresh = "icons/refresh-arrow.svg"
-    , close = "icons/cancel.svg"
-    , like = "icons/like.svg"
-    , dislike = "icons/dislike.svg"
-    , settings = "icons/settings.svg"
-    , user = "icons/avatar.svg"
-    , home = "icons/house.svg"
-    , popular = "icons/star.svg"
-    , notifications = "icons/glasses.svg"
-    , next = "icons/next-1.svg"
-    , previous = "icons/back.svg"
+    { reload = "icon/reload.svg"
+    , refresh = "icon/refresh-arrow.svg"
+    , close = "icon/cancel.svg"
+    , like = "icon/like.svg"
+    , dislike = "icon/dislike.svg"
+    , settings = "icon/settings.svg"
+    , user = "icon/avatar.svg"
+    , home = "icon/house.svg"
+    , popular = "icon/star.svg"
+    , notifications = "icon/glasses.svg"
+    , next = "icon/next-1.svg"
+    , previous = "icon/back.svg"
     }
