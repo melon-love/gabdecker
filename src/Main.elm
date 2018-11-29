@@ -1569,10 +1569,8 @@ postRow baseFontSize cw here log =
                 , column []
                     [ row [ nameBottomPadding ]
                         [ newTabLink ("https://gab.com/" ++ username) <|
-                            user.name
-                                ++ " ("
-                                ++ embiggen username
-                                ++ ")"
+                            embiggen user.name
+                        , text <| " (" ++ username ++ ")"
                         ]
                     , case post.group of
                         Just { id, title } ->
