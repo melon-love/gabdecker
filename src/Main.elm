@@ -29,6 +29,7 @@ import Element
         ( Attribute
         , Color
         , Element
+        , alignLeft
         , alignRight
         , centerX
         , centerY
@@ -159,6 +160,7 @@ type alias Model =
     , username : String
     , addedUserFeedName : String
     , feedTypes : List FeedType
+    , nextId : Int
     , feeds : List (Feed Msg)
     , lastClosedFeed : Maybe (Feed Msg)
     }
@@ -185,6 +187,8 @@ type Msg
     | LoadMore String (Feed Msg)
     | LoadAll
     | CloseFeed (Feed Msg)
+    | MoveFeedLeft FeedType
+    | MoveFeedRight FeedType
     | AddFeed
     | AddedUserFeedName String
     | AddNewFeed FeedType
@@ -295,6 +299,13 @@ init flags url key =
                                                 Just <| RealBackend st.token
                                 in
                                 ( be, Just auth )
+
+                feeds =
+                    feedTypesToFeeds Nothing
+                        defaultColumnWidth
+                        backend
+                        initialFeeds
+                        0
             in
             { showDialog = False
             , dialogError = Nothing
@@ -322,8 +333,8 @@ init flags url key =
             , username = "xossbow"
             , addedUserFeedName = ""
             , feedTypes = initialFeeds
-            , feeds =
-                feedTypesToFeeds Nothing defaultColumnWidth initialFeeds backend
+            , nextId = List.length feeds
+            , feeds = feeds
             , lastClosedFeed = Nothing
             }
     in
@@ -360,14 +371,17 @@ getViewport viewport =
     WindowResize (round vp.width) (round vp.height)
 
 
-feedTypesToFeeds : Maybe String -> Int -> List FeedType -> Maybe Backend -> List (Feed Msg)
-feedTypesToFeeds username columnWidth feedTypes maybeBackend =
+feedTypesToFeeds : Maybe String -> Int -> Maybe Backend -> List FeedType -> Int -> List (Feed Msg)
+feedTypesToFeeds username columnWidth maybeBackend feedTypes startId =
     case maybeBackend of
         Nothing ->
             []
 
         Just backend ->
-            List.map (feedTypeToFeed username columnWidth backend) feedTypes
+            List.map2 (feedTypeToFeed username columnWidth backend)
+                feedTypes
+            <|
+                List.range startId (startId + List.length feedTypes - 1)
 
 
 defaultColumnWidth : Int
@@ -375,8 +389,8 @@ defaultColumnWidth =
     350
 
 
-feedTypeToFeed : Maybe String -> Int -> Backend -> FeedType -> Feed Msg
-feedTypeToFeed username columnWidth backend feedType =
+feedTypeToFeed : Maybe String -> Int -> Backend -> FeedType -> Int -> Feed Msg
+feedTypeToFeed username columnWidth backend feedType id =
     let
         ft =
             if feedType == LoggedInUserFeed then
@@ -396,6 +410,7 @@ feedTypeToFeed username columnWidth backend feedType =
     , feed = { data = [], no_more = False }
     , error = Nothing
     , columnWidth = columnWidth
+    , id = id
     }
 
 
@@ -477,14 +492,16 @@ receiveToken mv model =
                         feeds =
                             feedTypesToFeeds model.loggedInUser
                                 model.columnWidth
-                                model.feedTypes
                                 backend
+                                model.feedTypes
+                                0
                     in
                     { model
                         | token = Just savedToken
                         , scopes = savedToken.scope
                         , receivedScopes = savedToken.scope
                         , backend = backend
+                        , nextId = List.length feeds
                         , feeds = feeds
                     }
                         |> withCmds
@@ -515,7 +532,7 @@ receiveFeeds value model =
             model |> withCmd cmd
 
         Just v ->
-            case Debug.log "decodeFeedTypes" <| ED.decodeFeedTypes v of
+            case ED.decodeFeedTypes v of
                 Err _ ->
                     model |> withCmd cmd
 
@@ -526,7 +543,7 @@ receiveFeeds value model =
 
 storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
 storageHandler response state model =
-    case Debug.log "response" response of
+    case response of
         LocalStorage.GetResponse { key, value } ->
             if key == tokenKey && model.backend == Nothing then
                 receiveToken value model
@@ -686,6 +703,12 @@ update msg model =
             }
                 |> withCmd (saveFeeds feeds model)
 
+        MoveFeedLeft feedType ->
+            moveFeedLeft feedType model
+
+        MoveFeedRight feedType ->
+            moveFeedRight feedType model
+
         AddFeed ->
             { model
                 | showDialog = True
@@ -705,6 +728,71 @@ update msg model =
 
         ReceiveFeed feedType result ->
             receiveFeed False feedType result model
+
+
+moveFeedLeft : FeedType -> Model -> ( Model, Cmd Msg )
+moveFeedLeft feedType model =
+    let
+        loop feeds res =
+            case feeds of
+                [] ->
+                    model
+
+                feed :: tail ->
+                    if feedType /= feed.feedType then
+                        loop tail <| feed :: res
+
+                    else
+                        case res of
+                            [] ->
+                                model
+
+                            f :: t ->
+                                { model
+                                    | feeds =
+                                        List.concat
+                                            [ List.reverse t
+                                            , [ feed, f ]
+                                            , tail
+                                            ]
+                                }
+    in
+    loop model.feeds [] |> withNoCmd
+
+
+moveFeedRight : FeedType -> Model -> ( Model, Cmd Msg )
+moveFeedRight feedType model =
+    let
+        loop feeds res =
+            case feeds of
+                [] ->
+                    model
+
+                feed :: tail ->
+                    if feedType /= feed.feedType then
+                        loop tail <| feed :: res
+
+                    else
+                        case tail of
+                            [] ->
+                                model
+
+                            f :: t ->
+                                { model
+                                    | feeds =
+                                        List.concat
+                                            [ List.reverse res
+                                            , [ f, feed ]
+                                            , t
+                                            ]
+                                }
+    in
+    loop model.feeds [] |> withNoCmd
+
+
+cdr : List a -> List a
+cdr list =
+    Maybe.withDefault [] <| List.tail list
 
 
 saveFeeds : List (Feed Msg) -> Model -> Cmd Msg
@@ -732,6 +820,7 @@ addNewFeed feedType model =
                 , showDialog = False
                 , dialogError = Nothing
                 , lastClosedFeed = Nothing
+                , nextId = model.nextId + 1
             }
                 |> withCmds
                     [ feedGetMore feed
@@ -783,6 +872,7 @@ addNewFeed feedType model =
                                     model.columnWidth
                                     backend
                                     feedType
+                                    model.nextId
                                 )
 
 
@@ -874,14 +964,14 @@ processReceivedError err model =
 updateFeeds : Int -> FeedType -> Result ApiError ActivityLogList -> List (Feed Msg) -> ( String, List (Feed Msg) )
 updateFeeds maxPosts feedType result feeds =
     let
-        loop i tail res =
+        loop tail res =
             case tail of
                 [] ->
                     ( "", List.reverse res )
 
                 feed :: rest ->
                     if feed.feedType == feedType then
-                        ( columnId i
+                        ( columnId feed.id
                         , List.concat
                             [ List.reverse res
                             , [ updateFeed maxPosts result feed ]
@@ -890,9 +980,9 @@ updateFeeds maxPosts feedType result feeds =
                         )
 
                     else
-                        loop (i + 1) rest (feed :: res)
+                        loop rest (feed :: res)
     in
-    loop 0 feeds []
+    loop feeds []
 
 
 updateFeed : Int -> Result ApiError ActivityLogList -> Feed Msg -> Feed Msg
@@ -1115,10 +1205,8 @@ mainPage model =
                 [ Element.scrollbarY
                 , width <| px (min (model.windowWidth - ccw) contentWidth)
                 ]
-                (List.map2 (feedColumn model.windowHeight model.fontSize model.here)
+                (List.map (feedColumn model.windowHeight model.fontSize model.here)
                     model.feeds
-                 <|
-                    List.range 0 (List.length model.feeds - 1)
                 )
             ]
         ]
@@ -1230,7 +1318,11 @@ dialog model =
         , Background.color colors.verylightgray
         , Element.paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
         ]
-        [ row [ width Element.fill ]
+        [ let
+            closeIcon =
+                heightImage icons.close "Close" iconHeight
+          in
+          row [ width Element.fill ]
             [ row
                 [ centerX
                 , centerY
@@ -1239,11 +1331,7 @@ dialog model =
                 ]
                 [ text "Add Feed" ]
             , el [ alignRight ]
-                (standardButton
-                    (heightImage icons.close "Close" iconHeight)
-                    "Close Feed"
-                    CloseDialog
-                )
+                (standardButton closeIcon "Close Feed" CloseDialog)
             ]
         , case model.dialogError of
             Nothing ->
@@ -1426,13 +1514,13 @@ columnBorderWidth =
     5
 
 
-feedColumn : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
-feedColumn windowHeight baseFontSize here feed id =
-    Lazy.lazy5 feedColumnInternal windowHeight baseFontSize here feed id
+feedColumn : Int -> Float -> Zone -> Feed Msg -> Element Msg
+feedColumn windowHeight baseFontSize here feed =
+    Lazy.lazy4 feedColumnInternal windowHeight baseFontSize here feed
 
 
-feedColumnInternal : Int -> Float -> Zone -> Feed Msg -> Int -> Element Msg
-feedColumnInternal windowHeight baseFontSize here feed id =
+feedColumnInternal : Int -> Float -> Zone -> Feed Msg -> Element Msg
+feedColumnInternal windowHeight baseFontSize here feed =
     let
         colw =
             width <| px feed.columnWidth
@@ -1456,14 +1544,33 @@ feedColumnInternal windowHeight baseFontSize here feed id =
             , Background.color styleColors.headerBackground
             ]
             [ column [ colw ]
-                [ row
+                [ let
+                    closeIcon =
+                        heightImage icons.close "Close" iconHeight
+
+                    prevIcon =
+                        heightImage icons.previous "Move Left" iconHeight
+
+                    nextIcon =
+                        heightImage icons.next "Move Right" iconHeight
+                  in
+                  row
                     [ padding columnPadding
                     , fontSize baseFontSize 1.5
                     , Font.bold
                     , centerX
                     , width Element.fill
                     ]
-                    [ row [ centerX ]
+                    [ row [ alignLeft ]
+                        [ standardButton prevIcon
+                            "Move Feed Left"
+                            (MoveFeedLeft feed.feedType)
+                        , text " "
+                        , standardButton nextIcon
+                            "Move Feed Right"
+                            (MoveFeedRight feed.feedType)
+                        ]
+                    , row [ centerX ]
                         [ standardButton
                             (heightImage icons.reload "Refresh" iconHeight)
                             "Refresh Feed"
@@ -1472,11 +1579,7 @@ feedColumnInternal windowHeight baseFontSize here feed id =
                         , feed.description
                         ]
                     , el [ alignRight ]
-                        (standardButton
-                            (heightImage icons.close "Close" iconHeight)
-                            "Close Feed"
-                            (CloseFeed feed)
-                        )
+                        (standardButton closeIcon "Close Feed" (CloseFeed feed))
                     ]
                 ]
             ]
@@ -1484,7 +1587,7 @@ feedColumnInternal windowHeight baseFontSize here feed id =
             [ column
                 [ colw
                 , height <| px (windowHeight - headerHeight baseFontSize)
-                , columnIdAttribute id
+                , columnIdAttribute feed.id
                 , Element.paddingEach
                     { zeroes
                         | left = columnPadding

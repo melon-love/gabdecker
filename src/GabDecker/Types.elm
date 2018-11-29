@@ -44,4 +44,5 @@ type alias Feed msg =
     , feed : ActivityLogList
     , error : Maybe ApiError
     , columnWidth : Int
+    , id : Int
     }
