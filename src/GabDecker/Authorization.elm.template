@@ -47,15 +47,20 @@ json =
 
 {-| This is used by Main.elm to login to the Gab API server.
 -}
-authorization : Result String Authorization
-authorization =
+authorization : String -> Result String TokenAuthorization
+authorization redirectBackUri =
     let
         res =
             JD.decodeString authorizationDecoder json
     in
     case res of
         Ok auth ->
-            Ok auth
+            Ok
+                { authorization = auth
+                , scope = List.map Tuple.second <| Dict.toList auth.scopes
+                , state = Nothing
+                , redirectBackUri = redirectBackUri
+                }
 
         Err err ->
             Err <| JD.errorToString err
