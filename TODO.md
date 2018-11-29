@@ -2,7 +2,6 @@
 
 This is a place to collect things left to do for GabDecker.
 
-* Change the feed column order.
 * Post / reply / quote / upvote / downvote / repost
 * Add Notifications feed to `Gab` module, then add feed here.
 * Font size and column width preferences.

@@ -745,7 +745,10 @@ moveFeedLeft feedType model =
                     else
                         case res of
                             [] ->
-                                model
+                                { model
+                                    | feeds =
+                                        List.concat [ tail, [ feed ] ]
+                                }
 
                             f :: t ->
                                 { model
@@ -775,7 +778,13 @@ moveFeedRight feedType model =
                     else
                         case tail of
                             [] ->
-                                model
+                                { model
+                                    | feeds =
+                                        List.concat
+                                            [ [ feed ]
+                                            , List.reverse res
+                                            ]
+                                }
 
                             f :: t ->
                                 { model
