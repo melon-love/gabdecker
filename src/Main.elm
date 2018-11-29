@@ -1940,16 +1940,16 @@ nbsp =
 
 
 icons =
-    { reload = "images/reload.svg"
-    , refresh = "images/refresh-arrow.svg"
-    , close = "images/cancel.svg"
-    , like = "images/like.svg"
-    , dislike = "images/dislike.svg"
-    , settings = "images/settings.svg"
-    , user = "images/avatar.svg"
-    , home = "images/house.svg"
-    , popular = "images/star.svg"
-    , notifications = "images/glasses.svg"
-    , next = "images/next-1.svg"
-    , previous = "images/back.svg"
+    { reload = "icons/reload.svg"
+    , refresh = "icons/refresh-arrow.svg"
+    , close = "icons/cancel.svg"
+    , like = "icons/like.svg"
+    , dislike = "icons/dislike.svg"
+    , settings = "icons/settings.svg"
+    , user = "icons/avatar.svg"
+    , home = "icons/house.svg"
+    , popular = "icons/star.svg"
+    , notifications = "icons/glasses.svg"
+    , next = "icons/next-1.svg"
+    , previous = "icons/back.svg"
     }
