@@ -759,8 +759,11 @@ moveFeedLeft feedType model =
                                             , tail
                                             ]
                                 }
+
+        mdl =
+            loop model.feeds []
     in
-    loop model.feeds [] |> withNoCmd
+    mdl |> withCmd (saveFeeds mdl.feeds mdl)
 
 
 moveFeedRight : FeedType -> Model -> ( Model, Cmd Msg )
@@ -795,8 +798,11 @@ moveFeedRight feedType model =
                                             , t
                                             ]
                                 }
+
+        mdl =
+            loop model.feeds []
     in
-    loop model.feeds [] |> withNoCmd
+    mdl |> withCmd (saveFeeds mdl.feeds mdl)
 
 
 cdr : List a -> List a
@@ -1882,7 +1888,7 @@ paragraphSpacing baseFontSize =
 
 paragraphLineSpacing : Float -> Attribute msg
 paragraphLineSpacing baseFontSize =
-    spacing <| round (0.4 * baseFontSize)
+    spacing <| round (0.25 * baseFontSize)
 
 
 newlinesToPs : String -> String
@@ -1903,7 +1909,7 @@ htmlBodyElements baseFontSize html =
                 , paragraphPadding
 
                 -- This works nicely in Chrome, but not in other browsers.
-                --, paragraphLineSpacing baseFontSize
+                , paragraphLineSpacing baseFontSize
                 ]
                 elements
     in

@@ -6,7 +6,6 @@ This is a place to collect things left to do for GabDecker.
 * Add Notifications feed to `Gab` module, then add feed here.
 * Font size and column width preferences.
 * Encode the preferences as a string, so you can paste them into another browser.
-* Increase inter-row spacing in paragraphs.
   I tried to do this with `spacing`, as documented, and that works in Chrome,
   but not in Brave, Safari, or Firefox.
 * Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
@@ -25,6 +24,7 @@ This is a place to collect things left to do for GabDecker.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Visual signal that loading is in progress.
+* Multiple named pages of feeds, selectable on the left column.
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.
   Save only Gab username and expiration date.
