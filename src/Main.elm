@@ -1481,7 +1481,7 @@ zeroes =
 -}
 headerHeight : Float -> Int
 headerHeight baseFontSize =
-    (round <| 1.5 * baseFontSize) + 40
+    round <| 1.5 * baseFontSize
 
 
 idAttribute : String -> Attribute msg
@@ -1602,7 +1602,12 @@ feedColumnInternal windowHeight baseFontSize here feed =
         , row []
             [ column
                 [ colw
-                , height <| px windowHeight
+                , height <|
+                    px
+                        (windowHeight
+                            - headerHeight baseFontSize
+                            - (2 * columnPadding + 10)
+                        )
                 , columnIdAttribute feed.id
                 , Element.scrollbarX
                 , Element.clipX
