@@ -34,6 +34,7 @@ This is a place to collect things left to do for GabDecker.
   Gotta make money off of this somehow.
   Save only Gab username and expiration date.
   Warn on the screen when expiration date approaches.
+* Colored versions of icons instead of rectangular background color highlight.
 * Dark mode
 * Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 

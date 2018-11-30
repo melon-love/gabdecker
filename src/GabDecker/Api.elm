@@ -37,6 +37,7 @@ import Gab.Types
         , ActivityLogList
         , Post
         , PostForm
+        , Success
         , User
         , UserList
         )
@@ -241,12 +242,12 @@ popularUsers backend tagger =
                 Http.get "json/users/popular.json" userListDecoder
 
 
-upvotePost : Backend -> (Result ApiError Value -> msg) -> String -> Bool -> Cmd msg
+upvotePost : Backend -> (Result ApiError Success -> msg) -> Int -> Bool -> Cmd msg
 upvotePost backend tagger postid unupvote =
     unimplemented tagger
 
 
-downvotePost : Backend -> (Result ApiError Value -> msg) -> String -> Bool -> Cmd msg
+downvotePost : Backend -> (Result ApiError Success -> msg) -> Int -> Bool -> Cmd msg
 downvotePost backend tagger postid undownvote =
     unimplemented tagger
 

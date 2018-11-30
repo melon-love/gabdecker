@@ -67,6 +67,7 @@ import Gab.Types
         , RelatedPosts(..)
         , RequestParts
         , SavedToken
+        , Success
         , User
         )
 import GabDecker.Api as Api exposing (Backend(..))
@@ -176,7 +177,7 @@ type UploadingState
 
 
 type Msg
-    = NoOp
+    = Noop
     | CloseDialog
     | HandleUrlRequest UrlRequest
     | HandleUrlChange Url
@@ -194,6 +195,9 @@ type Msg
     | AddFeed
     | AddedUserFeedName String
     | AddNewFeed FeedType
+    | Upvote FeedType Post
+    | Downvote FeedType Post
+    | ReceiveOperation String (Result ApiError Success)
     | RefreshFeed FeedType (Result ApiError ActivityLogList)
     | ReceiveFeed FeedType (Result ApiError ActivityLogList)
 
@@ -592,7 +596,7 @@ mungeToken token =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp ->
+        Noop ->
             model |> withNoCmd
 
         CloseDialog ->
@@ -725,11 +729,108 @@ update msg model =
         AddNewFeed feedType ->
             addNewFeed feedType model
 
+        Upvote feedType post ->
+            upvote feedType post model
+
+        Downvote feedType post ->
+            downvote feedType post model
+
+        ReceiveOperation label result ->
+            -- Should report errors here
+            model |> withNoCmd
+
         RefreshFeed feedType result ->
             receiveFeed True feedType result model
 
         ReceiveFeed feedType result ->
             receiveFeed False feedType result model
+
+
+upvote : FeedType -> Post -> Model -> ( Model, Cmd Msg )
+upvote feedType post model =
+    let
+        ( increment, unliked ) =
+            if post.liked then
+                ( -1, True )
+
+            else
+                ( 1, False )
+
+        newPost =
+            { post
+                | liked = not unliked
+                , like_count = post.like_count + increment
+            }
+    in
+    case model.backend of
+        Nothing ->
+            model |> withNoCmd
+
+        Just backend ->
+            replacePost feedType newPost model
+                |> withCmd
+                    (Api.upvotePost backend
+                        (ReceiveOperation "Upvote")
+                        post.id
+                        unliked
+                    )
+
+
+replacePost : FeedType -> Post -> Model -> Model
+replacePost feedType post model =
+    let
+        data : ActivityLogList -> List ActivityLog
+        data logList =
+            LE.updateIf (\lg -> lg.post.id == post.id)
+                (\lg ->
+                    { lg | post = post }
+                )
+                logList.data
+
+        feeds : List (Feed Msg)
+        feeds =
+            LE.updateIf (\f -> feedType == f.feedType)
+                (\f ->
+                    let
+                        logList : ActivityLogList
+                        logList =
+                            f.feed
+                    in
+                    { f | feed = { logList | data = data logList } }
+                )
+                model.feeds
+    in
+    { model | feeds = feeds }
+
+
+downvote : FeedType -> Post -> Model -> ( Model, Cmd Msg )
+downvote feedType post model =
+    let
+        ( increment, undisliked ) =
+            if post.disliked then
+                ( -1, True )
+
+            else
+                ( 1, False )
+
+        newPost =
+            { post
+                | disliked = not undisliked
+                , dislike_count = post.dislike_count + increment
+            }
+    in
+    case model.backend of
+        Nothing ->
+            model |> withNoCmd
+
+        Just backend ->
+            replacePost feedType newPost model
+                |> withCmd
+                    (Api.downvotePost backend
+                        (ReceiveOperation "Upvote")
+                        post.id
+                        undisliked
+                    )
 
 
 moveFeedLeft : FeedType -> Model -> ( Model, Cmd Msg )
@@ -950,7 +1051,7 @@ receiveFeed scrollToTop feedType result model =
         |> withCmds
             [ cmd
             , if scrollToTop && id /= "" then
-                Task.attempt (\_ -> NoOp) (Dom.setViewportOf id 0 0)
+                Task.attempt (\_ -> Noop) (Dom.setViewportOf id 0 0)
 
               else
                 Cmd.none
@@ -1293,9 +1394,9 @@ dialog model =
 
         addButton feedType =
             el [ Font.size <| 7 * iconHeight // 4 ] <|
-                textButton "+"
-                    "Add Feed"
+                textButton "Add Feed"
                     (AddNewFeed feedType)
+                    "+"
 
         addUserFeedRow =
             { label = "User: "
@@ -1316,9 +1417,9 @@ dialog model =
             { label = ""
             , element =
                 el [ Font.bold ] <|
-                    textButton label
-                        "Add Feed"
+                    textButton "Add Feed"
                         (AddNewFeed feedType)
+                        label
             , feedType = Nothing
             }
 
@@ -1348,7 +1449,7 @@ dialog model =
                 ]
                 [ text "Add Feed" ]
             , el [ alignRight ]
-                (standardButton closeIcon "Close Feed" CloseDialog)
+                (standardButton "Close Feed" CloseDialog closeIcon)
             ]
         , case model.dialogError of
             Nothing ->
@@ -1458,15 +1559,15 @@ controlColumn columnWidth model =
         )
         [ row [ centerX ]
             [ standardButton
-                (widthImage icons.reload "Refresh" iconHeight)
                 "Refresh All Feeds"
                 LoadAll
+                (widthImage icons.reload "Refresh" iconHeight)
             ]
         , row
             [ Font.size <| 7 * iconHeight // 4
             , centerX
             ]
-            [ standardButton (text "+") "Add New Feed" AddFeed ]
+            [ standardButton "Add New Feed" AddFeed (text "+") ]
         ]
 
 
@@ -1579,24 +1680,24 @@ feedColumnInternal windowHeight baseFontSize here feed =
                     , width Element.fill
                     ]
                     [ row [ alignLeft ]
-                        [ standardButton prevIcon
-                            "Move Feed Left"
+                        [ standardButton "Move Feed Left"
                             (MoveFeedLeft feed.feedType)
+                            prevIcon
                         , text " "
-                        , standardButton nextIcon
-                            "Move Feed Right"
+                        , standardButton "Move Feed Right"
                             (MoveFeedRight feed.feedType)
+                            nextIcon
                         ]
                     , row [ centerX ]
                         [ standardButton
-                            (heightImage icons.reload "Refresh" iconHeight)
                             "Refresh Feed"
                             (LoadMore "" feed)
+                            (heightImage icons.reload "Refresh" iconHeight)
                         , text " "
                         , feed.description
                         ]
                     , el [ alignRight ]
-                        (standardButton closeIcon "Close Feed" (CloseFeed feed))
+                        (standardButton "Close Feed" (CloseFeed feed) closeIcon)
                     ]
                 ]
             ]
@@ -1616,7 +1717,7 @@ feedColumnInternal windowHeight baseFontSize here feed =
               <|
                 List.concat
                     [ List.map
-                        (postRow baseFontSize feed.columnWidth True here)
+                        (postRow baseFontSize feed True here)
                         feed.feed.data
                     , [ moreRow colw feed ]
                     ]
@@ -1649,9 +1750,9 @@ moreRow colw feed =
                         nbsps =
                             String.repeat 3 chars.nbsp
                       in
-                      textButton (nbsps ++ "Load More" ++ nbsps)
-                        ""
+                      textButton ""
                         (LoadMore log.published_at feed)
+                        (nbsps ++ "Load More" ++ nbsps)
                     ]
 
 
@@ -1670,9 +1771,12 @@ nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
 
 
-postRow : Float -> Int -> Bool -> Zone -> ActivityLog -> Element Msg
-postRow baseFontSize cw isToplevel here log =
+postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
+postRow baseFontSize feed isToplevel here log =
     let
+        cw =
+            feed.columnWidth
+
         pad =
             5
 
@@ -1841,7 +1945,7 @@ postRow baseFontSize cw isToplevel here log =
 
                                         Just parentPost ->
                                             postRow baseFontSize
-                                                (cwp - 10)
+                                                { feed | columnWidth = cwp - 10 }
                                                 False
                                                 here
                                             <|
@@ -1856,7 +1960,7 @@ postRow baseFontSize cw isToplevel here log =
                 text ""
 
               else
-                interactionRow baseFontSize colwp post
+                interactionRow baseFontSize colwp feed post
             ]
         ]
 
@@ -1884,13 +1988,13 @@ highlightElement color element =
     el attrs element
 
 
-interactionRow : Float -> Attribute Msg -> Post -> Element Msg
-interactionRow baseFontSize colwp post =
+interactionRow : Float -> Attribute Msg -> Feed Msg -> Post -> Element Msg
+interactionRow baseFontSize colwp feed post =
     let
         fsize =
             round <| baseFontSize * 0.8
 
-        onecol image ( isHighlighted, highlight ) label count =
+        onecol image ( isHighlighted, highlight ) label count buttonLabel msg =
             column [ fillWidth ]
                 [ row []
                     [ if isHighlighted then
@@ -1916,7 +2020,19 @@ interactionRow baseFontSize colwp post =
                         el [ Background.color styleColors.postcountBackground ]
                             (text str)
                     ]
+                    |> (if msg == Noop then
+                            identity
+
+                        else
+                            standardButton buttonLabel msg
+                       )
                 ]
+
+        feedType =
+            feed.feedType
+
+        postid =
+            post.id
     in
     row
         [ paddingEach { zeroes | top = 5, bottom = 5 }
@@ -1927,18 +2043,26 @@ interactionRow baseFontSize colwp post =
             ( post.liked, GreenHighlight )
             ""
             post.like_count
+            "upvote"
+            (Upvote feedType post)
         , onecol (heightImage icons.dislike "downvote" fsize)
             ( post.disliked, RedHighlight )
             ""
             post.dislike_count
+            "downvote"
+            (Downvote feedType post)
         , onecol (heightImage icons.comment "comment" fsize)
             ( False, NoHighlight )
             ""
             post.reply_count
+            ""
+            Noop
         , onecol (heightImage icons.refresh "reposted" fsize)
             ( post.repost, GreenHighlight )
             ""
             post.repost_count
+            ""
+            Noop
         , onecol
             (column [ height (px <| fsize) ]
                 [ row
@@ -1951,6 +2075,8 @@ interactionRow baseFontSize colwp post =
             ( False, NoHighlight )
             "Quote"
             -1
+            ""
+            Noop
         ]
 
 
@@ -2083,7 +2209,7 @@ loginPage model =
             , row [ centerX ]
                 [ text "This is a work in progress." ]
             , row [ centerX ]
-                [ textButton "Login" "" Login ]
+                [ textButton "" Login "Login" ]
             , row [ centerX ]
                 [ simpleImage "images/deck-with-frog-671x425.jpg"
                     "Deck with Frog"
@@ -2112,8 +2238,8 @@ loginPage model =
         ]
 
 
-standardButton : Element Msg -> String -> Msg -> Element Msg
-standardButton label title msg =
+standardButton : String -> Msg -> Element Msg -> Element Msg
+standardButton title msg label =
     button
         [ Font.color styleColors.link
         , Element.mouseOver [ Background.color styleColors.linkHover ]
@@ -2124,9 +2250,9 @@ standardButton label title msg =
         }
 
 
-textButton : String -> String -> Msg -> Element Msg
-textButton label title msg =
-    standardButton (text label) title msg
+textButton : String -> Msg -> String -> Element Msg
+textButton title msg label =
+    standardButton title msg (text label)
 
 
 iso8601ToString : Zone -> String -> String
