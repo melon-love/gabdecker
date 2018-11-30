@@ -79,6 +79,7 @@ styleColors =
     , headerBackground = colors.verylightgray
     , quotedPost = colors.verylightgray
     , quotedPostBorder = colors.lightgray
+    , postcountBackground = colors.lightgray
     }
 
 

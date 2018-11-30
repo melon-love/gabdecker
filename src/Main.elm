@@ -29,6 +29,7 @@ import Element
         ( Attribute
         , Color
         , Element
+        , alignBottom
         , alignLeft
         , alignRight
         , centerX
@@ -1851,7 +1852,105 @@ postRow baseFontSize cw isToplevel here log =
                             ]
                         ]
                 ]
+            , if not isToplevel then
+                text ""
+
+              else
+                interactionRow baseFontSize colwp post
             ]
+        ]
+
+
+type HighlightColor
+    = NoHighlight
+    | RedHighlight
+    | GreenHighlight
+
+
+highlightElement : HighlightColor -> Element msg -> Element msg
+highlightElement color element =
+    let
+        attrs =
+            case color of
+                NoHighlight ->
+                    []
+
+                RedHighlight ->
+                    [ Background.color colors.red ]
+
+                GreenHighlight ->
+                    [ Background.color colors.green ]
+    in
+    el attrs element
+
+
+interactionRow : Float -> Attribute Msg -> Post -> Element Msg
+interactionRow baseFontSize colwp post =
+    let
+        fsize =
+            round <| baseFontSize * 0.8
+
+        onecol image ( isHighlighted, highlight ) label count =
+            column [ fillWidth ]
+                [ row []
+                    [ if isHighlighted then
+                        highlightElement highlight image
+
+                      else
+                        image
+                    , text " "
+                    , if label == "" then
+                        text ""
+
+                      else
+                        text label
+                    , text " "
+                    , if count < 0 then
+                        text ""
+
+                      else
+                        let
+                            str =
+                                chars.nbsp ++ String.fromInt count ++ chars.nbsp
+                        in
+                        el [ Background.color styleColors.postcountBackground ]
+                            (text str)
+                    ]
+                ]
+    in
+    row
+        [ paddingEach { zeroes | top = 5, bottom = 5 }
+        , colwp
+        , Font.size fsize
+        ]
+        [ onecol (heightImage icons.like "upvote" fsize)
+            ( post.liked, GreenHighlight )
+            ""
+            post.like_count
+        , onecol (heightImage icons.dislike "downvote" fsize)
+            ( post.disliked, RedHighlight )
+            ""
+            post.dislike_count
+        , onecol (heightImage icons.comment "comment" fsize)
+            ( False, NoHighlight )
+            ""
+            post.reply_count
+        , onecol (heightImage icons.refresh "reposted" fsize)
+            ( post.repost, GreenHighlight )
+            ""
+            post.repost_count
+        , onecol
+            (column [ height (px <| fsize) ]
+                [ row
+                    [ Font.bold
+                    , Font.size (round <| 1.5 * baseFontSize)
+                    ]
+                    [ text chars.leftCurlyQuote ]
+                ]
+            )
+            ( False, NoHighlight )
+            "Quote"
+            -1
         ]
 
 
