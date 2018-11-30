@@ -1210,15 +1210,15 @@ mainPage model =
             }
         , Border.color styleColors.border
         ]
-        [ column [ height Element.fill ]
-            -- 13? Don't know, but it works.
-            [ row [ height <| px (model.windowHeight - 13) ]
+        [ column []
+            [ row [ height <| px model.windowHeight ]
                 [ controlColumn ccw model -- Doesn't work in Brave or Safari
                 ]
             ]
         , column []
             [ row
-                [ Element.scrollbarY
+                [ height <| px model.windowHeight
+                , Element.scrollbarY
                 , width <| px (min (model.windowWidth - ccw) contentWidth)
                 ]
                 (List.map (feedColumn model.windowHeight model.fontSize model.here)
