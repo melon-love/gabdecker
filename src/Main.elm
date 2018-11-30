@@ -1602,7 +1602,7 @@ feedColumnInternal windowHeight baseFontSize here feed =
         , row []
             [ column
                 [ colw
-                , height <| px (windowHeight - headerHeight baseFontSize)
+                , height <| px windowHeight
                 , columnIdAttribute feed.id
                 , Element.scrollbarX
                 , Element.clipX
