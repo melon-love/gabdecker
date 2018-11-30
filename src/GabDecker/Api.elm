@@ -244,12 +244,24 @@ popularUsers backend tagger =
 
 upvotePost : Backend -> (Result ApiError Success -> msg) -> Int -> Bool -> Cmd msg
 upvotePost backend tagger postid unupvote =
-    unimplemented tagger
+    case backend of
+        RealBackend token ->
+            wrapHttpReturn tagger <|
+                Gab.upvotePost token postid unupvote
+
+        SimulatedBackend ->
+            unimplemented tagger
 
 
 downvotePost : Backend -> (Result ApiError Success -> msg) -> Int -> Bool -> Cmd msg
 downvotePost backend tagger postid undownvote =
-    unimplemented tagger
+    case backend of
+        RealBackend token ->
+            wrapHttpReturn tagger <|
+                Gab.downvotePost token postid undownvote
+
+        SimulatedBackend ->
+            unimplemented tagger
 
 
 repost : Backend -> (Result ApiError Value -> msg) -> String -> Bool -> Cmd msg

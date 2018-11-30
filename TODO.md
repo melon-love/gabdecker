@@ -2,7 +2,7 @@
 
 This is a place to collect things left to do for GabDecker.
 
-* Post / reply / quote / upvote / downvote / repost
+* Post / reply / quote / repost
 * Add Notifications feed to `Gab` module, then add feed here.
 * The column height got less with the DOCTYPE header.
   It no longer covers the entire window height. Fix it.
@@ -29,6 +29,9 @@ This is a place to collect things left to do for GabDecker.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Visual signal that loading is in progress.
 * Multiple named pages of feeds, selectable on the left column.
+* Escape to dismiss dialog.
+  Focus first input field in dialog.
+  Enter to execute selected input field in dialog
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.

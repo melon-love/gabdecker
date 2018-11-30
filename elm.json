@@ -22,7 +22,7 @@
             "elm-community/list-extra": "8.1.0",
             "elm-community/string-extra": "4.0.0",
             "mdgriffith/elm-ui": "1.1.0",
-            "melon-love/elm-gab-api": "3.0.2",
+            "melon-love/elm-gab-api": "5.0.1",
             "rtfeldman/elm-iso8601-date-strings": "1.1.2",
             "ryannhg/date-format": "2.3.0",
             "truqu/elm-oauth2": "4.0.0"

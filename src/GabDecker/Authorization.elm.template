@@ -40,7 +40,9 @@ json =
   "redirectUri": "your redirect uri",
   "scopes": {"Read": "read",
              "Notifications": "notifications",
-             "Post": "write-post"
+             "Post": "write-post",
+             "Engage User": "engage-user",
+             "Engage Post": "engage-post"
             }
 }
 """

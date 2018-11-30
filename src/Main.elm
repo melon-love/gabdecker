@@ -136,8 +136,14 @@ allScopes =
     ]
 
 
+type DialogType
+    = NoDialog
+    | AddFeedDialog
+    | OperationErrorDialog String
+
+
 type alias Model =
-    { showDialog : Bool
+    { showDialog : DialogType
     , dialogError : Maybe String
     , useSimulator : Bool
     , windowWidth : Int
@@ -197,9 +203,14 @@ type Msg
     | AddNewFeed FeedType
     | Upvote FeedType Post
     | Downvote FeedType Post
-    | ReceiveOperation String (Result ApiError Success)
+    | ReceiveOperation Operation (Result ApiError Success)
     | RefreshFeed FeedType (Result ApiError ActivityLogList)
     | ReceiveFeed FeedType (Result ApiError ActivityLogList)
+
+
+type Operation
+    = UpvoteOperation FeedType Int Bool
+    | DownvoteOperation FeedType Int Bool
 
 
 {-| GitHub requires the "User-Agent" header.
@@ -270,7 +281,7 @@ init flags url key =
         ( reply, scopes ) =
             case token of
                 Nothing ->
-                    ( Nothing, [ "read" ] )
+                    ( Nothing, List.map Tuple.second allScopes )
 
                 Just tok ->
                     ( Just <| responseTokenEncoder tok
@@ -313,7 +324,7 @@ init flags url key =
                         initialFeeds
                         0
             in
-            { showDialog = False
+            { showDialog = NoDialog
             , dialogError = Nothing
             , useSimulator = useSimulator
             , backend = backend
@@ -601,7 +612,7 @@ update msg model =
 
         CloseDialog ->
             { model
-                | showDialog = False
+                | showDialog = NoDialog
                 , dialogError = Nothing
             }
                 |> withNoCmd
@@ -717,7 +728,7 @@ update msg model =
 
         AddFeed ->
             { model
-                | showDialog = True
+                | showDialog = AddFeedDialog
                 , dialogError = Nothing
                 , addedUserFeedName = ""
             }
@@ -735,9 +746,8 @@ update msg model =
         Downvote feedType post ->
             downvote feedType post model
 
-        ReceiveOperation label result ->
-            -- Should report errors here
-            model |> withNoCmd
+        ReceiveOperation operation result ->
+            receiveOperation operation result model
 
         RefreshFeed feedType result ->
             receiveFeed True feedType result model
@@ -746,33 +756,116 @@ update msg model =
             receiveFeed False feedType result model
 
 
+operationToString : Operation -> String
+operationToString operation =
+    case operation of
+        UpvoteOperation _ _ _ ->
+            "upvote"
+
+        DownvoteOperation _ _ _ ->
+            "downvote"
+
+
+receiveOperation : Operation -> Result ApiError Success -> Model -> ( Model, Cmd Msg )
+receiveOperation operation result model =
+    let
+        handleError err =
+            let
+                mdl =
+                    case operation of
+                        UpvoteOperation feedType postid wasDisliked ->
+                            updatePost (togglePostLiked wasDisliked) feedType postid model
+
+                        DownvoteOperation feedType postid wasLiked ->
+                            updatePost (togglePostDisliked wasLiked) feedType postid model
+            in
+            { mdl | showDialog = OperationErrorDialog err }
+                |> withNoCmd
+    in
+    case result of
+        Err err ->
+            let
+                opname =
+                    " on " ++ operationToString operation
+            in
+            handleError <|
+                case err.httpError of
+                    Nothing ->
+                        "Unknown error on" ++ opname
+
+                    Just httpError ->
+                        case httpError of
+                            Http.BadStatus response ->
+                                if response.status.code == 400 then
+                                    case operation of
+                                        DownvoteOperation _ _ _ ->
+                                            "Downvote error, probably unauthorized."
+
+                                        _ ->
+                                            "Bad Request error" ++ opname
+
+                                else
+                                    "Bad HTTP status: "
+                                        ++ String.fromInt response.status.code
+                                        ++ opname
+
+                            _ ->
+                                "HTTP error on" ++ opname
+
+        Ok success ->
+            if not success.state then
+                handleError success.message
+
+            else
+                model |> withNoCmd
+
+
+updatePost : (Post -> Post) -> FeedType -> Int -> Model -> Model
+updatePost updater feedType postid model =
+    let
+        data : ActivityLogList -> List ActivityLog
+        data logList =
+            LE.updateIf (\lg -> lg.post.id == postid)
+                (\lg ->
+                    { lg | post = updater lg.post }
+                )
+                logList.data
+
+        feeds : List (Feed Msg)
+        feeds =
+            LE.updateIf (\f -> feedType == f.feedType)
+                (\f ->
+                    let
+                        logList : ActivityLogList
+                        logList =
+                            f.feed
+                    in
+                    { f | feed = { logList | data = data logList } }
+                )
+                model.feeds
+    in
+    { model | feeds = feeds }
+
+
 upvote : FeedType -> Post -> Model -> ( Model, Cmd Msg )
 upvote feedType post model =
     let
-        ( increment, unliked ) =
-            if post.liked then
-                ( -1, True )
-
-            else
-                ( 1, False )
-
-        newPost =
-            { post
-                | liked = not unliked
-                , like_count = post.like_count + increment
-            }
+        updater =
+            togglePostLiked post.disliked
     in
     case model.backend of
         Nothing ->
             model |> withNoCmd
 
         Just backend ->
-            replacePost feedType newPost model
+            updatePost updater feedType post.id model
                 |> withCmd
                     (Api.upvotePost backend
-                        (ReceiveOperation "Upvote")
+                        (ReceiveOperation <|
+                            UpvoteOperation feedType post.id post.disliked
+                        )
                         post.id
-                        unliked
+                        post.liked
                     )
 
 
@@ -803,33 +896,83 @@ replacePost feedType post model =
     { model | feeds = feeds }
 
 
+togglePostLiked : Bool -> Post -> Post
+togglePostLiked wasDisliked post =
+    { post
+        | liked = not post.liked
+        , like_count =
+            post.like_count
+                + (if post.liked then
+                    -1
+
+                   else
+                    1
+                  )
+        , disliked =
+            if post.liked then
+                wasDisliked
+
+            else
+                False
+        , dislike_count =
+            post.dislike_count
+                + (if wasDisliked && post.liked then
+                    1
+
+                   else
+                    0
+                  )
+    }
+
+
+togglePostDisliked : Bool -> Post -> Post
+togglePostDisliked wasLiked post =
+    { post
+        | disliked = not post.disliked
+        , dislike_count =
+            post.dislike_count
+                + (if post.disliked then
+                    -1
+
+                   else
+                    1
+                  )
+        , liked =
+            if post.disliked then
+                wasLiked
+
+            else
+                False
+        , like_count =
+            post.like_count
+                + (if wasLiked && post.disliked then
+                    1
+
+                   else
+                    0
+                  )
+    }
+
+
 downvote : FeedType -> Post -> Model -> ( Model, Cmd Msg )
 downvote feedType post model =
     let
-        ( increment, undisliked ) =
-            if post.disliked then
-                ( -1, True )
-
-            else
-                ( 1, False )
-
-        newPost =
-            { post
-                | disliked = not undisliked
-                , dislike_count = post.dislike_count + increment
-            }
+        updater =
+            togglePostDisliked post.liked
     in
     case model.backend of
         Nothing ->
             model |> withNoCmd
 
         Just backend ->
-            replacePost feedType newPost model
+            updatePost updater feedType post.id model
                 |> withCmd
                     (Api.downvotePost backend
-                        (ReceiveOperation "Upvote")
+                        (ReceiveOperation <|
+                            DownvoteOperation feedType post.id post.liked
+                        )
                         post.id
-                        undisliked
+                        post.disliked
                     )
 
 
@@ -935,7 +1078,7 @@ addNewFeed feedType model =
             in
             { model
                 | feeds = feeds
-                , showDialog = False
+                , showDialog = NoDialog
                 , dialogError = Nothing
                 , lastClosedFeed = Nothing
                 , nextId = model.nextId + 1
@@ -1248,11 +1391,15 @@ view model =
     , body =
         [ Element.layoutWith
             { options = [ focusStyle ] }
-            (if model.showDialog then
-                [ Element.inFront <| dialog model ]
+            (case model.showDialog of
+                AddFeedDialog ->
+                    [ Element.inFront <| addFeedDialog model ]
 
-             else
-                []
+                OperationErrorDialog err ->
+                    [ Element.inFront <| operationErrorDialog err model ]
+
+                _ ->
+                    []
             )
             body
         ]
@@ -1386,8 +1533,41 @@ addFeedChoices model =
         ]
 
 
-dialog : Model -> Element Msg
-dialog model =
+operationErrorDialog : String -> Model -> Element Msg
+operationErrorDialog err model =
+    let
+        iconHeight =
+            userIconHeight model.fontSize
+    in
+    column
+        [ Border.width 5
+        , centerX
+        , centerY
+        , Background.color colors.verylightgray
+        , paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
+        ]
+        [ let
+            closeIcon =
+                heightImage icons.close "Close" iconHeight
+          in
+          row [ width Element.fill ]
+            [ row
+                [ centerX
+                , centerY
+                , Font.bold
+                , fontSize model.fontSize 1.5
+                ]
+                [ text "Operation Error " ]
+            , el [ alignRight ]
+                (standardButton "Close Dialog" CloseDialog closeIcon)
+            ]
+        , row [ paddingEach { zeroes | top = 20 } ]
+            [ text err ]
+        ]
+
+
+addFeedDialog : Model -> Element Msg
+addFeedDialog model =
     let
         iconHeight =
             userIconHeight model.fontSize
@@ -1449,7 +1629,7 @@ dialog model =
                 ]
                 [ text "Add Feed" ]
             , el [ alignRight ]
-                (standardButton "Close Feed" CloseDialog closeIcon)
+                (standardButton "Close Dialog" CloseDialog closeIcon)
             ]
         , case model.dialogError of
             Nothing ->
@@ -2157,8 +2337,6 @@ htmlBodyElements baseFontSize html =
             paragraph
                 [ Element.clipY
                 , paragraphPadding
-
-                -- This works nicely in Chrome, but not in other browsers.
                 , paragraphLineSpacing baseFontSize
                 ]
                 elements
