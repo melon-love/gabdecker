@@ -77,7 +77,8 @@ styleColors =
     , linkHover = colors.lightBlue
     , border = colors.lightgray
     , headerBackground = colors.verylightgray
-    , quotedPost = colors.lightgray
+    , quotedPost = colors.verylightgray
+    , quotedPostBorder = colors.lightgray
     }
 
 

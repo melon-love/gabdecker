@@ -4,6 +4,10 @@ This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / upvote / downvote / repost
 * Add Notifications feed to `Gab` module, then add feed here.
+* The column height got less with the DOCTYPE header.
+  It no longer covers the entire window height. Fix it.
+* Icons insted of "User:", to the right of the name.
+  For Home and Popular, too.
 * Font size and column width preferences.
 * Encode the preferences as a string, so you can paste them into another browser.
   I tried to do this with `spacing`, as documented, and that works in Chrome,
@@ -25,6 +29,7 @@ This is a place to collect things left to do for GabDecker.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Visual signal that loading is in progress.
 * Multiple named pages of feeds, selectable on the left column.
+* Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.
   Save only Gab username and expiration date.
@@ -35,3 +40,5 @@ This is a place to collect things left to do for GabDecker.
 ## Bugs
 
 There is still no API for getting comments or group or topic feeds, and posting still gets an error 429 (too many requests).
+
+(un)Follow and (un)Mute do not work.

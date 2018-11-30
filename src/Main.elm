@@ -39,6 +39,7 @@ import Element
         , image
         , link
         , padding
+        , paddingEach
         , paragraph
         , px
         , row
@@ -1331,7 +1332,7 @@ dialog model =
         , centerX
         , centerY
         , Background.color colors.verylightgray
-        , Element.paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
+        , paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
         ]
         [ let
             closeIcon =
@@ -1354,7 +1355,7 @@ dialog model =
 
             Just err ->
                 row
-                    [ Element.paddingEach { zeroes | top = 10 }
+                    [ paddingEach { zeroes | top = 10 }
                     , Font.color colors.red
                     ]
                     [ text err ]
@@ -1603,17 +1604,13 @@ feedColumnInternal windowHeight baseFontSize here feed =
                 [ colw
                 , height <| px (windowHeight - headerHeight baseFontSize)
                 , columnIdAttribute feed.id
-                , Element.paddingEach
-                    { zeroes
-                        | left = columnPadding
-                        , right = columnPadding
-                    }
                 , Element.scrollbarX
                 , Element.clipX
                 ]
               <|
                 List.concat
-                    [ List.map (postRow baseFontSize feed.columnWidth here)
+                    [ List.map
+                        (postRow baseFontSize feed.columnWidth True here)
                         feed.feed.data
                     , [ moreRow colw feed ]
                     ]
@@ -1634,7 +1631,7 @@ moreRow colw feed =
             Just log ->
                 row
                     [ centerX
-                    , Element.paddingEach
+                    , paddingEach
                         { zeroes
                             | top = 20
                             , bottom = 20
@@ -1644,7 +1641,7 @@ moreRow colw feed =
                     ]
                     [ let
                         nbsps =
-                            nbsp ++ nbsp ++ nbsp
+                            String.repeat 3 chars.nbsp
                       in
                       textButton (nbsps ++ "Load More" ++ nbsps)
                         ""
@@ -1654,7 +1651,7 @@ moreRow colw feed =
 
 userPadding : Attribute msg
 userPadding =
-    Element.paddingEach
+    paddingEach
         { top = 0
         , right = 0
         , bottom = 4
@@ -1662,35 +1659,35 @@ userPadding =
         }
 
 
-postBorder : Attribute msg
-postBorder =
-    Border.widthEach
-        { bottom = 1
-        , left = 0
-        , right = 0
-        , top = 1
-        }
-
-
 nameBottomPadding : Attribute msg
 nameBottomPadding =
-    Element.paddingEach { zeroes | bottom = 3 }
+    paddingEach { zeroes | bottom = 3 }
 
 
-postRow : Float -> Int -> Zone -> ActivityLog -> Element Msg
-postRow baseFontSize cw here log =
+postRow : Float -> Int -> Bool -> Zone -> ActivityLog -> Element Msg
+postRow baseFontSize cw isToplevel here log =
     let
         pad =
             5
 
+        colpad =
+            if isToplevel then
+                columnPadding
+
+            else
+                5
+
         cwp =
-            cw - 2 * pad - 6
+            cw - 2 * colpad - 6
 
         colw =
+            width <| px cw
+
+        colwp =
             width <| px cwp
 
         mediaw =
-            width <| px (cwp - 2 * columnPadding)
+            colwp
 
         post =
             log.post
@@ -1711,33 +1708,45 @@ postRow baseFontSize cw here log =
             log.type_ == "repost"
     in
     row
-        [ postBorder
+        [ colw
+        , paddingEach
+            { zeroes
+                | left = colpad
+                , right = colpad
+            }
+        , Border.widthEach <|
+            if isToplevel then
+                { zeroes | bottom = 2 }
+
+            else
+                zeroes
         , Border.color styleColors.border
-        , fillWidth
-        , padding pad
         ]
-        [ column [ colw ]
+        [ column []
             [ if not repost then
                 text ""
 
               else
                 row
-                    [ mediaw
-                    , userPadding
-                    , Border.widthEach { zeroes | bottom = 1 }
+                    [ Border.widthEach { zeroes | bottom = 1 }
                     , Border.color styleColors.border
+                    , colwp
                     ]
-                    [ heightImage icons.refresh "refresh" 10
-                    , newTabLink ("https://gab.com/" ++ actusername)
-                        (" " ++ actuser.name ++ " reposted")
+                    [ row
+                        [ paddingEach { zeroes | top = 5, bottom = 5 }
+                        ]
+                        [ heightImage icons.refresh "refresh" 10
+                        , newTabLink ("https://gab.com/" ++ actusername)
+                            (" " ++ actuser.name ++ " reposted")
+                        ]
                     ]
             , row
                 [ Font.bold
-                , mediaw
-                , userPadding
+                , paddingEach { zeroes | top = 5 }
+                , colwp
                 ]
                 [ column
-                    [ Element.paddingEach
+                    [ paddingEach
                         { zeroes | right = 5 }
                     ]
                     [ row []
@@ -1783,11 +1792,10 @@ postRow baseFontSize cw here log =
                         ]
                     ]
                 ]
-            , row
-                []
+            , row []
                 [ Element.textColumn
-                    [ mediaw
-                    , paragraphSpacing baseFontSize
+                    [ paragraphSpacing baseFontSize
+                    , colwp
                     ]
                   <|
                     case post.body_html of
@@ -1798,7 +1806,7 @@ postRow baseFontSize cw here log =
                             htmlBodyElements baseFontSize html
                 ]
             , row []
-                [ column [ colw ] <|
+                [ column [ colwp ] <|
                     case post.attachment of
                         MediaAttachment records ->
                             List.map (mediaRow mediaw) records
@@ -1807,28 +1815,36 @@ postRow baseFontSize cw here log =
                             [ text "" ]
                 ]
             , row []
-                [ column
-                    [ mediaw
-                    , Element.paddingEach { zeroes | left = 5, right = 5 }
-                    , Background.color styleColors.quotedPost
-                    ]
-                    [ if post.is_quote then
-                        case post.related of
-                            RelatedPosts { parent } ->
-                                case parent of
-                                    Nothing ->
-                                        text ""
+                [ if not post.is_quote then
+                    text ""
 
-                                    Just parentPost ->
-                                        postRow baseFontSize (cwp - 10) here <|
-                                            { log
-                                                | post = parentPost
-                                                , type_ = "post"
-                                            }
+                  else
+                    column
+                        [ paddingEach { zeroes | bottom = 5 } ]
+                        [ row
+                            [ paddingEach { zeroes | left = 5 }
+                            , Background.color styleColors.quotedPost
+                            , Border.width 1
+                            , Border.color styleColors.quotedPostBorder
+                            ]
+                            [ case post.related of
+                                RelatedPosts { parent } ->
+                                    case parent of
+                                        Nothing ->
+                                            text ""
 
-                      else
-                        text ""
-                    ]
+                                        Just parentPost ->
+                                            postRow baseFontSize
+                                                (cwp - 10)
+                                                False
+                                                here
+                                            <|
+                                                { log
+                                                    | post = parentPost
+                                                    , type_ = "post"
+                                                }
+                            ]
+                        ]
                 ]
             ]
         ]
@@ -1836,11 +1852,15 @@ postRow baseFontSize cw here log =
 
 mediaRow : Attribute msg -> MediaRecord -> Element msg
 mediaRow colw record =
-    row []
+    row
+        [ paddingEach
+            { zeroes
+                | top = 5
+                , bottom = 5
+            }
+        ]
         [ image
-            [ colw
-            , Element.paddingEach { zeroes | top = 5 }
-            ]
+            [ colw ]
             { src = record.url_thumbnail
             , description = "image"
             }
@@ -1878,7 +1898,7 @@ removeEmptyHead strings =
 
 paragraphPadding : Attribute msg
 paragraphPadding =
-    Element.paddingEach <| { zeroes | top = 4, bottom = 4 }
+    paddingEach <| { zeroes | top = 4, bottom = 4 }
 
 
 paragraphSpacing : Float -> Attribute msg
@@ -1977,7 +1997,7 @@ loginPage model =
                             "Gregor Cresnar"
                         ]
                     , row [ centerX ]
-                        [ text <| copyright ++ " 2018 Bill St. Clair" ]
+                        [ text <| chars.copyright ++ " 2018 Bill St. Clair" ]
                     , row [ centerX ]
                         [ simpleLink "https://github.com/melon-love/gabdecker"
                             "GitHub"
@@ -2047,14 +2067,16 @@ timeString =
         ]
 
 
-copyright : String
-copyright =
-    String.fromList [ Char.fromCode 0xA9 ]
+codestr : Int -> String
+codestr code =
+    String.fromList [ Char.fromCode code ]
 
 
-nbsp : String
-nbsp =
-    String.fromList [ Char.fromCode 0xA0 ]
+chars =
+    { leftCurlyQuote = codestr 0x201C
+    , copyright = codestr 0xA9
+    , nbsp = codestr 0xA0
+    }
 
 
 icons =
@@ -2070,4 +2092,5 @@ icons =
     , notifications = "icon/glasses.svg"
     , next = "icon/next-1.svg"
     , previous = "icon/back.svg"
+    , comment = "icon/chat-2.svg"
     }
