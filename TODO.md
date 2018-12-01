@@ -31,6 +31,10 @@ This is a place to collect things left to do for GabDecker.
   Focus first input field in dialog.
   Enter to execute selected input field in dialog
 * Colored versions of icons instead of rectangular background color highlight.
+* If you get a post in a feed, and then it is deleted, when you update the
+  feed, it will still be there.
+  This happens also when you repost and then unrepost.
+  The easy fix is to NOT merge, but always initialize on refresh.
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.

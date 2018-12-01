@@ -1,14 +1,23 @@
 module GabDecker.Types exposing
     ( ApiError
-    , Feed(..)
+    , Feed
+    , FeedData(..)
     , FeedGetter(..)
-    , FeedRecord
+    , FeedResult
     , FeedTagger
     , FeedType(..)
+    , LogList
     )
 
 import Element exposing (Element)
-import Gab.Types exposing (ActivityLogList, NotificationsLog, UserList)
+import Gab.Types
+    exposing
+        ( ActivityLog
+        , ActivityLogList
+        , Notification
+        , NotificationsLog
+        , UserList
+        )
 import Http
 
 
@@ -18,14 +27,17 @@ type alias ApiError =
     }
 
 
-type alias FeedTagger msg kind =
-    Result ApiError kind -> msg
+type alias FeedResult x =
+    Result ApiError x
 
 
-type FeedGetter msg kind
-    = FeedGetterWithBefore (FeedTagger msg kind -> String -> Cmd msg)
-    | FeedGetter (FeedTagger msg kind -> Cmd msg)
-    | FeedGetterUnused
+type alias FeedTagger x msg =
+    FeedResult x -> msg
+
+
+type FeedGetter msg
+    = PostFeedGetter (FeedTagger ActivityLogList msg -> String -> Cmd msg)
+    | NotificationFeedGetter (FeedTagger NotificationsLog msg -> String -> Cmd msg)
 
 
 type FeedType
@@ -39,17 +51,23 @@ type FeedType
     | NotificationsFeed
 
 
-type alias FeedRecord msg kind =
-    { getter : FeedGetter msg kind
+type alias LogList x =
+    { data : List x
+    , no_more : Bool
+    }
+
+
+type alias Feed msg =
+    { getter : FeedGetter msg
     , feedType : FeedType
     , description : Element msg
-    , feed : kind
+    , feed : LogList FeedData
     , error : Maybe ApiError
     , columnWidth : Int
     , id : Int
     }
 
 
-type Feed msg
-    = ActivityLogListFeed (FeedRecord msg ActivityLogList)
-    | NotificationsLogFeed (FeedRecord msg NotificationsLog)
+type FeedData
+    = PostFeedData ActivityLog
+    | NotificationFeedData Notification
