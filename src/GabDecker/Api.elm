@@ -289,9 +289,15 @@ downvotePost backend tagger postid undownvote =
             unimplemented tagger
 
 
-repost : Backend -> (Result ApiError Value -> msg) -> String -> Bool -> Cmd msg
+repost : Backend -> (Result ApiError Success -> msg) -> Int -> Bool -> Cmd msg
 repost backend tagger postid unrepost =
-    unimplemented tagger
+    case backend of
+        RealBackend token ->
+            wrapHttpReturn tagger <|
+                Gab.repost token postid unrepost
+
+        SimulatedBackend ->
+            unimplemented tagger
 
 
 getPost : Backend -> (Result ApiError Post -> msg) -> Cmd msg

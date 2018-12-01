@@ -204,6 +204,7 @@ type Msg
     | AddNewFeed FeedType
     | Upvote FeedType Post
     | Downvote FeedType Post
+    | Repost FeedType Post
     | ReceiveOperation Operation (Result ApiError Success)
     | RefreshActivityLogListFeed FeedType (Result ApiError ActivityLogList)
     | ReceiveActivityLogListFeed FeedType (Result ApiError ActivityLogList)
@@ -212,6 +213,7 @@ type Msg
 type Operation
     = UpvoteOperation FeedType Int Bool
     | DownvoteOperation FeedType Int Bool
+    | RepostOperation FeedType Int
 
 
 {-| GitHub requires the "User-Agent" header.
@@ -856,6 +858,9 @@ update msg model =
         Downvote feedType post ->
             downvote feedType post model
 
+        Repost feedType post ->
+            repost feedType post model
+
         ReceiveOperation operation result ->
             receiveOperation operation result model
 
@@ -875,6 +880,9 @@ operationToString operation =
         DownvoteOperation _ _ _ ->
             "downvote"
 
+        RepostOperation _ _ ->
+            "repost"
+
 
 receiveOperation : Operation -> Result ApiError Success -> Model -> ( Model, Cmd Msg )
 receiveOperation operation result model =
@@ -888,6 +896,9 @@ receiveOperation operation result model =
 
                         DownvoteOperation feedType postid wasLiked ->
                             updatePost (togglePostDisliked wasLiked) feedType postid model
+
+                        RepostOperation feedType postid ->
+                            updatePost toggleReposted feedType postid model
             in
             { mdl | showDialog = OperationErrorDialog err }
                 |> withNoCmd
@@ -1079,6 +1090,21 @@ togglePostDisliked wasLiked post =
     }
 
 
+toggleReposted : Post -> Post
+toggleReposted post =
+    { post
+        | repost = not post.repost
+        , repost_count =
+            post.repost_count
+                + (if post.repost then
+                    -1
+
+                   else
+                    1
+                  )
+    }
+
+
 downvote : FeedType -> Post -> Model -> ( Model, Cmd Msg )
 downvote feedType post model =
     let
@@ -1098,6 +1124,24 @@ downvote feedType post model =
                         )
                         post.id
                         post.disliked
+                    )
+
+
+repost : FeedType -> Post -> Model -> ( Model, Cmd Msg )
+repost feedType post model =
+    case model.backend of
+        Nothing ->
+            model |> withNoCmd
+
+        Just backend ->
+            updatePost toggleReposted feedType post.id model
+                |> withCmd
+                    (Api.repost backend
+                        (ReceiveOperation <|
+                            RepostOperation feedType post.id
+                        )
+                        post.id
+                        post.repost
                     )
 
 
@@ -2164,7 +2208,7 @@ postRow baseFontSize feed isToplevel here log =
         actusername =
             actuser.username
 
-        repost =
+        reposted =
             log.type_ == "repost"
     in
     row
@@ -2183,7 +2227,7 @@ postRow baseFontSize feed isToplevel here log =
         , Border.color styleColors.border
         ]
         [ column []
-            [ if not repost then
+            [ if not reposted then
                 text ""
 
               else
@@ -2414,7 +2458,7 @@ interactionRow baseFontSize colwp feed post =
             ""
             post.repost_count
             ""
-            Noop
+            (Repost feedType post)
         , onecol
             (column [ height (px <| fsize) ]
                 [ row

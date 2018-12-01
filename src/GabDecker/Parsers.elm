@@ -140,22 +140,28 @@ parseString parser string =
 
 parseOne : Parser a -> Parser ( String, Maybe a, String )
 parseOne parser =
+    P.loop () (parseOneHelp parser)
+
+
+parseOneHelp : Parser a -> () -> Parser (Step () ( String, Maybe a, String ))
+parseOneHelp parser _ =
     P.oneOf
         [ P.succeed
             (\start a end whole ->
-                ( String.slice 0 start whole
-                , a
-                , String.slice end (String.length whole) whole
-                )
+                P.Done
+                    ( String.slice 0 start whole
+                    , a
+                    , String.slice end (String.length whole) whole
+                    )
             )
             |= P.getOffset
             |= (parser |> P.andThen (\a -> P.succeed <| Just a))
             |= P.getOffset
             |= P.getSource
         , P.chompIf (\_ -> True)
-            |> P.andThen
-                (\_ -> P.lazy (\_ -> parseOne parser))
-        , P.succeed (\source -> ( source, Nothing, "" ))
+            |> P.andThen (\_ -> P.succeed <| P.Loop ())
+        , P.succeed
+            (\source -> P.Done ( source, Nothing, "" ))
             |= P.getSource
         ]
 
