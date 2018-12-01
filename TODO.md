@@ -4,16 +4,13 @@ This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
 * Add Notifications feed to `Gab` module, then add feed here.
-* The column height got less with the DOCTYPE header.
-  It no longer covers the entire window height. Fix it.
 * Icons insted of "User:", to the right of the name.
   For Home and Popular, too.
+* Feed icons in left column. Click on one to scroll it horizontally into view.
+  Highlight the clicked feed somehow.
 * Font size and column width preferences.
 * Encode the preferences as a string, so you can paste them into another browser.
-  I tried to do this with `spacing`, as documented, and that works in Chrome,
-  but not in Brave, Safari, or Firefox.
 * Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
-* Lookup user name for column header.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.
   Showing comments at all and showing parents should both be preferences.
@@ -22,7 +19,8 @@ This is a place to collect things left to do for GabDecker.
 * Open clicked image in overlay pane.
 * Link user image to profile page.
 * HTML elements, "`&amp;`" -> "`&`".
-* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`, `<u>foo</u>`.
+* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`,
+  `<u>foo</u>`.
 * Mark the boundary between just loaded posts and older ones.
 * Single `<br />` -> multiple `row`s.
 * Auto-load more near end of scrolling a column.
@@ -32,12 +30,12 @@ This is a place to collect things left to do for GabDecker.
 * Escape to dismiss dialog.
   Focus first input field in dialog.
   Enter to execute selected input field in dialog
+* Colored versions of icons instead of rectangular background color highlight.
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.
   Save only Gab username and expiration date.
   Warn on the screen when expiration date approaches.
-* Colored versions of icons instead of rectangular background color highlight.
 * Dark mode
 * Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 

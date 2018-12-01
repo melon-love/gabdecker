@@ -87,8 +87,9 @@ import GabDecker.Parsers as Parsers
 import GabDecker.Types as Types
     exposing
         ( ApiError
-        , Feed
+        , Feed(..)
         , FeedGetter(..)
+        , FeedRecord
         , FeedType(..)
         )
 import Html exposing (Html)
@@ -204,8 +205,8 @@ type Msg
     | Upvote FeedType Post
     | Downvote FeedType Post
     | ReceiveOperation Operation (Result ApiError Success)
-    | RefreshFeed FeedType (Result ApiError ActivityLogList)
-    | ReceiveFeed FeedType (Result ApiError ActivityLogList)
+    | RefreshActivityLogListFeed FeedType (Result ApiError ActivityLogList)
+    | ReceiveActivityLogListFeed FeedType (Result ApiError ActivityLogList)
 
 
 type Operation
@@ -421,14 +422,28 @@ feedTypeToFeed username columnWidth backend feedType id =
             else
                 feedType
     in
-    { getter = Api.feedTypeToGetter ft backend
-    , feedType = ft
-    , description = feedTypeDescription ft
-    , feed = { data = [], no_more = False }
-    , error = Nothing
-    , columnWidth = columnWidth
-    , id = id
-    }
+    case feedType of
+        NotificationsFeed ->
+            NotificationsLogFeed
+                { getter = Api.feedTypeToNotificationsLogGetter ft backend
+                , feedType = ft
+                , description = feedTypeDescription ft
+                , feed = { data = [], no_more = False }
+                , error = Nothing
+                , columnWidth = columnWidth
+                , id = id
+                }
+
+        _ ->
+            ActivityLogListFeed
+                { getter = Api.feedTypeToActivityLogListGetter ft backend
+                , feedType = ft
+                , description = feedTypeDescription ft
+                , feed = { data = [], no_more = False }
+                , error = Nothing
+                , columnWidth = columnWidth
+                , id = id
+                }
 
 
 feedTypeDescription : FeedType -> Element Msg
@@ -457,31 +472,36 @@ feedTypeDescription feedType =
 
 feedGetMore : Feed Msg -> Cmd Msg
 feedGetMore feed =
-    if feed.feed.no_more then
+    if getFeedNoMore feed then
         Cmd.none
 
     else
-        let
-            receiver =
-                ReceiveFeed feed.feedType
-        in
-        case feed.getter of
-            FeedGetter f ->
-                f receiver
-
-            FeedGetterWithBefore f ->
+        case feed of
+            ActivityLogListFeed record ->
                 let
-                    before =
-                        case LE.last feed.feed.data of
-                            Nothing ->
-                                ""
-
-                            Just log ->
-                                log.published_at
+                    receiver =
+                        ReceiveActivityLogListFeed record.feedType
                 in
-                f receiver before
+                case record.getter of
+                    FeedGetter f ->
+                        f receiver
 
-            FeedGetterUnused ->
+                    FeedGetterWithBefore f ->
+                        let
+                            before =
+                                case LE.last record.feed.data of
+                                    Nothing ->
+                                        ""
+
+                                    Just log ->
+                                        log.published_at
+                        in
+                        f receiver before
+
+                    FeedGetterUnused ->
+                        Cmd.none
+
+            _ ->
                 Cmd.none
 
 
@@ -604,6 +624,96 @@ mungeToken token =
         token
 
 
+isFeedDataEmpty : Feed msg -> Bool
+isFeedDataEmpty feed =
+    case feed of
+        ActivityLogListFeed record ->
+            record.feed.data == []
+
+        NotificationsLogFeed record ->
+            record.feed.data == []
+
+
+getFeedType : Feed msg -> FeedType
+getFeedType feed =
+    case feed of
+        ActivityLogListFeed { feedType } ->
+            feedType
+
+        NotificationsLogFeed { feedType } ->
+            feedType
+
+
+getFeedColumnWidth : Feed msg -> Int
+getFeedColumnWidth feed =
+    case feed of
+        ActivityLogListFeed { columnWidth } ->
+            columnWidth
+
+        NotificationsLogFeed { columnWidth } ->
+            columnWidth
+
+
+setFeedColumnWidth : Int -> Feed msg -> Feed msg
+setFeedColumnWidth columnWidth feed =
+    case feed of
+        ActivityLogListFeed record ->
+            ActivityLogListFeed { record | columnWidth = columnWidth }
+
+        NotificationsLogFeed record ->
+            NotificationsLogFeed { record | columnWidth = columnWidth }
+
+
+getFeedDescription : Feed msg -> Element msg
+getFeedDescription feed =
+    case feed of
+        ActivityLogListFeed { description } ->
+            description
+
+        NotificationsLogFeed { description } ->
+            description
+
+
+getFeedId : Feed msg -> Int
+getFeedId feed =
+    case feed of
+        ActivityLogListFeed { id } ->
+            id
+
+        NotificationsLogFeed { id } ->
+            id
+
+
+getFeedError : Feed msg -> Maybe ApiError
+getFeedError feed =
+    case feed of
+        ActivityLogListFeed { error } ->
+            error
+
+        NotificationsLogFeed { error } ->
+            error
+
+
+setFeedError : Maybe ApiError -> Feed msg -> Feed msg
+setFeedError error feed =
+    case feed of
+        ActivityLogListFeed record ->
+            ActivityLogListFeed { record | error = error }
+
+        NotificationsLogFeed record ->
+            NotificationsLogFeed { record | error = error }
+
+
+getFeedNoMore : Feed msg -> Bool
+getFeedNoMore feed =
+    case feed of
+        ActivityLogListFeed record ->
+            record.feed.no_more
+
+        NotificationsLogFeed record ->
+            record.feed.no_more
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -708,10 +818,10 @@ update msg model =
         CloseFeed feed ->
             let
                 feedType =
-                    feed.feedType
+                    getFeedType feed
 
                 feeds =
-                    List.filter (\f -> feedType /= f.feedType)
+                    List.filter (\f -> feedType /= getFeedType f)
                         model.feeds
             in
             { model
@@ -749,11 +859,11 @@ update msg model =
         ReceiveOperation operation result ->
             receiveOperation operation result model
 
-        RefreshFeed feedType result ->
-            receiveFeed True feedType result model
+        RefreshActivityLogListFeed feedType result ->
+            receiveActivityLogListFeed True feedType result model
 
-        ReceiveFeed feedType result ->
-            receiveFeed False feedType result model
+        ReceiveActivityLogListFeed feedType result ->
+            receiveActivityLogListFeed False feedType result model
 
 
 operationToString : Operation -> String
@@ -833,14 +943,23 @@ updatePost updater feedType postid model =
 
         feeds : List (Feed Msg)
         feeds =
-            LE.updateIf (\f -> feedType == f.feedType)
+            LE.updateIf (\f -> feedType == getFeedType f)
                 (\f ->
-                    let
-                        logList : ActivityLogList
-                        logList =
-                            f.feed
-                    in
-                    { f | feed = { logList | data = data logList } }
+                    case f of
+                        ActivityLogListFeed record ->
+                            let
+                                logList : ActivityLogList
+                                logList =
+                                    record.feed
+                            in
+                            ActivityLogListFeed
+                                { record
+                                    | feed =
+                                        { logList | data = data logList }
+                                }
+
+                        _ ->
+                            f
                 )
                 model.feeds
     in
@@ -882,14 +1001,20 @@ replacePost feedType post model =
 
         feeds : List (Feed Msg)
         feeds =
-            LE.updateIf (\f -> feedType == f.feedType)
+            LE.updateIf (\f -> feedType == getFeedType f)
                 (\f ->
-                    let
-                        logList : ActivityLogList
-                        logList =
-                            f.feed
-                    in
-                    { f | feed = { logList | data = data logList } }
+                    case f of
+                        ActivityLogListFeed record ->
+                            let
+                                logList : ActivityLogList
+                                logList =
+                                    record.feed
+                            in
+                            ActivityLogListFeed
+                                { record | feed = { logList | data = data logList } }
+
+                        _ ->
+                            f
                 )
                 model.feeds
     in
@@ -985,7 +1110,7 @@ moveFeedLeft feedType model =
                     model
 
                 feed :: tail ->
-                    if feedType /= feed.feedType then
+                    if feedType /= getFeedType feed then
                         loop tail <| feed :: res
 
                     else
@@ -1021,7 +1146,7 @@ moveFeedRight feedType model =
                     model
 
                 feed :: tail ->
-                    if feedType /= feed.feedType then
+                    if feedType /= getFeedType feed then
                         loop tail <| feed :: res
 
                     else
@@ -1060,7 +1185,7 @@ saveFeeds : List (Feed Msg) -> Model -> Cmd Msg
 saveFeeds feeds model =
     let
         value =
-            List.map .feedType feeds
+            List.map getFeedType feeds
                 |> ED.encodeFeedTypes
     in
     localStorageSend
@@ -1151,27 +1276,36 @@ loadAll model =
 
 loadMore : String -> Feed Msg -> Model -> ( Model, Cmd Msg )
 loadMore before feed model =
-    case feed.getter of
-        FeedGetter getter ->
-            model |> withCmd (getter (RefreshFeed feed.feedType))
+    case feed of
+        ActivityLogListFeed record ->
+            case record.getter of
+                FeedGetter getter ->
+                    model
+                        |> withCmd
+                            (getter (RefreshActivityLogListFeed <| getFeedType feed))
 
-        FeedGetterWithBefore getter ->
-            let
-                tagger =
-                    if before == "" then
-                        RefreshFeed
+                FeedGetterWithBefore getter ->
+                    let
+                        tagger =
+                            if before == "" then
+                                RefreshActivityLogListFeed
 
-                    else
-                        ReceiveFeed
-            in
-            model |> withCmd (getter (tagger feed.feedType) before)
+                            else
+                                ReceiveActivityLogListFeed
+                    in
+                    model
+                        |> withCmd
+                            (getter (tagger <| getFeedType feed) before)
 
-        FeedGetterUnused ->
+                FeedGetterUnused ->
+                    model |> withNoCmd
+
+        _ ->
             model |> withNoCmd
 
 
-receiveFeed : Bool -> FeedType -> Result ApiError ActivityLogList -> Model -> ( Model, Cmd Msg )
-receiveFeed scrollToTop feedType result model =
+receiveActivityLogListFeed : Bool -> FeedType -> Result ApiError ActivityLogList -> Model -> ( Model, Cmd Msg )
+receiveActivityLogListFeed scrollToTop feedType result model =
     let
         ( mdl, cmd ) =
             case result of
@@ -1188,7 +1322,7 @@ receiveFeed scrollToTop feedType result model =
     in
     let
         ( id, feeds ) =
-            updateFeeds model.maxPosts feedType result mdl.feeds
+            updateActivityLogListFeeds model.maxPosts feedType result mdl.feeds
     in
     { mdl | feeds = feeds }
         |> withCmds
@@ -1222,8 +1356,8 @@ processReceivedError err model =
             model |> withNoCmd
 
 
-updateFeeds : Int -> FeedType -> Result ApiError ActivityLogList -> List (Feed Msg) -> ( String, List (Feed Msg) )
-updateFeeds maxPosts feedType result feeds =
+updateActivityLogListFeeds : Int -> FeedType -> Result ApiError ActivityLogList -> List (Feed Msg) -> ( String, List (Feed Msg) )
+updateActivityLogListFeeds maxPosts feedType result feeds =
     let
         loop tail res =
             case tail of
@@ -1231,35 +1365,52 @@ updateFeeds maxPosts feedType result feeds =
                     ( "", List.reverse res )
 
                 feed :: rest ->
-                    if feed.feedType == feedType then
-                        ( columnId feed.id
-                        , List.concat
-                            [ List.reverse res
-                            , [ updateFeed maxPosts result feed ]
-                            , rest
-                            ]
-                        )
+                    case feed of
+                        ActivityLogListFeed record ->
+                            if record.feedType == feedType then
+                                ( columnId record.id
+                                , List.concat
+                                    [ List.reverse res
+                                    , [ updateActivityLogListFeed maxPosts
+                                            result
+                                            feed
+                                      ]
+                                    , rest
+                                    ]
+                                )
 
-                    else
-                        loop rest (feed :: res)
+                            else
+                                loop rest (feed :: res)
+
+                        _ ->
+                            loop rest (feed :: res)
     in
     loop feeds []
 
 
-updateFeed : Int -> Result ApiError ActivityLogList -> Feed Msg -> Feed Msg
-updateFeed maxPosts result feed =
+updateActivityLogListFeed : Int -> Result ApiError ActivityLogList -> Feed Msg -> Feed Msg
+updateActivityLogListFeed maxPosts result feed =
     case result of
         Err err ->
-            { feed | error = Just err }
+            setFeedError (Just err) feed
 
         Ok activities ->
-            { feed
-                | error = Nothing
-                , feed =
-                    { data = mergeFeedData maxPosts activities.data feed
-                    , no_more = activities.no_more
-                    }
-            }
+            case feed of
+                ActivityLogListFeed record ->
+                    ActivityLogListFeed
+                        { record
+                            | error = Nothing
+                            , feed =
+                                { data =
+                                    mergeActivityLogListFeedData maxPosts
+                                        activities.data
+                                        record
+                                , no_more = activities.no_more
+                                }
+                        }
+
+                _ ->
+                    feed
 
 
 {-| (<same id>, <published\_at compare>)
@@ -1317,8 +1468,8 @@ compareActivityLogs a b =
             ( False, GT )
 
 
-mergeFeedData : Int -> List ActivityLog -> Feed Msg -> List ActivityLog
-mergeFeedData maxPosts data feed =
+mergeActivityLogListFeedData : Int -> List ActivityLog -> FeedRecord Msg ActivityLogList -> List ActivityLog
+mergeActivityLogListFeedData maxPosts data feed =
     case feed.feedType of
         PopularFeed ->
             data
@@ -1479,7 +1630,7 @@ mainPage model =
 
 findFeed : FeedType -> Model -> Maybe (Feed Msg)
 findFeed feedType model =
-    LE.find (\f -> feedType == f.feedType) model.feeds
+    LE.find (\f -> feedType == getFeedType f) model.feeds
 
 
 addFeedChoices : Model -> List ( String, FeedType )
@@ -1821,7 +1972,7 @@ feedColumnInternal : Int -> Float -> Zone -> Feed Msg -> Element Msg
 feedColumnInternal windowHeight baseFontSize here feed =
     let
         colw =
-            width <| px feed.columnWidth
+            width <| px (getFeedColumnWidth feed)
 
         iconHeight =
             userIconHeight baseFontSize
@@ -1861,11 +2012,11 @@ feedColumnInternal windowHeight baseFontSize here feed =
                     ]
                     [ row [ alignLeft ]
                         [ standardButton "Move Feed Left"
-                            (MoveFeedLeft feed.feedType)
+                            (MoveFeedLeft <| getFeedType feed)
                             prevIcon
                         , text " "
                         , standardButton "Move Feed Right"
-                            (MoveFeedRight feed.feedType)
+                            (MoveFeedRight <| getFeedType feed)
                             nextIcon
                         ]
                     , row [ centerX ]
@@ -1874,7 +2025,7 @@ feedColumnInternal windowHeight baseFontSize here feed =
                             (LoadMore "" feed)
                             (heightImage icons.reload "Refresh" iconHeight)
                         , text " "
-                        , feed.description
+                        , getFeedDescription feed
                         ]
                     , el [ alignRight ]
                         (standardButton "Close Feed" (CloseFeed feed) closeIcon)
@@ -1890,15 +2041,23 @@ feedColumnInternal windowHeight baseFontSize here feed =
                             - headerHeight baseFontSize
                             - (2 * columnPadding + 10)
                         )
-                , columnIdAttribute feed.id
+                , columnIdAttribute <| getFeedId feed
                 , Element.scrollbarX
                 , Element.clipX
                 ]
               <|
+                let
+                    rows =
+                        case feed of
+                            ActivityLogListFeed record ->
+                                List.map (postRow baseFontSize feed True here)
+                                    record.feed.data
+
+                            _ ->
+                                []
+                in
                 List.concat
-                    [ List.map
-                        (postRow baseFontSize feed True here)
-                        feed.feed.data
+                    [ rows
                     , [ moreRow colw feed ]
                     ]
             ]
@@ -1907,33 +2066,44 @@ feedColumnInternal windowHeight baseFontSize here feed =
 
 moreRow : Attribute Msg -> Feed Msg -> Element Msg
 moreRow colw feed =
-    if feed.feed.no_more then
+    if getFeedNoMore feed then
+        text ""
+
+    else if isFeedDataEmpty feed then
         text ""
 
     else
-        case LE.last feed.feed.data of
-            Nothing ->
-                text ""
+        row
+            [ centerX
+            , paddingEach
+                { zeroes
+                    | top = 20
+                    , bottom = 20
+                    , left = 5
+                    , right = 5
+                }
+            ]
+            [ let
+                nbsps =
+                    String.repeat 3 chars.nbsp
 
-            Just log ->
-                row
-                    [ centerX
-                    , paddingEach
-                        { zeroes
-                            | top = 20
-                            , bottom = 20
-                            , left = 5
-                            , right = 5
-                        }
-                    ]
-                    [ let
-                        nbsps =
-                            String.repeat 3 chars.nbsp
-                      in
-                      textButton ""
-                        (LoadMore log.published_at feed)
-                        (nbsps ++ "Load More" ++ nbsps)
-                    ]
+                msg =
+                    case feed of
+                        ActivityLogListFeed record ->
+                            case LE.last record.feed.data of
+                                Nothing ->
+                                    Noop
+
+                                Just logList ->
+                                    LoadMore logList.published_at feed
+
+                        _ ->
+                            Noop
+              in
+              textButton ""
+                msg
+                (nbsps ++ "Load More" ++ nbsps)
+            ]
 
 
 userPadding : Attribute msg
@@ -1955,7 +2125,7 @@ postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
 postRow baseFontSize feed isToplevel here log =
     let
         cw =
-            feed.columnWidth
+            getFeedColumnWidth feed
 
         pad =
             5
@@ -2125,7 +2295,9 @@ postRow baseFontSize feed isToplevel here log =
 
                                         Just parentPost ->
                                             postRow baseFontSize
-                                                { feed | columnWidth = cwp - 10 }
+                                                (setFeedColumnWidth (cwp - 10)
+                                                    feed
+                                                )
                                                 False
                                                 here
                                             <|
@@ -2209,7 +2381,7 @@ interactionRow baseFontSize colwp feed post =
                 ]
 
         feedType =
-            feed.feedType
+            getFeedType feed
 
         postid =
             post.id

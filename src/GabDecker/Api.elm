@@ -1,7 +1,8 @@
 module GabDecker.Api exposing
     ( Backend(..)
     , downvotePost
-    , feedTypeToGetter
+    , feedTypeToActivityLogListGetter
+    , feedTypeToNotificationsLogGetter
     , followUser
     , getPost
     , groupFeed
@@ -9,6 +10,7 @@ module GabDecker.Api exposing
     , me
     , muteUser
     , newPost
+    , notifications
     , popularFeed
     , popularUsers
     , postImage
@@ -27,6 +29,7 @@ import Gab.EncodeDecode
     exposing
         ( activityLogDecoder
         , activityLogListDecoder
+        , notificationsLogDecoder
         , postDecoder
         , userDecoder
         , userListDecoder
@@ -35,6 +38,7 @@ import Gab.Types
     exposing
         ( ActivityLog
         , ActivityLogList
+        , NotificationsLog
         , Post
         , PostForm
         , Success
@@ -45,7 +49,6 @@ import GabDecker.Types
     exposing
         ( ApiError
         , FeedGetter(..)
-        , FeedTagger
         , FeedType(..)
         )
 import Http
@@ -59,8 +62,8 @@ type Backend
     | SimulatedBackend
 
 
-feedTypeToGetter : FeedType -> Backend -> FeedGetter msg
-feedTypeToGetter feedType backend =
+feedTypeToActivityLogListGetter : FeedType -> Backend -> FeedGetter msg ActivityLogList
+feedTypeToActivityLogListGetter feedType backend =
     case feedType of
         HomeFeed ->
             FeedGetterWithBefore <| homeFeed backend
@@ -76,6 +79,16 @@ feedTypeToGetter feedType backend =
 
         PopularFeed ->
             FeedGetter <| popularFeed backend
+
+        _ ->
+            FeedGetterUnused
+
+
+feedTypeToNotificationsLogGetter : FeedType -> Backend -> FeedGetter msg NotificationsLog
+feedTypeToNotificationsLogGetter feedType backend =
+    case feedType of
+        NotificationsFeed ->
+            FeedGetterWithBefore <| notifications backend
 
         _ ->
             FeedGetterUnused
@@ -160,12 +173,12 @@ userFollowing backend tagger username before =
                 Http.get ("json/following/" ++ username ++ ".json") userListDecoder
 
 
-followUser : Backend -> (Result ApiError Value -> msg) -> String -> Cmd msg
+followUser : Backend -> (Result ApiError Success -> msg) -> String -> Cmd msg
 followUser backend tagger username =
     unimplemented tagger
 
 
-muteUser : Backend -> (Result ApiError User -> msg) -> String -> Cmd msg
+muteUser : Backend -> (Result ApiError Success -> msg) -> String -> Cmd msg
 muteUser backend tagger username =
     unimplemented tagger
 
@@ -179,7 +192,7 @@ whichJson before =
         "2.json"
 
 
-homeFeed : Backend -> FeedTagger msg -> String -> Cmd msg
+homeFeed : Backend -> (Result ApiError ActivityLogList -> msg) -> String -> Cmd msg
 homeFeed backend tagger before =
     wrapHttpReturn tagger <|
         case backend of
@@ -194,7 +207,7 @@ homeFeed backend tagger before =
                 Http.get ("json/feeds/home/" ++ json) activityLogListDecoder
 
 
-userFeed : Backend -> String -> FeedTagger msg -> String -> Cmd msg
+userFeed : Backend -> String -> (Result ApiError ActivityLogList -> msg) -> String -> Cmd msg
 userFeed backend username tagger before =
     wrapHttpReturn tagger <|
         case backend of
@@ -210,17 +223,17 @@ userFeed backend username tagger before =
                     activityLogListDecoder
 
 
-groupFeed : Backend -> String -> FeedTagger msg -> String -> Cmd msg
+groupFeed : Backend -> String -> (Result ApiError ActivityLogList -> msg) -> String -> Cmd msg
 groupFeed backend groupid tagger before =
     unimplemented tagger
 
 
-topicFeed : Backend -> String -> FeedTagger msg -> String -> Cmd msg
+topicFeed : Backend -> String -> (Result ApiError ActivityLogList -> msg) -> String -> Cmd msg
 topicFeed backend topicid tagger before =
     unimplemented tagger
 
 
-popularFeed : Backend -> FeedTagger msg -> Cmd msg
+popularFeed : Backend -> (Result ApiError ActivityLogList -> msg) -> Cmd msg
 popularFeed backend tagger =
     wrapHttpReturn tagger <|
         case backend of
@@ -240,6 +253,18 @@ popularUsers backend tagger =
 
             SimulatedBackend ->
                 Http.get "json/users/popular.json" userListDecoder
+
+
+notifications : Backend -> (Result ApiError NotificationsLog -> msg) -> String -> Cmd msg
+notifications backend tagger before =
+    wrapHttpReturn tagger <|
+        case backend of
+            RealBackend token ->
+                Gab.notifications token before
+
+            SimulatedBackend ->
+                Http.get ("json/notifications/" ++ whichJson before)
+                    notificationsLogDecoder
 
 
 upvotePost : Backend -> (Result ApiError Success -> msg) -> Int -> Bool -> Cmd msg

@@ -1,13 +1,14 @@
 module GabDecker.Types exposing
     ( ApiError
-    , Feed
+    , Feed(..)
     , FeedGetter(..)
+    , FeedRecord
     , FeedTagger
     , FeedType(..)
     )
 
 import Element exposing (Element)
-import Gab.Types exposing (ActivityLogList)
+import Gab.Types exposing (ActivityLogList, NotificationsLog, UserList)
 import Http
 
 
@@ -17,13 +18,13 @@ type alias ApiError =
     }
 
 
-type alias FeedTagger msg =
-    Result ApiError ActivityLogList -> msg
+type alias FeedTagger msg kind =
+    Result ApiError kind -> msg
 
 
-type FeedGetter msg
-    = FeedGetterWithBefore (FeedTagger msg -> String -> Cmd msg)
-    | FeedGetter (FeedTagger msg -> Cmd msg)
+type FeedGetter msg kind
+    = FeedGetterWithBefore (FeedTagger msg kind -> String -> Cmd msg)
+    | FeedGetter (FeedTagger msg kind -> Cmd msg)
     | FeedGetterUnused
 
 
@@ -35,14 +36,20 @@ type FeedType
     | PopularFeed
     | LastClosedFeed
     | LoggedInUserFeed
+    | NotificationsFeed
 
 
-type alias Feed msg =
-    { getter : FeedGetter msg
+type alias FeedRecord msg kind =
+    { getter : FeedGetter msg kind
     , feedType : FeedType
     , description : Element msg
-    , feed : ActivityLogList
+    , feed : kind
     , error : Maybe ApiError
     , columnWidth : Int
     , id : Int
     }
+
+
+type Feed msg
+    = ActivityLogListFeed (FeedRecord msg ActivityLogList)
+    | NotificationsLogFeed (FeedRecord msg NotificationsLog)
