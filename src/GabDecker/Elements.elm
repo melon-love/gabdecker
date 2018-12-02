@@ -41,12 +41,12 @@ import Element.Font as Font
 
 simpleLink : String -> String -> Element msg
 simpleLink url label =
-    styledLink False [] url label
+    styledLink False [] url (text label)
 
 
 newTabLink : String -> String -> Element msg
 newTabLink url label =
-    styledLink True [] url label
+    styledLink True [] url (text label)
 
 
 itou : Int -> Float
@@ -85,7 +85,7 @@ styleColors =
 
 {-| Color highlighting is temporary, until Font.underline becomes decorative.
 -}
-styledLink : Bool -> List (Attribute msg) -> String -> String -> Element msg
+styledLink : Bool -> List (Attribute msg) -> String -> Element msg -> Element msg
 styledLink newTab attributes url label =
     (if newTab then
         Element.newTabLink
@@ -101,7 +101,7 @@ styledLink newTab attributes url label =
             ]
         )
         { url = url
-        , label = text label
+        , label = label
         }
 
 

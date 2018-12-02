@@ -37,6 +37,9 @@ encodeFeedType feedType =
         PopularFeed ->
             JE.object [ ( "feedType", JE.string "PopularFeed" ) ]
 
+        NotificationsFeed ->
+            JE.object [ ( "feedType", JE.string "NotificationsFeed" ) ]
+
         _ ->
             JE.object [ ( "feedType", JE.string "unknown" ) ]
 
@@ -64,6 +67,9 @@ feedTypeDecoder =
 
                                     "PopularFeed" ->
                                         JD.succeed PopularFeed
+
+                                    "NotificationsFeed" ->
+                                        JD.succeed NotificationsFeed
 
                                     _ ->
                                         fail

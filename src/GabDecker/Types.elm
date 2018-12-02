@@ -6,6 +6,7 @@ module GabDecker.Types exposing
     , FeedResult
     , FeedTagger
     , FeedType(..)
+    , GangedNotification
     , LogList
     )
 
@@ -16,6 +17,7 @@ import Gab.Types
         , ActivityLogList
         , Notification
         , NotificationsLog
+        , User
         , UserList
         )
 import Http
@@ -68,6 +70,13 @@ type alias Feed msg =
     }
 
 
+type alias GangedNotification =
+    { notification : Notification
+    , users : List User
+    }
+
+
 type FeedData
     = PostFeedData ActivityLog
     | NotificationFeedData Notification
+    | GangedNotificationData GangedNotification

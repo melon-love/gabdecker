@@ -63,6 +63,7 @@ import Gab.Types
         , Attachment(..)
         , MediaRecord
         , Notification
+        , NotificationType(..)
         , NotificationsLog
         , Post
         , PostForm
@@ -82,6 +83,7 @@ import GabDecker.Elements
         , simpleImage
         , simpleLink
         , styleColors
+        , styledLink
         , widthImage
         )
 import GabDecker.EncodeDecode as ED
@@ -94,6 +96,7 @@ import GabDecker.Types as Types
         , FeedGetter(..)
         , FeedResult
         , FeedType(..)
+        , GangedNotification
         , LogList
         )
 import Html exposing (Html)
@@ -436,6 +439,19 @@ feedTypeToFeed username columnWidth backend feedType id =
     , columnWidth = columnWidth
     , id = id
     }
+
+
+userUrl : User -> String
+userUrl user =
+    "https://gab.com/" ++ user.username
+
+
+postUrl : Post -> String
+postUrl post =
+    "https://gab.com/"
+        ++ post.user.username
+        ++ "/posts/"
+        ++ String.fromInt post.id
 
 
 feedTypeDescription : FeedType -> Element Msg
@@ -1204,6 +1220,9 @@ feedBefore feed =
                 NotificationFeedData d ->
                     d.id
 
+                _ ->
+                    ""
+
 
 loadMore : Bool -> Feed Msg -> Cmd Msg
 loadMore appendResult feed =
@@ -1898,31 +1917,33 @@ feedColumnInternal windowHeight baseFontSize here feed =
                 ]
               <|
                 let
-                    rows =
-                        List.map (feedDataRow baseFontSize feed True here) <|
-                            feed.feed.data
-
-                    undoneRows =
+                    ( undoneRows, data ) =
                         if feed.feedType == NotificationsFeed then
-                            [ row
-                                [ fillWidth
-                                , paddingEach
-                                    { zeroes
-                                        | left = columnPadding
-                                        , top = 5
-                                        , bottom = 5
-                                    }
-                                , Font.bold
-                                , Border.widthEach
-                                    { zeroes | bottom = 2 }
-                                , Border.color styleColors.border
-                                ]
-                                [ text "Notifications will soon be better."
-                                ]
-                            ]
+                            ( [ row
+                                    [ fillWidth
+                                    , paddingEach
+                                        { zeroes
+                                            | left = columnPadding
+                                            , top = 5
+                                            , bottom = 5
+                                        }
+                                    , Font.bold
+                                    , Border.widthEach
+                                        { zeroes | bottom = 2 }
+                                    , Border.color styleColors.border
+                                    ]
+                                    [ text "Comment parents are coming."
+                                    ]
+                              ]
+                            , gangNotifications feed.feed.data
+                            )
 
                         else
-                            []
+                            ( [], feed.feed.data )
+
+                    rows =
+                        List.map (feedDataRow baseFontSize feed True here) <|
+                            data
                 in
                 List.concat
                     [ undoneRows
@@ -1986,8 +2007,11 @@ feedDataRow baseFontSize feed isToplevel here data =
         PostFeedData log ->
             postRow baseFontSize feed isToplevel here log
 
-        NotificationFeedData notification ->
+        GangedNotificationData notification ->
             notificationRow baseFontSize feed here notification
+
+        _ ->
+            text ""
 
 
 postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
@@ -2129,7 +2153,8 @@ postRow baseFontSize feed isToplevel here log =
                   <|
                     case post.body_html of
                         Nothing ->
-                            htmlBodyElements baseFontSize <| newlinesToPs post.body
+                            htmlBodyElements baseFontSize <|
+                                newlinesToPs post.body
 
                         Just html ->
                             htmlBodyElements baseFontSize html
@@ -2184,9 +2209,185 @@ postRow baseFontSize feed isToplevel here log =
         ]
 
 
-notificationRow : Float -> Feed Msg -> Zone -> Notification -> Element Msg
-notificationRow baseFontSize feed here notification =
+userNameLink : User -> Element el
+userNameLink user =
+    newTabLink (userUrl user) user.name
+
+
+notificationDescriptionLine : User -> String -> Maybe Post -> String -> Element Msg
+notificationDescriptionLine user middle maybePost postName =
+    row []
+        [ userNameLink user
+        , text middle
+        , case maybePost of
+            Nothing ->
+                text postName
+
+            Just post ->
+                newTabLink (postUrl post) postName
+        , text "."
+        ]
+
+
+postCreatedLink : Post -> Zone -> Element Msg
+postCreatedLink post here =
+    newTabLink (postUrl post) <| iso8601ToString here post.created_at
+
+
+notificationTypeToDescription : NotificationType -> Notification -> List User -> Element Msg
+notificationTypeToDescription typ notification otherUsers =
+    -- "comment", "follow", "like", "mention", "repost", "comment-reply"
     let
+        maybePost =
+            notification.post
+
+        actuser =
+            notification.actuser
+
+        otherUsersString =
+            if otherUsers == [] then
+                ""
+
+            else
+                let
+                    len =
+                        List.length otherUsers
+                in
+                " and "
+                    ++ String.fromInt len
+                    ++ (if len == 1 then
+                            " other user"
+
+                        else
+                            " other users"
+                       )
+    in
+    case typ of
+        LikeNotification ->
+            notificationDescriptionLine actuser
+                (otherUsersString ++ " liked ")
+                maybePost
+                "your post"
+
+        RepostNotification ->
+            notificationDescriptionLine actuser
+                " reposted "
+                maybePost
+                "your post"
+
+        FollowNotification ->
+            notificationDescriptionLine actuser
+                " followed you"
+                Nothing
+                ""
+
+        MentionNotification ->
+            notificationDescriptionLine actuser
+                " mentioned you "
+                maybePost
+                -- Sometimes this should be "comment"
+                "in a post"
+
+        UnknownNotification "comment" ->
+            notificationDescriptionLine actuser
+                " commented on your "
+                maybePost
+                "post"
+
+        UnknownNotification "comment-reply" ->
+            notificationDescriptionLine actuser
+                " replied to your "
+                maybePost
+                "comment"
+
+        UnknownNotification message ->
+            case maybePost of
+                Nothing ->
+                    text notification.message
+
+                Just post ->
+                    newTabLink (postUrl post) notification.message
+
+
+style : String -> Html msg
+style css =
+    Html.node "style" [] [ Html.text css ]
+
+
+gangedTypes : List NotificationType
+gangedTypes =
+    [ LikeNotification, RepostNotification, FollowNotification ]
+
+
+gangNotifications : List FeedData -> List FeedData
+gangNotifications data =
+    let
+        notesAreSimilar note1 note2 =
+            if
+                (note1.type_ == note2.type_)
+                    && List.member note1.type_ gangedTypes
+            then
+                case note1.post of
+                    Nothing ->
+                        note2.post == Nothing
+
+                    Just post1 ->
+                        case note2.post of
+                            Nothing ->
+                                False
+
+                            Just post2 ->
+                                post1.id == post2.id
+
+            else
+                False
+
+        loop : List Notification -> List FeedData -> List FeedData
+        loop rest res =
+            case rest of
+                [] ->
+                    List.reverse res
+
+                head :: tail ->
+                    let
+                        similars =
+                            List.filter (notesAreSimilar head) tail
+
+                        users =
+                            List.map .actuser similars
+
+                        ganged =
+                            GangedNotificationData
+                                (GangedNotification head <|
+                                    List.reverse users
+                                )
+                    in
+                    loop (LE.filterNot (notesAreSimilar head) tail)
+                        (ganged :: res)
+
+        getNote feedData =
+            case feedData of
+                NotificationFeedData note ->
+                    Just note
+
+                _ ->
+                    Nothing
+
+        notes =
+            List.filterMap getNote data
+    in
+    loop notes []
+
+
+notificationRow : Float -> Feed Msg -> Zone -> GangedNotification -> Element Msg
+notificationRow baseFontSize feed here gangedNotification =
+    let
+        notification =
+            gangedNotification.notification
+
+        otherUsers =
+            gangedNotification.users
+
         cw =
             feed.columnWidth
 
@@ -2226,7 +2427,10 @@ notificationRow baseFontSize feed here notification =
         ]
         [ column []
             [ row [ paddingEach { zeroes | top = 5, bottom = 5 } ]
-                [ text notification.message ]
+                [ notificationTypeToDescription notification.type_
+                    notification
+                    otherUsers
+                ]
             , row []
                 [ case maybePost of
                     Nothing ->
@@ -2238,28 +2442,66 @@ notificationRow baseFontSize feed here notification =
                             , colwp
                             ]
                         <|
-                            case post.body_html_summary of
-                                Nothing ->
-                                    let
-                                        body1 =
-                                            String.left 200 post.body
+                            List.concat
+                                [ [ let
+                                        spacing =
+                                            negate (paragraphSpacingAmount baseFontSize)
 
-                                        body =
-                                            if
-                                                String.length body1
-                                                    == String.length post.body
-                                            then
-                                                body1
-
-                                            else
-                                                body1 ++ "..."
+                                        css =
+                                            ".moveup { margin-bottom: "
+                                                ++ String.fromInt spacing
+                                                ++ "px !important;"
                                     in
-                                    htmlBodyElements baseFontSize <|
-                                        newlinesToPs body
+                                    Element.html <| style css
+                                  , row
+                                        [ paddingEach { zeroes | top = 4 }
+                                        , Element.htmlAttribute <|
+                                            Attributes.class "moveup"
+                                        ]
+                                        [ postCreatedLink post here ]
+                                  ]
+                                , case post.body_html_summary of
+                                    Just html ->
+                                        htmlBodyElements baseFontSize html
 
-                                Just html ->
-                                    htmlBodyElements baseFontSize html
+                                    Nothing ->
+                                        let
+                                            body1 =
+                                                String.left 200 post.body
+
+                                            body =
+                                                if
+                                                    String.length body1
+                                                        == String.length post.body
+                                                then
+                                                    body1
+
+                                                else
+                                                    body1 ++ "..."
+                                        in
+                                        htmlBodyElements baseFontSize <|
+                                            newlinesToPs body
+                                ]
                 ]
+            , let
+                allUsers =
+                    notification.actuser :: otherUsers
+
+                height =
+                    30
+
+                userImage user =
+                    styledLink True
+                        []
+                        (userUrl user)
+                        (heightImage user.picture_url user.name height)
+              in
+              row
+                [ paddingEach { zeroes | bottom = 4 }
+                , spacing 4
+                ]
+              <|
+                List.map userImage allUsers
             ]
         ]
 
@@ -2430,9 +2672,19 @@ paragraphPadding =
     paddingEach <| { zeroes | top = 4, bottom = 4 }
 
 
+paragraphPaddingNoTop : Attribute msg
+paragraphPaddingNoTop =
+    paddingEach <| { zeroes | bottom = 4 }
+
+
+paragraphSpacingAmount : Float -> Int
+paragraphSpacingAmount baseFontSize =
+    round (0.6 * baseFontSize)
+
+
 paragraphSpacing : Float -> Attribute msg
 paragraphSpacing baseFontSize =
-    spacing <| round (0.6 * baseFontSize)
+    spacing <| paragraphSpacingAmount baseFontSize
 
 
 paragraphLineSpacing : Float -> Attribute msg
@@ -2454,8 +2706,7 @@ htmlBodyElements baseFontSize html =
         par : List (Element Msg) -> Element Msg
         par elements =
             paragraph
-                [ Element.clipY
-                , paragraphPadding
+                [ paragraphPadding
                 , paragraphLineSpacing baseFontSize
                 ]
                 elements
