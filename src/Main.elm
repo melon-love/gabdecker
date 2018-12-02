@@ -2492,9 +2492,9 @@ notificationRow baseFontSize feed here gangedNotification =
 
                 userImage user =
                     styledLink True
-                        []
+                        [ titleAttribute user.name ]
                         (userUrl user)
-                        (heightImage user.picture_url user.name height)
+                        (heightImage user.picture_url "" height)
               in
               row
                 [ paddingEach { zeroes | bottom = 4 }
