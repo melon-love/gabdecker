@@ -2271,7 +2271,7 @@ notificationTypeToDescription typ notification otherUsers =
 
         RepostNotification ->
             notificationDescriptionLine actuser
-                " reposted "
+                (otherUsersString ++ " reposted ")
                 maybePost
                 "your post"
 
