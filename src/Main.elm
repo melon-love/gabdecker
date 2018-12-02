@@ -62,6 +62,7 @@ import Gab.Types
         , ActivityLogList
         , Attachment(..)
         , MediaRecord
+        , Notification
         , NotificationsLog
         , Post
         , PostForm
@@ -252,7 +253,7 @@ localStoragePrefix =
 
 initialFeeds : List FeedType
 initialFeeds =
-    [ HomeFeed, UserFeed "a", PopularFeed ]
+    [ HomeFeed, NotificationsFeed, PopularFeed ]
 
 
 init : Value -> Url -> Key -> ( Model, Cmd Msg )
@@ -456,6 +457,9 @@ feedTypeDescription feedType =
 
         PopularFeed ->
             newTabLink "https://gab.com/popular" "Popular"
+
+        NotificationsFeed ->
+            newTabLink "https://gab.com/notifications" "Notifications"
 
         _ ->
             text "Shouldn't happen"
@@ -1480,6 +1484,9 @@ addFeedChoices model =
         popularFeed =
             findFeed PopularFeed model
 
+        notificationsFeed =
+            findFeed NotificationsFeed model
+
         ( username, userFeed ) =
             case model.loggedInUser of
                 Nothing ->
@@ -1500,6 +1507,12 @@ addFeedChoices model =
         , case popularFeed of
             Nothing ->
                 [ ( "Popular", PopularFeed ) ]
+
+            _ ->
+                []
+        , case notificationsFeed of
+            Nothing ->
+                [ ( "Notifications", NotificationsFeed ) ]
 
             _ ->
                 []
@@ -1886,8 +1899,8 @@ feedColumnInternal windowHeight baseFontSize here feed =
               <|
                 let
                     rows =
-                        List.map (postRow baseFontSize feed True here) <|
-                            reducePostData feed.feed.data
+                        List.map (feedDataRow baseFontSize feed True here) <|
+                            feed.feed.data
                 in
                 List.concat
                     [ rows
@@ -1895,20 +1908,6 @@ feedColumnInternal windowHeight baseFontSize here feed =
                     ]
             ]
         ]
-
-
-reducePostData : List FeedData -> List ActivityLog
-reducePostData list =
-    let
-        reducer data res =
-            case data of
-                PostFeedData d ->
-                    d :: res
-
-                _ ->
-                    res
-    in
-    List.foldr reducer [] list
 
 
 moreRow : Attribute Msg -> Feed Msg -> Element Msg
@@ -1956,6 +1955,16 @@ userPadding =
 nameBottomPadding : Attribute msg
 nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
+
+
+feedDataRow : Float -> Feed Msg -> Bool -> Zone -> FeedData -> Element Msg
+feedDataRow baseFontSize feed isToplevel here data =
+    case data of
+        PostFeedData log ->
+            postRow baseFontSize feed isToplevel here log
+
+        NotificationFeedData notification ->
+            notificationRow baseFontSize feed here notification
 
 
 postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
@@ -2148,6 +2157,86 @@ postRow baseFontSize feed isToplevel here log =
 
               else
                 interactionRow baseFontSize colwp feed post
+            ]
+        ]
+
+
+notificationRow : Float -> Feed Msg -> Zone -> Notification -> Element Msg
+notificationRow baseFontSize feed here notification =
+    let
+        cw =
+            feed.columnWidth
+
+        pad =
+            5
+
+        colpad =
+            columnPadding
+
+        cwp =
+            cw - 2 * colpad - 6
+
+        colw =
+            width <| px cw
+
+        colwp =
+            width <| px cwp
+
+        maybePost =
+            notification.post
+
+        actuser =
+            notification.actuser
+
+        actusername =
+            actuser.username
+    in
+    row
+        [ colw
+        , Border.widthEach { zeroes | bottom = 2 }
+        , Border.color styleColors.border
+        , paddingEach
+            { zeroes
+                | left = colpad
+                , right = colpad
+            }
+        ]
+        [ column []
+            [ row [ paddingEach { zeroes | top = 5, bottom = 5 } ]
+                [ text notification.message ]
+            , row []
+                [ case maybePost of
+                    Nothing ->
+                        text ""
+
+                    Just post ->
+                        Element.textColumn
+                            [ paragraphSpacing baseFontSize
+                            , colwp
+                            ]
+                        <|
+                            case post.body_html_summary of
+                                Nothing ->
+                                    let
+                                        body1 =
+                                            String.left 200 post.body
+
+                                        body =
+                                            if
+                                                String.length body1
+                                                    == String.length post.body
+                                            then
+                                                body1
+
+                                            else
+                                                body1 ++ "..."
+                                    in
+                                    htmlBodyElements baseFontSize <|
+                                        newlinesToPs body
+
+                                Just html ->
+                                    htmlBodyElements baseFontSize html
+                ]
             ]
         ]
 
