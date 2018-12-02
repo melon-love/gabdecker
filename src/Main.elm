@@ -1901,9 +1901,32 @@ feedColumnInternal windowHeight baseFontSize here feed =
                     rows =
                         List.map (feedDataRow baseFontSize feed True here) <|
                             feed.feed.data
+
+                    undoneRows =
+                        if feed.feedType == NotificationsFeed then
+                            [ row
+                                [ fillWidth
+                                , paddingEach
+                                    { zeroes
+                                        | left = columnPadding
+                                        , top = 5
+                                        , bottom = 5
+                                    }
+                                , Font.bold
+                                , Border.widthEach
+                                    { zeroes | bottom = 2 }
+                                , Border.color styleColors.border
+                                ]
+                                [ text "Notifications will soon be better."
+                                ]
+                            ]
+
+                        else
+                            []
                 in
                 List.concat
-                    [ rows
+                    [ undoneRows
+                    , rows
                     , [ moreRow colw feed ]
                     ]
             ]
