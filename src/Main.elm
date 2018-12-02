@@ -2256,10 +2256,10 @@ notificationTypeToDescription typ notification otherUsers =
                 " and "
                     ++ String.fromInt len
                     ++ (if len == 1 then
-                            " other user"
+                            " others"
 
                         else
-                            " other users"
+                            " others"
                        )
     in
     case typ of
@@ -2277,7 +2277,7 @@ notificationTypeToDescription typ notification otherUsers =
 
         FollowNotification ->
             notificationDescriptionLine actuser
-                " followed you"
+                (otherUsersString ++ " followed you")
                 Nothing
                 ""
 
