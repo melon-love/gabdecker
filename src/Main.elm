@@ -1917,7 +1917,8 @@ feedIsLoading feed model =
 
 feedColumn : Bool -> Int -> Float -> Zone -> Feed Msg -> Element Msg
 feedColumn isLoading windowHeight baseFontSize here feed =
-    Lazy.lazy5 feedColumnInternal
+    Lazy.lazy5
+        feedColumnInternal
         isLoading
         windowHeight
         baseFontSize
@@ -2017,7 +2018,7 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
                         let
                             data =
                                 --Debug.log "rendering "
-                                if theFeed.feedType == NotificationsFeed then
+                                if Debug.log "rendering " theFeed.feedType == NotificationsFeed then
                                     gangNotifications theFeed.feed.data
 
                                 else
@@ -2121,27 +2122,59 @@ feedDataRow baseFontSize feed isToplevel here data =
             postRow baseFontSize feed isToplevel here log
 
         GangedNotificationData notification ->
-            notificationRow baseFontSize feed isToplevel here notification
+            notificationRow baseFontSize
+                feed.columnWidth
+                isToplevel
+                here
+                notification
 
         _ ->
             text ""
 
 
+type alias FeedStuff =
+    { baseFontSize : Float
+    , columnWidth : Int
+    , feedType : FeedType
+    , isTopLevel : Bool
+    , here : Zone
+    , log : ActivityLog
+    }
+
+
 postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
 postRow baseFontSize feed isToplevel here log =
-    Lazy.lazy5 postRowInternal
-        baseFontSize
-        feed
-        isToplevel
-        here
-        log
-
-
-postRowInternal : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
-postRowInternal baseFontSize feed isToplevel here log =
     let
+        stuff =
+            FeedStuff baseFontSize
+                feed.columnWidth
+                feed.feedType
+                isToplevel
+                here
+                log
+    in
+    --Lazy.lazy
+    postRowInternal
+        stuff
+
+
+postRowInternal : FeedStuff -> Element Msg
+postRowInternal stuff =
+    let
+        baseFontSize =
+            stuff.baseFontSize
+
         cw =
-            feed.columnWidth
+            stuff.columnWidth
+
+        isToplevel =
+            stuff.isTopLevel
+
+        here =
+            stuff.here
+
+        log =
+            stuff.log
 
         pad =
             5
@@ -2263,24 +2296,24 @@ postRowInternal baseFontSize feed isToplevel here log =
                                         text ""
 
                                     Just parentPost ->
-                                        postRow baseFontSize
-                                            { feed | columnWidth = cwp - 10 }
-                                            False
-                                            here
-                                        <|
-                                            { log
-                                                | post =
-                                                    { parentPost
-                                                        | body_html =
-                                                            if post.is_quote then
-                                                                parentPost.body_html
+                                        postRowInternal
+                                            { stuff
+                                                | columnWidth = cwp - 10
+                                                , log =
+                                                    { log
+                                                        | post =
+                                                            { parentPost
+                                                                | body_html =
+                                                                    if post.is_quote then
+                                                                        parentPost.body_html
 
-                                                            else
-                                                                parentPost.body_html_summary
-                                                        , body =
-                                                            truncatePost parentPost.body
+                                                                    else
+                                                                        parentPost.body_html_summary
+                                                                , body =
+                                                                    truncatePost parentPost.body
+                                                            }
+                                                        , type_ = "post"
                                                     }
-                                                , type_ = "post"
                                             }
                         ]
                     ]
@@ -2289,7 +2322,7 @@ postRowInternal baseFontSize feed isToplevel here log =
                 text ""
 
               else
-                interactionRow baseFontSize colwp feed post
+                interactionRow baseFontSize colwp stuff post
             ]
         ]
 
@@ -2600,17 +2633,25 @@ gangNotifications data =
     loop notes []
 
 
-notificationRow : Float -> Feed Msg -> Bool -> Zone -> GangedNotification -> Element Msg
-notificationRow baseFontSize feed isToplevel here gangedNotification =
+notificationRow : Float -> Int -> Bool -> Zone -> GangedNotification -> Element Msg
+notificationRow baseFontSize cw isToplevel here gangedNotification =
+    --Lazy.lazy5
+    notificationRowInternal
+        baseFontSize
+        cw
+        isToplevel
+        here
+        gangedNotification
+
+
+notificationRowInternal : Float -> Int -> Bool -> Zone -> GangedNotification -> Element Msg
+notificationRowInternal baseFontSize cw isToplevel here gangedNotification =
     let
         notification =
             gangedNotification.notification
 
         otherUsers =
             gangedNotification.users
-
-        cw =
-            feed.columnWidth
 
         pad =
             5
@@ -2833,8 +2874,8 @@ highlightElement color element =
     el attrs element
 
 
-interactionRow : Float -> Attribute Msg -> Feed Msg -> Post -> Element Msg
-interactionRow baseFontSize colwp feed post =
+interactionRow : Float -> Attribute Msg -> FeedStuff -> Post -> Element Msg
+interactionRow baseFontSize colwp stuff post =
     let
         fsize =
             round <| baseFontSize * 0.8
@@ -2874,7 +2915,7 @@ interactionRow baseFontSize colwp feed post =
                 ]
 
         feedType =
-            feed.feedType
+            stuff.feedType
 
         postid =
             post.id
