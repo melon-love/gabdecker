@@ -2008,7 +2008,7 @@ feedDataRow baseFontSize feed isToplevel here data =
             postRow baseFontSize feed isToplevel here log
 
         GangedNotificationData notification ->
-            notificationRow baseFontSize feed here notification
+            notificationRow baseFontSize feed isToplevel here notification
 
         _ ->
             text ""
@@ -2093,58 +2093,7 @@ postRow baseFontSize feed isToplevel here log =
                             (" " ++ actuser.name ++ " reposted")
                         ]
                     ]
-            , row
-                [ Font.bold
-                , paddingEach { zeroes | top = 5 }
-                , colwp
-                ]
-                [ column
-                    [ paddingEach
-                        { zeroes | right = 5 }
-                    ]
-                    [ row []
-                        [ heightImage user.picture_url username 40 ]
-                    ]
-                , column []
-                    [ row [ nameBottomPadding ]
-                        [ newTabLink ("https://gab.com/" ++ username) <|
-                            embiggen user.name
-                        , text <| " (" ++ username ++ ")"
-                        ]
-                    , case post.group of
-                        Just { id, title } ->
-                            let
-                                url =
-                                    "http://gab.com/groups/" ++ id
-                            in
-                            row [ nameBottomPadding ]
-                                [ newTabLink url <| "Group: " ++ title ]
-
-                        _ ->
-                            case post.topic of
-                                Just { id, title } ->
-                                    let
-                                        url =
-                                            "http://gab.com/topic/" ++ id
-                                    in
-                                    row [ nameBottomPadding ]
-                                        [ newTabLink url <| "Topic: " ++ title ]
-
-                                _ ->
-                                    text ""
-                    , let
-                        url =
-                            "https://gab.com/"
-                                ++ username
-                                ++ "/posts/"
-                                ++ String.fromInt post.id
-                      in
-                      row []
-                        [ newTabLink url <|
-                            iso8601ToString here post.created_at
-                        ]
-                    ]
-                ]
+            , postUserRow colwp here post
             , row []
                 [ Element.textColumn
                     [ paragraphSpacing baseFontSize
@@ -2205,6 +2154,69 @@ postRow baseFontSize feed isToplevel here log =
 
               else
                 interactionRow baseFontSize colwp feed post
+            ]
+        ]
+
+
+postUserRow : Attribute Msg -> Zone -> Post -> Element Msg
+postUserRow colwp here post =
+    let
+        user =
+            post.user
+
+        username =
+            user.username
+    in
+    row
+        [ Font.bold
+        , paddingEach { zeroes | top = 5 }
+        , colwp
+        ]
+        [ column
+            [ paddingEach
+                { zeroes | right = 5 }
+            ]
+            [ row []
+                [ heightImage user.picture_url username 40 ]
+            ]
+        , column []
+            [ row [ nameBottomPadding ]
+                [ newTabLink ("https://gab.com/" ++ username) <|
+                    embiggen user.name
+                , text <| " (" ++ username ++ ")"
+                ]
+            , case post.group of
+                Just { id, title } ->
+                    let
+                        url =
+                            "http://gab.com/groups/" ++ id
+                    in
+                    row [ nameBottomPadding ]
+                        [ newTabLink url <| "Group: " ++ title ]
+
+                _ ->
+                    case post.topic of
+                        Just { id, title } ->
+                            let
+                                url =
+                                    "http://gab.com/topic/" ++ id
+                            in
+                            row [ nameBottomPadding ]
+                                [ newTabLink url <| "Topic: " ++ title ]
+
+                        _ ->
+                            text ""
+            , let
+                url =
+                    "https://gab.com/"
+                        ++ username
+                        ++ "/posts/"
+                        ++ String.fromInt post.id
+              in
+              row []
+                [ newTabLink url <|
+                    iso8601ToString here post.created_at
+                ]
             ]
         ]
 
@@ -2379,8 +2391,8 @@ gangNotifications data =
     loop notes []
 
 
-notificationRow : Float -> Feed Msg -> Zone -> GangedNotification -> Element Msg
-notificationRow baseFontSize feed here gangedNotification =
+notificationRow : Float -> Feed Msg -> Bool -> Zone -> GangedNotification -> Element Msg
+notificationRow baseFontSize feed isToplevel here gangedNotification =
     let
         notification =
             gangedNotification.notification
@@ -2395,7 +2407,11 @@ notificationRow baseFontSize feed here gangedNotification =
             5
 
         colpad =
-            columnPadding
+            if isToplevel then
+                columnPadding
+
+            else
+                5
 
         cwp =
             cw - 2 * colpad - 6
@@ -2417,13 +2433,18 @@ notificationRow baseFontSize feed here gangedNotification =
     in
     row
         [ colw
-        , Border.widthEach { zeroes | bottom = 2 }
-        , Border.color styleColors.border
         , paddingEach
             { zeroes
                 | left = colpad
                 , right = colpad
             }
+        , Border.widthEach <|
+            if isToplevel then
+                { zeroes | bottom = 2 }
+
+            else
+                zeroes
+        , Border.color styleColors.border
         ]
         [ column []
             [ row [ paddingEach { zeroes | top = 5, bottom = 5 } ]
@@ -2460,50 +2481,106 @@ notificationRow baseFontSize feed here gangedNotification =
                                         ]
                                         [ postCreatedLink post here ]
                                   ]
-                                , case post.body_html_summary of
-                                    Just html ->
-                                        htmlBodyElements baseFontSize html
-
-                                    Nothing ->
-                                        let
-                                            body1 =
-                                                String.left 200 post.body
-
-                                            body =
-                                                if
-                                                    String.length body1
-                                                        == String.length post.body
-                                                then
-                                                    body1
-
-                                                else
-                                                    body1 ++ "..."
-                                        in
-                                        htmlBodyElements baseFontSize <|
-                                            newlinesToPs body
+                                , notificationsBody baseFontSize post
                                 ]
                 ]
-            , let
-                allUsers =
-                    notification.actuser :: otherUsers
+            , case maybePost of
+                Nothing ->
+                    text ""
 
-                height =
-                    30
+                Just post ->
+                    case post.related of
+                        RelatedPosts { parent } ->
+                            case parent of
+                                Just pp ->
+                                    notificationParentRow (cw - colpad)
+                                        baseFontSize
+                                        here
+                                        pp
 
-                userImage user =
-                    styledLink True
-                        [ titleAttribute user.name ]
-                        (userUrl user)
-                        (heightImage user.picture_url "" height)
-              in
-              row
-                [ paddingEach { zeroes | bottom = 4 }
-                , spacing 4
-                ]
-              <|
-                List.map userImage allUsers
+                                Nothing ->
+                                    text ""
+            , if not isToplevel then
+                text ""
+
+              else
+                let
+                    allUsers =
+                        notification.actuser :: otherUsers
+
+                    height =
+                        30
+
+                    userImage user =
+                        styledLink True
+                            [ titleAttribute user.name ]
+                            (userUrl user)
+                            (heightImage user.picture_url "" height)
+                in
+                row
+                    [ paddingEach { zeroes | bottom = 4 }
+                    , spacing 4
+                    ]
+                <|
+                    List.map userImage allUsers
             ]
         ]
+
+
+notificationParentRow : Int -> Float -> Zone -> Post -> Element Msg
+notificationParentRow cw baseFontSize here post =
+    let
+        colpad =
+            5
+
+        cwp =
+            cw - 2 * colpad - 6
+
+        colwp =
+            width <| px cwp
+
+        user =
+            post.user
+    in
+    row [ paddingEach { zeroes | bottom = 5 } ]
+        [ column
+            [ colwp
+            , paddingEach { zeroes | bottom = 5, left = 5 }
+            , Background.color styleColors.quotedPost
+            , Border.width 1
+            , Border.color styleColors.quotedPostBorder
+            ]
+          <|
+            List.concat
+                [ [ postUserRow colwp here post ]
+                , notificationsBody baseFontSize post
+                ]
+        ]
+
+
+notificationsBody : Float -> Post -> List (Element Msg)
+notificationsBody baseFontSize post =
+    case post.body_html_summary of
+        Just html ->
+            htmlBodyElements baseFontSize html
+
+        Nothing ->
+            let
+                body1 =
+                    String.left 200 post.body
+
+                body =
+                    if
+                        String.length body1
+                            == String.length post.body
+                    then
+                        body1
+
+                    else
+                        body1 ++ "..."
+            in
+            htmlBodyElements baseFontSize <|
+                newlinesToPs body
 
 
 type HighlightColor

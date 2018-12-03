@@ -3,7 +3,6 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Parent post in notification rows.
 * Icons insted of "User:", to the right of the name.
   For Home and Popular, too.
 * Feed icons in left column. Click on one to scroll it horizontally into view.
