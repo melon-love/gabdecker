@@ -2473,7 +2473,10 @@ notificationRow baseFontSize feed isToplevel here gangedNotification =
         , Border.color styleColors.border
         ]
         [ column []
-            [ row [ paddingEach { zeroes | top = 5, bottom = 5 } ]
+            [ row
+                [ paddingEach { zeroes | top = 5, bottom = 5 }
+                , Font.bold
+                ]
                 [ notificationTypeToDescription notification.type_
                     (maybeParent /= Nothing)
                     notification
@@ -2505,6 +2508,7 @@ notificationRow baseFontSize feed isToplevel here gangedNotification =
                                         [ paddingEach { zeroes | top = 4 }
                                         , Element.htmlAttribute <|
                                             Attributes.class "moveup"
+                                        , Font.bold
                                         ]
                                         [ postCreatedLink post here ]
                                   ]
