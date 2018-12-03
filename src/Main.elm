@@ -2255,10 +2255,17 @@ postCreatedLink post here =
     newTabLink (postUrl post) <| iso8601ToString here post.created_at
 
 
-notificationTypeToDescription : NotificationType -> Notification -> List User -> Element Msg
-notificationTypeToDescription typ notification otherUsers =
+notificationTypeToDescription : NotificationType -> Bool -> Notification -> List User -> Element Msg
+notificationTypeToDescription typ isComment notification otherUsers =
     -- "comment", "follow", "like", "mention", "repost", "comment-reply"
     let
+        postOrComment =
+            if isComment then
+                "comment"
+
+            else
+                "post"
+
         maybePost =
             notification.post
 
@@ -2288,13 +2295,13 @@ notificationTypeToDescription typ notification otherUsers =
             notificationDescriptionLine actuser
                 (otherUsersString ++ " liked ")
                 maybePost
-                "your post"
+                ("your " ++ postOrComment)
 
         RepostNotification ->
             notificationDescriptionLine actuser
                 (otherUsersString ++ " reposted ")
                 maybePost
-                "your post"
+                ("your " ++ postOrComment)
 
         FollowNotification ->
             notificationDescriptionLine actuser
@@ -2307,19 +2314,19 @@ notificationTypeToDescription typ notification otherUsers =
                 " mentioned you "
                 maybePost
                 -- Sometimes this should be "comment"
-                "in a post"
+                ("in a " ++ postOrComment)
 
         UnknownNotification "comment" ->
             notificationDescriptionLine actuser
                 " commented on your "
                 maybePost
-                "post"
+                postOrComment
 
         UnknownNotification "comment-reply" ->
             notificationDescriptionLine actuser
                 " replied to your "
                 maybePost
-                "comment"
+                postOrComment
 
         UnknownNotification message ->
             case maybePost of
@@ -2439,6 +2446,16 @@ notificationRow baseFontSize feed isToplevel here gangedNotification =
 
         actusername =
             actuser.username
+
+        maybeParent =
+            case maybePost of
+                Just post ->
+                    case post.related of
+                        RelatedPosts { parent } ->
+                            parent
+
+                Nothing ->
+                    Nothing
     in
     row
         [ colw
@@ -2458,6 +2475,7 @@ notificationRow baseFontSize feed isToplevel here gangedNotification =
         [ column []
             [ row [ paddingEach { zeroes | top = 5, bottom = 5 } ]
                 [ notificationTypeToDescription notification.type_
+                    (maybeParent /= Nothing)
                     notification
                     otherUsers
                 ]
@@ -2498,17 +2516,15 @@ notificationRow baseFontSize feed isToplevel here gangedNotification =
                     text ""
 
                 Just post ->
-                    case post.related of
-                        RelatedPosts { parent } ->
-                            case parent of
-                                Just pp ->
-                                    notificationParentRow (cw - colpad)
-                                        baseFontSize
-                                        here
-                                        pp
+                    case maybeParent of
+                        Just pp ->
+                            notificationParentRow (cw - colpad)
+                                baseFontSize
+                                here
+                                pp
 
-                                Nothing ->
-                                    text ""
+                        Nothing ->
+                            text ""
             , if not isToplevel then
                 text ""
 
