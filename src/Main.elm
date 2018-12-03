@@ -1514,18 +1514,21 @@ mainPage model =
                 ]
             ]
         , column []
-            [ row
+            [ keyedRow
+                --Keyed.row
                 [ height <| px model.windowHeight
                 , Element.scrollbarY
                 , width <| px (min (model.windowWidth - ccw) contentWidth)
                 ]
                 (List.map
                     (\feed ->
-                        feedColumn (feedIsLoading feed model)
+                        ( feedTypeToString feed.feedType
+                        , feedColumn (feedIsLoading feed model)
                             model.windowHeight
                             model.fontSize
                             model.here
                             feed
+                        )
                     )
                     model.feeds
                 )
@@ -2060,6 +2063,13 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
 keyedColumn : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
 keyedColumn attributes pairs =
     column attributes <| List.map Tuple.second pairs
+
+
+{-| Same signature as Keyed.row, to allow quick switch between keyed and unkeyed.
+-}
+keyedRow : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
+keyedRow attributes pairs =
+    row attributes <| List.map Tuple.second pairs
 
 
 {-| Not currently used. Saved for the next incomplete column
