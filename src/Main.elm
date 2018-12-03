@@ -2070,15 +2070,11 @@ postRow baseFontSize feed isToplevel here log =
             if log.type_ == "repost" then
                 ( "reposted", icons.refresh )
 
-            else
-                case post.related of
-                    RelatedPosts { parent } ->
-                        case parent of
-                            Nothing ->
-                                ( "", "" )
+            else if post.is_reply then
+                ( "commented", icons.comment )
 
-                            Just _ ->
-                                ( "commented", icons.comment )
+            else
+                ( "", "" )
     in
     row
         [ colw
