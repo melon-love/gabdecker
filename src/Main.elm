@@ -1917,41 +1917,50 @@ feedColumnInternal windowHeight baseFontSize here feed =
                 ]
               <|
                 let
-                    ( undoneRows, data ) =
+                    data =
                         if feed.feedType == NotificationsFeed then
-                            ( [ row
-                                    [ fillWidth
-                                    , paddingEach
-                                        { zeroes
-                                            | left = columnPadding
-                                            , top = 5
-                                            , bottom = 5
-                                        }
-                                    , Font.bold
-                                    , Border.widthEach
-                                        { zeroes | bottom = 2 }
-                                    , Border.color styleColors.border
-                                    ]
-                                    [ text "Comment parents are coming."
-                                    ]
-                              ]
-                            , gangNotifications feed.feed.data
-                            )
+                            gangNotifications feed.feed.data
 
                         else
-                            ( [], feed.feed.data )
+                            feed.feed.data
 
                     rows =
                         List.map (feedDataRow baseFontSize feed True here) <|
                             data
                 in
                 List.concat
-                    [ undoneRows
+                    [ if False then
+                        undoneRows
+
+                      else
+                        []
                     , rows
                     , [ moreRow colw feed ]
                     ]
             ]
         ]
+
+
+{-| Not currently used. Saved for the next incomplete column
+-}
+undoneRows : List (Element Msg)
+undoneRows =
+    [ row
+        [ fillWidth
+        , paddingEach
+            { zeroes
+                | left = columnPadding
+                , top = 5
+                , bottom = 5
+            }
+        , Font.bold
+        , Border.widthEach
+            { zeroes | bottom = 2 }
+        , Border.color styleColors.border
+        ]
+        [ text "Comment parents are coming."
+        ]
+    ]
 
 
 moreRow : Attribute Msg -> Feed Msg -> Element Msg
