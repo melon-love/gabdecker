@@ -3,9 +3,21 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* Visual signal that loading is in progress.
+* If a comment has an empty body and only a photo, display the photo, or
+  the date gets covered by the parent below.
+* Clicking on a name should give option of adding feed or opening profile.
+  Same with group and topic, once those feeds are in the API.
+* Clicking on a post time should give the option of opening in Gab
+  or performing an action, all five actions displayed in a feed.
 * Feed icons in left column. Click on one to scroll it horizontally into view.
   Highlight the clicked feed somehow.
+* Scroll to feed after adding it.
+* Profile at top of newly-added user feed.
+  Ability to toggle it off and back on.
+  Choice is persistent.
 * Font size and column width preferences.
+  "Show comments in feeds" preference, or maybe per-feed.
 * Encode the preferences as a string, so you can paste them into another browser.
 * Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
@@ -13,6 +25,7 @@ This is a place to collect things left to do for GabDecker.
   post.parent was there, and I used it. Check if I really need
   post.conversation_parent.
 * Pop up small profile page on hover over name, just like Gab.com.
+  Or maybe this should be another choice on click.
 * Verified, pro, and donor identification for users.
 * Open clicked image in overlay pane.
 * Link user image to profile page.
@@ -23,16 +36,11 @@ This is a place to collect things left to do for GabDecker.
 * Single `<br />` -> multiple `row`s.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
-* Visual signal that loading is in progress.
 * Multiple named pages of feeds, selectable on the left column.
 * Escape to dismiss dialog.
   Focus first input field in dialog.
   Enter to execute selected input field in dialog
 * Colored versions of icons instead of rectangular background color highlight.
-* If you get a post in a feed, and then it is deleted, when you update the
-  feed, it will still be there.
-  This happens also when you repost and then unrepost.
-  The easy fix is to NOT merge, but always initialize on refresh.
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.

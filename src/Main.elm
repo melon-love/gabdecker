@@ -127,6 +127,7 @@ import OAuthMiddleware.EncodeDecode
         )
 import PortFunnel.LocalStorage as LocalStorage
 import PortFunnels exposing (FunnelDict, Handler(..))
+import Set exposing (Set)
 import String
 import String.Extra as SE
 import Task
@@ -179,6 +180,7 @@ type alias Model =
     , feedTypes : List FeedType
     , nextId : Int
     , feeds : List (Feed Msg)
+    , loadingFeeds : Set String
     , lastClosedFeed : Maybe (Feed Msg)
     }
 
@@ -363,6 +365,7 @@ init flags url key =
             , feedTypes = initialFeeds
             , nextId = List.length feeds
             , feeds = feeds
+            , loadingFeeds = Set.empty
             , lastClosedFeed = Nothing
             }
     in
@@ -718,7 +721,7 @@ update msg model =
                             )
 
         LoadMore appendResult feed ->
-            ( model
+            ( setLoadingFeed feed model
             , loadMore appendResult feed
             )
 
@@ -1222,11 +1225,15 @@ addNewFeed feedType baseFontSize model =
 loadAll : Model -> ( Model, Cmd Msg )
 loadAll model =
     let
-        getone feed res =
-            loadMore False feed
-                :: res
+        getone feed ( m, cs ) =
+            ( setLoadingFeed feed m
+            , loadMore False feed :: cs
+            )
+
+        ( mdl, cmds ) =
+            List.foldr getone ( model, [] ) model.feeds
     in
-    model |> withCmds (List.foldr getone [] model.feeds)
+    mdl |> withCmds cmds
 
 
 feedBefore : Feed Msg -> String
@@ -1285,7 +1292,11 @@ receiveFeed scrollToTop feedType result model =
         ( id, feeds ) =
             updateFeeds (not scrollToTop) feedType result mdl.feeds
     in
-    { mdl | feeds = feeds }
+    { mdl
+        | feeds = feeds
+        , loadingFeeds =
+            Set.remove (feedTypeToString feedType) model.loadingFeeds
+    }
         |> withCmds
             [ cmd
             , if scrollToTop && id /= "" then
@@ -1505,7 +1516,14 @@ mainPage model =
                 , Element.scrollbarY
                 , width <| px (min (model.windowWidth - ccw) contentWidth)
                 ]
-                (List.map (feedColumn model.windowHeight model.fontSize model.here)
+                (List.map
+                    (\feed ->
+                        feedColumn (feedIsLoading feed model)
+                            model.windowHeight
+                            model.fontSize
+                            model.here
+                            feed
+                    )
                     model.feeds
                 )
             ]
@@ -1856,13 +1874,47 @@ columnBorderWidth =
     5
 
 
-feedColumn : Int -> Float -> Zone -> Feed Msg -> Element Msg
-feedColumn windowHeight baseFontSize here feed =
-    Lazy.lazy4 feedColumnInternal windowHeight baseFontSize here feed
+setLoadingFeed : Feed Msg -> Model -> Model
+setLoadingFeed feed model =
+    { model
+        | loadingFeeds =
+            Set.insert (feedTypeToString feed.feedType)
+                model.loadingFeeds
+    }
 
 
-feedColumnInternal : Int -> Float -> Zone -> Feed Msg -> Element Msg
-feedColumnInternal windowHeight baseFontSize here feed =
+feedTypeToString : FeedType -> String
+feedTypeToString feedType =
+    case feedType of
+        HomeFeed ->
+            "home"
+
+        UserFeed username ->
+            "user." ++ username
+
+        GroupFeed groupid ->
+            "group." ++ groupid
+
+        TopicFeed topicid ->
+            "topic." ++ topicid
+
+        PopularFeed ->
+            "popular"
+
+        NotificationsFeed ->
+            "notifications"
+
+        _ ->
+            "unknown"
+
+
+feedIsLoading : Feed Msg -> Model -> Bool
+feedIsLoading feed model =
+    Set.member (feedTypeToString feed.feedType) model.loadingFeeds
+
+
+feedColumn : Bool -> Int -> Float -> Zone -> Feed Msg -> Element Msg
+feedColumn isLoading windowHeight baseFontSize here feed =
     let
         colw =
             width <| px feed.columnWidth
@@ -1912,11 +1964,20 @@ feedColumnInternal windowHeight baseFontSize here feed =
                             (MoveFeedRight feed.feedType)
                             nextIcon
                         ]
-                    , row [ centerX ]
-                        [ standardButton
-                            "Refresh Feed"
-                            (LoadMore False feed)
-                            (heightImage icons.reload "Refresh" iconHeight)
+                    , row
+                        [ centerX ]
+                        [ el
+                            (if isLoading then
+                                [ Background.color colors.orange ]
+
+                             else
+                                []
+                            )
+                          <|
+                            standardButtonWithDontHover isLoading
+                                "Refresh Feed"
+                                (LoadMore False feed)
+                                (heightImage icons.reload "Refresh" iconHeight)
                         , text " "
                         , feed.description
                         ]
@@ -1925,42 +1986,46 @@ feedColumnInternal windowHeight baseFontSize here feed =
                     ]
                 ]
             ]
-        , row []
-            [ column
-                [ colw
-                , height <|
-                    px
-                        (windowHeight
-                            - headerHeight baseFontSize
-                            - (2 * columnPadding + 10)
-                        )
-                , columnIdAttribute feed.id
-                , Element.scrollbarX
-                , Element.clipX
-                ]
-              <|
-                let
-                    data =
-                        if feed.feedType == NotificationsFeed then
-                            gangNotifications feed.feed.data
+        , let
+            render theFeed =
+                row []
+                    [ column
+                        [ colw
+                        , height <|
+                            px
+                                (windowHeight
+                                    - headerHeight baseFontSize
+                                    - (2 * columnPadding + 10)
+                                )
+                        , columnIdAttribute theFeed.id
+                        , Element.scrollbarX
+                        , Element.clipX
+                        ]
+                      <|
+                        let
+                            data =
+                                if theFeed.feedType == NotificationsFeed then
+                                    gangNotifications theFeed.feed.data
 
-                        else
-                            trimComments feed.feed.data
+                                else
+                                    trimComments theFeed.feed.data
 
-                    rows =
-                        List.map (feedDataRow baseFontSize feed True here) <|
-                            data
-                in
-                List.concat
-                    [ if False then
-                        undoneRows
+                            rows =
+                                List.map (feedDataRow baseFontSize theFeed True here) <|
+                                    data
+                        in
+                        List.concat
+                            [ if False then
+                                undoneRows
 
-                      else
-                        []
-                    , rows
-                    , [ moreRow colw feed ]
+                              else
+                                []
+                            , rows
+                            , [ moreRow colw theFeed ]
+                            ]
                     ]
-            ]
+          in
+          Lazy.lazy render feed
         ]
 
 
@@ -3000,12 +3065,24 @@ loginPage model =
 
 
 standardButton : String -> Msg -> Element Msg -> Element Msg
-standardButton title msg label =
+standardButton =
+    standardButtonWithDontHover False
+
+
+standardButtonWithDontHover : Bool -> String -> Msg -> Element Msg -> Element Msg
+standardButtonWithDontHover dontHover title msg label =
     button
-        [ Font.color styleColors.link
-        , Element.mouseOver [ Background.color styleColors.linkHover ]
-        , titleAttribute title
-        ]
+        (List.concat
+            [ [ Font.color styleColors.link
+              , titleAttribute title
+              ]
+            , if dontHover then
+                []
+
+              else
+                [ Element.mouseOver [ Background.color styleColors.linkHover ] ]
+            ]
+        )
         { onPress = Just msg
         , label = label
         }

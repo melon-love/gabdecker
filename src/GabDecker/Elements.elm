@@ -69,6 +69,7 @@ colors =
     , verylightgray = rgbi 0xF4 0xF4 0xF4
     , white = rgbi 0xFF 0xFF 0xFF
     , red = rgbi 0xFF 0 0
+    , orange = rgbi 0xFF 0xA5 0
     }
 
 
@@ -80,6 +81,7 @@ styleColors =
     , quotedPost = colors.verylightgray
     , quotedPostBorder = colors.lightgray
     , postcountBackground = colors.lightgray
+    , loadingFeed = colors.orange
     }
 
 
