@@ -369,7 +369,7 @@ init flags url key =
             , lastClosedFeed = Nothing
             }
     in
-    model
+    List.foldl setLoadingFeed model model.feeds
         |> withCmds
             [ Navigation.replaceUrl key "#"
             , case token of
@@ -534,14 +534,16 @@ receiveToken mv model =
                                 model.feedTypes
                                 0
                     in
-                    { model
-                        | token = Just savedToken
-                        , scopes = savedToken.scope
-                        , receivedScopes = savedToken.scope
-                        , backend = backend
-                        , nextId = List.length feeds
-                        , feeds = feeds
-                    }
+                    List.foldl setLoadingFeed
+                        { model
+                            | token = Just savedToken
+                            , scopes = savedToken.scope
+                            , receivedScopes = savedToken.scope
+                            , backend = backend
+                            , nextId = List.length feeds
+                            , feeds = feeds
+                        }
+                        feeds
                         |> withCmds
                             [ if backend == Nothing then
                                 Cmd.none
@@ -1915,6 +1917,16 @@ feedIsLoading feed model =
 
 feedColumn : Bool -> Int -> Float -> Zone -> Feed Msg -> Element Msg
 feedColumn isLoading windowHeight baseFontSize here feed =
+    Lazy.lazy5 feedColumnInternal
+        isLoading
+        windowHeight
+        baseFontSize
+        here
+        feed
+
+
+feedColumnInternal : Bool -> Int -> Float -> Zone -> Feed Msg -> Element Msg
+feedColumnInternal isLoading windowHeight baseFontSize here feed =
     let
         colw =
             width <| px feed.columnWidth
@@ -2004,6 +2016,7 @@ feedColumn isLoading windowHeight baseFontSize here feed =
                       <|
                         let
                             data =
+                                --Debug.log "rendering "
                                 if theFeed.feedType == NotificationsFeed then
                                     gangNotifications theFeed.feed.data
 
@@ -2025,7 +2038,10 @@ feedColumn isLoading windowHeight baseFontSize here feed =
                             ]
                     ]
           in
-          Lazy.lazy render feed
+          -- Doesn't work. Runs always
+          --Lazy.lazy
+          render
+            feed
         ]
 
 
@@ -2113,6 +2129,16 @@ feedDataRow baseFontSize feed isToplevel here data =
 
 postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
 postRow baseFontSize feed isToplevel here log =
+    Lazy.lazy5 postRowInternal
+        baseFontSize
+        feed
+        isToplevel
+        here
+        log
+
+
+postRowInternal : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
+postRowInternal baseFontSize feed isToplevel here log =
     let
         cw =
             feed.columnWidth
