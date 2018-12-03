@@ -3,8 +3,6 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Icons insted of "User:", to the right of the name.
-  For Home and Popular, too.
 * Feed icons in left column. Click on one to scroll it horizontally into view.
   Highlight the clicked feed somehow.
 * Font size and column width preferences.
@@ -12,7 +10,8 @@ This is a place to collect things left to do for GabDecker.
 * Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.
-  Showing comments at all and showing parents should both be preferences.
+  post.parent was there, and I used it. Check if I really need
+  post.conversation_parent.
 * Pop up small profile page on hover over name, just like Gab.com.
 * Verified, pro, and donor identification for users.
 * Open clicked image in overlay pane.

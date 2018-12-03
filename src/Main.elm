@@ -256,7 +256,7 @@ localStoragePrefix =
 
 initialFeeds : List FeedType
 initialFeeds =
-    [ HomeFeed, NotificationsFeed, PopularFeed ]
+    [ HomeFeed, NotificationsFeed, PopularFeed, UserFeed "a" ]
 
 
 init : Value -> Url -> Key -> ( Model, Cmd Msg )
@@ -328,7 +328,8 @@ init flags url key =
                                 ( be, Just auth )
 
                 feeds =
-                    feedTypesToFeeds Nothing
+                    feedTypesToFeeds defaultFontSize
+                        Nothing
                         defaultColumnWidth
                         backend
                         initialFeeds
@@ -398,14 +399,14 @@ getViewport viewport =
     WindowResize (round vp.width) (round vp.height)
 
 
-feedTypesToFeeds : Maybe String -> Int -> Maybe Backend -> List FeedType -> Int -> List (Feed Msg)
-feedTypesToFeeds username columnWidth maybeBackend feedTypes startId =
+feedTypesToFeeds : Float -> Maybe String -> Int -> Maybe Backend -> List FeedType -> Int -> List (Feed Msg)
+feedTypesToFeeds baseFontSize username columnWidth maybeBackend feedTypes startId =
     case maybeBackend of
         Nothing ->
             []
 
         Just backend ->
-            List.map2 (feedTypeToFeed username columnWidth backend)
+            List.map2 (feedTypeToFeed baseFontSize username columnWidth backend)
                 feedTypes
             <|
                 List.range startId (startId + List.length feedTypes - 1)
@@ -416,8 +417,8 @@ defaultColumnWidth =
     350
 
 
-feedTypeToFeed : Maybe String -> Int -> Backend -> FeedType -> Int -> Feed Msg
-feedTypeToFeed username columnWidth backend feedType id =
+feedTypeToFeed : Float -> Maybe String -> Int -> Backend -> FeedType -> Int -> Feed Msg
+feedTypeToFeed baseFontSize username columnWidth backend feedType id =
     let
         ft =
             if feedType == LoggedInUserFeed then
@@ -433,7 +434,7 @@ feedTypeToFeed username columnWidth backend feedType id =
     in
     { getter = Api.feedTypeToGetter ft backend
     , feedType = ft
-    , description = feedTypeDescription ft
+    , description = feedTypeDescription ft baseFontSize
     , feed = { data = [], no_more = False }
     , error = Nothing
     , columnWidth = columnWidth
@@ -454,14 +455,28 @@ postUrl post =
         ++ String.fromInt post.id
 
 
-feedTypeDescription : FeedType -> Element Msg
-feedTypeDescription feedType =
+feedTypeDescription : FeedType -> Float -> Element Msg
+feedTypeDescription feedType baseFontSize =
+    let
+        iconHeight =
+            userIconHeight baseFontSize
+
+        feedRow url elements =
+            styledLink True [] url (row [] elements)
+    in
     case feedType of
         HomeFeed ->
-            newTabLink "https://gab.com/" "Home"
+            feedRow "https://gab.com/"
+                [ text "Home "
+                , heightImage icons.home "Home" iconHeight
+                ]
 
         UserFeed user ->
-            newTabLink ("https://gab.com/" ++ user) <| "User: " ++ user
+            feedRow ("https://gab.com/" ++ user)
+                [ text user
+                , text " "
+                , heightImage icons.user "frob" iconHeight
+                ]
 
         -- Need to look up group name
         GroupFeed groupid ->
@@ -472,10 +487,16 @@ feedTypeDescription feedType =
             text <| "Topic: " ++ topicid
 
         PopularFeed ->
-            newTabLink "https://gab.com/popular" "Popular"
+            feedRow "https://gab.com/popular"
+                [ text "Popular "
+                , heightImage icons.popular "Popular" iconHeight
+                ]
 
         NotificationsFeed ->
-            newTabLink "https://gab.com/notifications" "Notifications"
+            feedRow "https://gab.com/notifications"
+                [ text "Notifications "
+                , heightImage icons.notifications "Notifications" iconHeight
+                ]
 
         _ ->
             text "Shouldn't happen"
@@ -503,7 +524,8 @@ receiveToken mv model =
                                 RealBackend savedToken.token
 
                         feeds =
-                            feedTypesToFeeds model.loggedInUser
+                            feedTypesToFeeds model.fontSize
+                                model.loggedInUser
                                 model.columnWidth
                                 backend
                                 model.feedTypes
@@ -736,7 +758,7 @@ update msg model =
             { model | addedUserFeedName = username } |> withNoCmd
 
         AddNewFeed feedType ->
-            addNewFeed feedType model
+            addNewFeed feedType model.fontSize model
 
         Upvote feedType post ->
             upvote feedType post model
@@ -1127,8 +1149,8 @@ saveFeeds feeds model =
         model
 
 
-addNewFeed : FeedType -> Model -> ( Model, Cmd Msg )
-addNewFeed feedType model =
+addNewFeed : FeedType -> Float -> Model -> ( Model, Cmd Msg )
+addNewFeed feedType baseFontSize model =
     let
         addit feed =
             let
@@ -1188,7 +1210,8 @@ addNewFeed feedType model =
 
                         else
                             addit
-                                (feedTypeToFeed model.loggedInUser
+                                (feedTypeToFeed baseFontSize
+                                    model.loggedInUser
                                     model.columnWidth
                                     backend
                                     feedType
@@ -2995,4 +3018,5 @@ icons =
     , next = "icon/next-1.svg"
     , previous = "icon/back.svg"
     , comment = "icon/chat-2.svg"
+    , notification = "icon/hand.svg"
     }
