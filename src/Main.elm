@@ -1945,7 +1945,7 @@ feedColumnInternal windowHeight baseFontSize here feed =
                             gangNotifications feed.feed.data
 
                         else
-                            feed.feed.data
+                            trimComments feed.feed.data
 
                     rows =
                         List.map (feedDataRow baseFontSize feed True here) <|
@@ -2381,6 +2381,72 @@ style css =
 gangedTypes : List NotificationType
 gangedTypes =
     [ LikeNotification, RepostNotification, FollowNotification ]
+
+
+trimComments : List FeedData -> List FeedData
+trimComments data =
+    let
+        isSameCommentedPost post1 parent1Id log2 =
+            let
+                post2 =
+                    log2.post
+            in
+            ("post" == log2.type_)
+                && post2.is_reply
+                && (case post2.related of
+                        RelatedPosts { parent } ->
+                            case parent of
+                                Nothing ->
+                                    False
+
+                                Just parent2 ->
+                                    parent2.id == parent1Id
+                   )
+
+        loop rest res =
+            case rest of
+                [] ->
+                    List.reverse res
+
+                head :: tail ->
+                    if head.type_ /= "post" then
+                        loop tail (PostFeedData head :: res)
+
+                    else
+                        let
+                            post =
+                                head.post
+                        in
+                        if not post.is_reply then
+                            loop tail (PostFeedData head :: res)
+
+                        else
+                            case post.related of
+                                RelatedPosts { parent } ->
+                                    case parent of
+                                        Nothing ->
+                                            loop tail res
+
+                                        Just p ->
+                                            loop
+                                                (LE.filterNot
+                                                    (isSameCommentedPost post p.id)
+                                                    tail
+                                                )
+                                                (PostFeedData head :: res)
+
+        getLog feedData =
+            case feedData of
+                PostFeedData log ->
+                    Just log
+
+                _ ->
+                    Nothing
+
+        logs =
+            List.filterMap getLog data
+    in
+    loop logs []
 
 
 gangNotifications : List FeedData -> List FeedData
