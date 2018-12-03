@@ -2066,8 +2066,19 @@ postRow baseFontSize feed isToplevel here log =
         actusername =
             actuser.username
 
-        reposted =
-            log.type_ == "repost"
+        ( repostString, iconUrl ) =
+            if log.type_ == "repost" then
+                ( "reposted", icons.refresh )
+
+            else
+                case post.related of
+                    RelatedPosts { parent } ->
+                        case parent of
+                            Nothing ->
+                                ( "", "" )
+
+                            Just _ ->
+                                ( "commented", icons.comment )
     in
     row
         [ colw
@@ -2085,7 +2096,7 @@ postRow baseFontSize feed isToplevel here log =
         , Border.color styleColors.border
         ]
         [ column []
-            [ if not reposted then
+            [ if repostString == "" then
                 text ""
 
               else
@@ -2097,9 +2108,9 @@ postRow baseFontSize feed isToplevel here log =
                     [ row
                         [ paddingEach { zeroes | top = 5, bottom = 5 }
                         ]
-                        [ heightImage icons.refresh "refresh" 10
+                        [ heightImage iconUrl "refresh" 10
                         , newTabLink ("https://gab.com/" ++ actusername)
-                            (" " ++ actuser.name ++ " reposted")
+                            (" " ++ actuser.name ++ " " ++ repostString)
                         ]
                     ]
             , postUserRow colwp here post
@@ -2127,36 +2138,42 @@ postRow baseFontSize feed isToplevel here log =
                             [ text "" ]
                 ]
             , row []
-                [ if not post.is_quote then
-                    text ""
-
-                  else
-                    column
-                        [ paddingEach { zeroes | bottom = 5 } ]
-                        [ row
-                            [ paddingEach { zeroes | left = 5 }
-                            , Background.color styleColors.quotedPost
-                            , Border.width 1
-                            , Border.color styleColors.quotedPostBorder
-                            ]
-                            [ case post.related of
-                                RelatedPosts { parent } ->
-                                    case parent of
-                                        Nothing ->
-                                            text ""
-
-                                        Just parentPost ->
-                                            postRow baseFontSize
-                                                { feed | columnWidth = cwp - 10 }
-                                                False
-                                                here
-                                            <|
-                                                { log
-                                                    | post = parentPost
-                                                    , type_ = "post"
-                                                }
-                            ]
+                [ column
+                    [ paddingEach { zeroes | bottom = 5 } ]
+                    [ row
+                        [ paddingEach { zeroes | left = 5 }
+                        , Background.color styleColors.quotedPost
+                        , Border.width 1
+                        , Border.color styleColors.quotedPostBorder
                         ]
+                        [ case post.related of
+                            RelatedPosts { parent } ->
+                                case parent of
+                                    Nothing ->
+                                        text ""
+
+                                    Just parentPost ->
+                                        postRow baseFontSize
+                                            { feed | columnWidth = cwp - 10 }
+                                            False
+                                            here
+                                        <|
+                                            { log
+                                                | post =
+                                                    { parentPost
+                                                        | body_html =
+                                                            if post.is_quote then
+                                                                parentPost.body_html
+
+                                                            else
+                                                                parentPost.body_html_summary
+                                                        , body =
+                                                            truncatePost parentPost.body
+                                                    }
+                                                , type_ = "post"
+                                            }
+                        ]
+                    ]
                 ]
             , if not isToplevel then
                 text ""
@@ -2587,6 +2604,11 @@ notificationParentRow cw baseFontSize here post =
         ]
 
 
+truncatePost : String -> String
+truncatePost body =
+    String.left 200 body
+
+
 notificationsBody : Float -> Post -> List (Element Msg)
 notificationsBody baseFontSize post =
     case post.body_html_summary of
@@ -2596,7 +2618,7 @@ notificationsBody baseFontSize post =
         Nothing ->
             let
                 body1 =
-                    String.left 200 post.body
+                    truncatePost post.body
 
                 body =
                     if
