@@ -53,6 +53,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input exposing (button)
+import Element.Keyed as Keyed
 import Element.Lazy as Lazy
 import Gab
 import Gab.EncodeDecode as ED
@@ -2002,7 +2003,8 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
         , let
             render theFeed =
                 row []
-                    [ column
+                    [ keyedColumn
+                        --Keyed.column
                         [ colw
                         , height <|
                             px
@@ -2028,14 +2030,21 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
                                 List.map (feedDataRow baseFontSize theFeed True here) <|
                                     data
                         in
+                        let
+                            typeString =
+                                feedTypeToString theFeed.feedType
+                        in
                         List.concat
                             [ if False then
-                                undoneRows
+                                undoneRows typeString
 
                               else
                                 []
                             , rows
-                            , [ moreRow colw theFeed ]
+                            , [ ( typeString ++ "moreRow"
+                                , moreRow colw theFeed
+                                )
+                              ]
                             ]
                     ]
           in
@@ -2046,25 +2055,34 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
         ]
 
 
+{-| Same signature as Keyed.column, to allow quick switch between keyed and unkeyed.
+-}
+keyedColumn : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
+keyedColumn attributes pairs =
+    column attributes <| List.map Tuple.second pairs
+
+
 {-| Not currently used. Saved for the next incomplete column
 -}
-undoneRows : List (Element Msg)
-undoneRows =
-    [ row
-        [ fillWidth
-        , paddingEach
-            { zeroes
-                | left = columnPadding
-                , top = 5
-                , bottom = 5
-            }
-        , Font.bold
-        , Border.widthEach
-            { zeroes | bottom = 2 }
-        , Border.color styleColors.border
-        ]
-        [ text "Comment parents are coming."
-        ]
+undoneRows : String -> List ( String, Element Msg )
+undoneRows typeString =
+    [ ( typeString ++ ".undoneRows"
+      , row
+            [ fillWidth
+            , paddingEach
+                { zeroes
+                    | left = columnPadding
+                    , top = 5
+                    , bottom = 5
+                }
+            , Font.bold
+            , Border.widthEach
+                { zeroes | bottom = 2 }
+            , Border.color styleColors.border
+            ]
+            [ text "Comment parents are coming."
+            ]
+      )
     ]
 
 
@@ -2115,21 +2133,25 @@ nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
 
 
-feedDataRow : Float -> Feed Msg -> Bool -> Zone -> FeedData -> Element Msg
+feedDataRow : Float -> Feed Msg -> Bool -> Zone -> FeedData -> ( String, Element Msg )
 feedDataRow baseFontSize feed isToplevel here data =
     case data of
         PostFeedData log ->
-            postRow baseFontSize feed isToplevel here log
+            ( log.id
+            , postRow baseFontSize feed isToplevel here log
+            )
 
         GangedNotificationData notification ->
-            notificationRow baseFontSize
+            ( notification.notification.id
+            , notificationRow baseFontSize
                 feed.columnWidth
                 isToplevel
                 here
                 notification
+            )
 
         _ ->
-            text ""
+            ( "Can't happen", text "" )
 
 
 type alias FeedStuff =
