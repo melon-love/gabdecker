@@ -213,8 +213,9 @@ type Msg
     | MoveFeedLeft FeedType
     | MoveFeedRight FeedType
     | ScrollToFeed FeedType
-    | ScrollToViewport (Result Dom.Error Dom.Element)
-    | ScrollToColumn Dom.Element (Result Dom.Error Dom.Element)
+    | ScrollToViewport String (Result Dom.Error Dom.Element)
+    | ScrollToControl String Dom.Element (Result Dom.Error Dom.Element)
+    | ScrollToContent Dom.Element Dom.Element (Result Dom.Error Dom.Element)
     | AddFeed
     | AddedUserFeedName String
     | AddNewFeed FeedType
@@ -774,13 +775,26 @@ update msg model =
                     model |> withNoCmd
 
                 Just feed ->
+                    let
+                        colid =
+                            columnId feed.id
+
+                        firstcolId =
+                            case List.head model.feeds of
+                                Nothing ->
+                                    ""
+
+                                Just f ->
+                                    columnId f.id
+                    in
                     model
                         |> withCmd
-                            (Task.attempt ScrollToViewport <|
-                                Dom.getElement (columnId feed.id)
+                            (Task.attempt (ScrollToViewport firstcolId) <|
+                                Dom.getElement <|
+                                    Debug.log "colid" colid
                             )
 
-        ScrollToViewport result ->
+        ScrollToViewport firstcolId result ->
             case result of
                 Err _ ->
                     model |> withNoCmd
@@ -788,22 +802,40 @@ update msg model =
                 Ok feedElement ->
                     model
                         |> withCmd
-                            (Task.attempt (ScrollToColumn feedElement) <|
+                            (Task.attempt (ScrollToControl firstcolId feedElement) <|
                                 Dom.getElement controlColumnId
                             )
 
-        ScrollToColumn feedElement result ->
+        ScrollToControl firstcolId feedElement result ->
             case result of
                 Err _ ->
                     model |> withNoCmd
 
                 Ok controlElement ->
+                    model
+                        |> withCmd
+                            (Task.attempt
+                                (ScrollToContent feedElement controlElement)
+                             <|
+                                Dom.getElement <|
+                                    Debug.log "firstColId" firstcolId
+                            )
+
+        ScrollToContent feedElement controlElement result ->
+            case result of
+                Err _ ->
+                    model |> withNoCmd
+
+                Ok columnElement ->
                     let
                         fe =
                             Debug.log "feedElement" feedElement
 
-                        ce =
+                        ctrle =
                             Debug.log "controlElement" controlElement
+
+                        conte =
+                            Debug.log "columnElement" columnElement
 
                         cw =
                             Debug.log "cw" <| controlElement.element.width + 8
@@ -811,13 +843,40 @@ update msg model =
                         fx =
                             Debug.log "fx" feedElement.element.x
 
+                        fy =
+                            Debug.log "fy" feedElement.element.y
+
                         fw =
                             Debug.log "fw" feedElement.element.width
 
                         sw =
                             Debug.log "sw" feedElement.scene.width
+
+                        nullMsg =
+                            \_ -> Noop
                     in
-                    model |> withNoCmd
+                    if fx >= cw then
+                        if fx + fw <= sw then
+                            model |> withNoCmd
+
+                        else
+                            -- Need to scroll left a little
+                            let
+                                scrollx =
+                                    Debug.log "scrollx" <| sw - fx - cw
+                            in
+                            model
+                                |> withCmd
+                                    (Task.attempt nullMsg <|
+                                        Dom.setViewportOf contentId scrollx fy
+                                    )
+
+                    else
+                        model
+                            |> withCmd
+                                (Task.attempt nullMsg <|
+                                    Dom.setViewportOf contentId (0 - fx) fy
+                                )
 
         AddFeed ->
             { model
@@ -1778,6 +1837,7 @@ mainPage model =
                 [ height <| px model.windowHeight
                 , Element.scrollbarY
                 , width <| px (min (model.windowWidth - ccw) contentWidth)
+                , idAttribute contentId
                 ]
                 (List.map
                     (\feed ->
@@ -2059,6 +2119,11 @@ controlColumnWidth state baseFontSize =
 controlColumnId : String
 controlColumnId =
     "controlColumn"
+
+
+contentId : String
+contentId =
+    "contentColumn"
 
 
 controlColumn : Int -> Model -> Element Msg
