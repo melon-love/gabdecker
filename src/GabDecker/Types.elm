@@ -54,7 +54,7 @@ type FeedType
 
 
 type alias LogList x =
-    { data : List x
+    { data : x
     , no_more : Bool
     }
 
@@ -77,6 +77,5 @@ type alias GangedNotification =
 
 
 type FeedData
-    = PostFeedData ActivityLog
-    | NotificationFeedData Notification
-    | GangedNotificationData GangedNotification
+    = PostFeedData (List ActivityLog)
+    | NotificationFeedData (List GangedNotification)

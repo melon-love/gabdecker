@@ -5,6 +5,8 @@ This is a place to collect things left to do for GabDecker.
 * Post / reply / quote / repost
 * If a comment has an empty body and only a photo, display the photo, or
   the date gets covered by the parent below.
+* It looks like the notification API doesn't return comments on comments.
+  It should.
 * Clicking on a name should give option of adding feed or opening profile.
   Same with group and topic, once those feeds are in the API.
   Should also be able to mute/unmute user.

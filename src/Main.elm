@@ -10,6 +10,8 @@
 -- Search for TODO to see remaining work.
 -- Also see ../TODO.md
 --
+-- Remember to call gangNotifications or trimComments while processing feed.
+--
 ----------------------------------------------------------------------
 
 
@@ -181,6 +183,7 @@ type alias Model =
     , feedTypes : List FeedType
     , nextId : Int
     , feeds : List (Feed Msg)
+    , lastFeeds : Dict String (Feed Msg)
     , loadingFeeds : Set String
     , lastClosedFeed : Maybe (Feed Msg)
     }
@@ -366,6 +369,7 @@ init flags url key =
             , feedTypes = initialFeeds
             , nextId = List.length feeds
             , feeds = feeds
+            , lastFeeds = Dict.empty
             , loadingFeeds = Set.empty
             , lastClosedFeed = Nothing
             }
@@ -439,7 +443,16 @@ feedTypeToFeed baseFontSize username columnWidth backend feedType id =
     { getter = Api.feedTypeToGetter ft backend
     , feedType = ft
     , description = feedTypeDescription ft baseFontSize
-    , feed = { data = [], no_more = False }
+    , feed =
+        { data =
+            case ft of
+                NotificationsFeed ->
+                    NotificationFeedData []
+
+                _ ->
+                    PostFeedData []
+        , no_more = False
+        }
     , error = Nothing
     , columnWidth = columnWidth
     , id = id
@@ -799,7 +812,7 @@ boxActivityLogListResult result =
 
         Ok logList ->
             Ok
-                { data = List.map PostFeedData logList.data
+                { data = PostFeedData logList.data
                 , no_more = logList.no_more
                 }
 
@@ -811,8 +824,14 @@ boxNotificationsLogResult result =
             Err err
 
         Ok logList ->
+            let
+                gangit notification =
+                    { notification = notification
+                    , users = []
+                    }
+            in
             Ok
-                { data = List.map NotificationFeedData logList.data
+                { data = NotificationFeedData <| List.map gangit logList.data
                 , no_more = logList.no_more
                 }
 
@@ -891,24 +910,25 @@ updatePost : (Post -> Post) -> FeedType -> Int -> Model -> Model
 updatePost updater feedType postid model =
     let
         shouldUpdate lg =
-            case lg of
-                PostFeedData al ->
-                    al.post.id == postid
-
-                _ ->
-                    False
+            lg.post.id == postid
 
         modifier lg =
-            case lg of
-                PostFeedData al ->
-                    PostFeedData { al | post = updater al.post }
-
-                _ ->
-                    lg
+            { lg | post = updater lg.post }
 
         updateLogList : LogList FeedData -> LogList FeedData
         updateLogList logList =
-            { logList | data = LE.updateIf shouldUpdate modifier logList.data }
+            case logList.data of
+                PostFeedData activityLogList ->
+                    { logList
+                        | data =
+                            PostFeedData <|
+                                LE.updateIf shouldUpdate
+                                    modifier
+                                    activityLogList
+                    }
+
+                _ ->
+                    logList
 
         feeds : List (Feed Msg)
         feeds =
@@ -1241,20 +1261,22 @@ loadAll model =
 
 feedBefore : Feed Msg -> String
 feedBefore feed =
-    case LE.last feed.feed.data of
-        Nothing ->
-            ""
-
-        Just log ->
-            case log of
-                PostFeedData d ->
-                    d.published_at
-
-                NotificationFeedData d ->
-                    d.id
-
-                _ ->
+    case feed.feed.data of
+        PostFeedData activityLogList ->
+            case LE.last activityLogList of
+                Nothing ->
                     ""
+
+                Just activityLog ->
+                    activityLog.published_at
+
+        NotificationFeedData gangedNotificationList ->
+            case LE.last gangedNotificationList of
+                Nothing ->
+                    ""
+
+                Just gangedNotification ->
+                    gangedNotification.notification.id
 
 
 loadMore : Bool -> Feed Msg -> Cmd Msg
@@ -1299,6 +1321,10 @@ receiveFeed scrollToTop feedType result model =
         | feeds = feeds
         , loadingFeeds =
             Set.remove (feedTypeToString feedType) model.loadingFeeds
+
+        --, lastFeeds =
+        --    List.map (\feed -> ( feedTypeToString feed.feedType, feed )) mdl.feeds
+        --        |> Dict.fromList
     }
         |> withCmds
             [ cmd
@@ -1358,29 +1384,208 @@ updateFeeds appendResult feedType result feeds =
     loop feeds []
 
 
+{-| This is here to try to preserve === on the whole feed or some of its elements.
+-}
+canonicalizeFeed : Feed Msg -> Feed Msg -> Feed Msg
+canonicalizeFeed newFeed feed =
+    let
+        newData =
+            newFeed.feed.data
+
+        feedData =
+            feed.feed.data
+    in
+    if newData == feedData then
+        let
+            ignore =
+                Debug.log "Canonical" feed.feedType
+        in
+        feed
+
+    else
+        let
+            data =
+                case feedData of
+                    PostFeedData feedList ->
+                        case newData of
+                            PostFeedData newList ->
+                                PostFeedData <|
+                                    let
+                                        ignore =
+                                            --logDifferences feedList newList
+                                            0
+                                    in
+                                    canonicalizeData .id
+                                        newList
+                                        feedList
+
+                            _ ->
+                                newData
+
+                    NotificationFeedData feedList ->
+                        case newData of
+                            NotificationFeedData newList ->
+                                NotificationFeedData <|
+                                    canonicalizeData (.notification >> .id)
+                                        newList
+                                        feedList
+
+                            _ ->
+                                newData
+
+            feed_feed =
+                feed.feed
+        in
+        { feed
+            | feed =
+                { feed_feed | data = data }
+        }
+
+
+logDifferences : List ActivityLog -> List ActivityLog -> ()
+logDifferences feedList newList =
+    let
+        len =
+            Debug.log "feedList len" <| List.length feedList
+
+        len2 =
+            Debug.log "newList len" <| List.length feedList
+
+        doone feed new idx =
+            let
+                is =
+                    String.fromInt idx ++ ": "
+
+                id =
+                    if feed.id /= new.id then
+                        Debug.log (is ++ ", id: " ++ feed.id ++ ", ") new.id
+
+                    else
+                        ""
+
+                pub =
+                    if feed.published_at /= new.published_at then
+                        Debug.log (is ++ ", published_at: " ++ feed.published_at ++ ", ") new.published_at
+
+                    else
+                        ""
+
+                type_ =
+                    if feed.type_ /= new.type_ then
+                        Debug.log (is ++ ", id: " ++ feed.type_ ++ ", ") new.type_
+
+                    else
+                        ""
+
+                user =
+                    if feed.actuser /= new.actuser then
+                        Debug.log (is ++ ", user: " ++ Debug.toString feed.actuser ++ ", ") new.actuser
+
+                    else
+                        feed.actuser
+
+                post =
+                    if feed.post /= new.post then
+                        Debug.log (is ++ ", post: " ++ Debug.toString feed.post ++ ", ") new.post
+
+                    else
+                        feed.post
+            in
+            ()
+
+        map =
+            List.map3 doone
+                feedList
+                newList
+                (List.range 1 <| List.length feedList)
+    in
+    ()
+
+
+canonicalizeData : (x -> String) -> List x -> List x -> List x
+canonicalizeData key new old =
+    let
+        dict =
+            List.foldl
+                (\log d ->
+                    Dict.insert (key log) log d
+                )
+                Dict.empty
+                old
+
+        mapper dat =
+            case Dict.get (key dat) dict of
+                Just v ->
+                    v
+
+                Nothing ->
+                    dat
+    in
+    List.map mapper new
+
+
 updateFeed : Bool -> FeedResult (LogList FeedData) -> Feed Msg -> Feed Msg
 updateFeed appendResult result feed =
     case result of
         Err err ->
             { feed | error = Just err }
 
-        Ok logList ->
+        Ok resultLogList ->
             let
                 feed_feed =
                     feed.feed
-            in
-            { feed
-                | feed =
-                    { feed_feed
-                        | data =
-                            if appendResult then
-                                List.append feed_feed.data logList.data
 
-                            else
-                                logList.data
-                        , no_more = logList.no_more
+                newFeed =
+                    { feed
+                        | feed =
+                            { feed_feed
+                                | data =
+                                    reprocessFeedData <|
+                                        updateFeedData appendResult
+                                            resultLogList.data
+                                            feed_feed.data
+                            }
                     }
-            }
+            in
+            canonicalizeFeed newFeed feed
+
+
+updateFeedData : Bool -> FeedData -> FeedData -> FeedData
+updateFeedData appendResult resultData feedData =
+    if not appendResult then
+        resultData
+
+    else
+        case resultData of
+            PostFeedData resultList ->
+                case feedData of
+                    PostFeedData feedList ->
+                        PostFeedData <|
+                            List.append feedList resultList
+
+                    _ ->
+                        resultData
+
+            NotificationFeedData gangedNotificationList ->
+                case feedData of
+                    NotificationFeedData feedList ->
+                        NotificationFeedData <|
+                            List.append feedList
+                                gangedNotificationList
+
+                    _ ->
+                        resultData
+
+
+reprocessFeedData : FeedData -> FeedData
+reprocessFeedData data =
+    case data of
+        PostFeedData activityLogList ->
+            PostFeedData <| trimComments activityLogList
+
+        NotificationFeedData gangedNotificationList ->
+            NotificationFeedData <|
+                gangNotifications (ungangNotifications gangedNotificationList)
 
 
 {-| (<same id>, <published\_at compare>)
@@ -1522,6 +1727,26 @@ mainPage model =
                 ]
                 (List.map
                     (\feed ->
+                        let
+                            ignore =
+                                case
+                                    Dict.get (feedTypeToString feed.feedType)
+                                        model.lastFeeds
+                                of
+                                    Nothing ->
+                                        feed
+
+                                    Just lastFeed ->
+                                        if feed /= lastFeed then
+                                            let
+                                                foo =
+                                                    Debug.log "feed" feed
+                                            in
+                                            Debug.log "lastFeed" lastFeed
+
+                                        else
+                                            feed
+                        in
                         ( feedTypeToString feed.feedType
                         , feedColumn (feedIsLoading feed model)
                             model.windowHeight
@@ -2003,58 +2228,83 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
                     ]
                 ]
             ]
-        , let
-            render theFeed =
-                row []
-                    [ keyedColumn
-                        --Keyed.column
-                        [ colw
-                        , height <|
-                            px
-                                (windowHeight
-                                    - headerHeight baseFontSize
-                                    - (2 * columnPadding + 10)
-                                )
-                        , columnIdAttribute theFeed.id
-                        , Element.scrollbarX
-                        , Element.clipX
-                        ]
-                      <|
-                        let
-                            data =
-                                --Debug.log "rendering "
-                                if Debug.log "rendering " theFeed.feedType == NotificationsFeed then
-                                    gangNotifications theFeed.feed.data
-
-                                else
-                                    trimComments theFeed.feed.data
-
-                            rows =
-                                List.map (feedDataRow baseFontSize theFeed True here) <|
-                                    data
-                        in
-                        let
-                            typeString =
-                                feedTypeToString theFeed.feedType
-                        in
-                        List.concat
-                            [ if False then
-                                undoneRows typeString
-
-                              else
-                                []
-                            , rows
-                            , [ ( typeString ++ "moreRow"
-                                , moreRow colw theFeed
-                                )
-                              ]
-                            ]
-                    ]
-          in
-          -- Doesn't work. Runs always
-          --Lazy.lazy
-          render
+        , Lazy.lazy4
+            renderRowContents
+            windowHeight
+            baseFontSize
+            here
             feed
+        ]
+
+
+renderRowContents windowHeight baseFontSize here feed =
+    let
+        colw =
+            width <| px feed.columnWidth
+
+        iconHeight =
+            userIconHeight baseFontSize
+    in
+    row []
+        [ --keyedColumn
+          Keyed.column
+            [ colw
+            , height <|
+                px
+                    (windowHeight
+                        - headerHeight baseFontSize
+                        - (2 * columnPadding + 10)
+                    )
+            , columnIdAttribute feed.id
+            , Element.scrollbarX
+            , Element.clipX
+            ]
+          <|
+            let
+                data =
+                    feed.feed.data
+
+                ignore =
+                    Debug.log
+                        "Rendering"
+                        feed.feedType
+
+                rows =
+                    case data of
+                        PostFeedData activityLogList ->
+                            List.map
+                                (postFeedDataRow baseFontSize
+                                    feed
+                                    True
+                                    here
+                                )
+                                activityLogList
+
+                        NotificationFeedData gangedNotificationList ->
+                            List.map
+                                (notificationFeedDataRow baseFontSize
+                                    feed
+                                    True
+                                    here
+                                )
+                                gangedNotificationList
+            in
+            let
+                typeString =
+                    feedTypeToString feed.feedType
+            in
+            List.concat
+                [ if False then
+                    undoneRows typeString
+
+                  else
+                    []
+                , rows
+                , [ ( typeString ++ "moreRow"
+                    , moreRow colw feed
+                    )
+                  ]
+                ]
         ]
 
 
@@ -2101,7 +2351,14 @@ moreRow colw feed =
     if feed.feed.no_more then
         text ""
 
-    else if feed.feed.data == [] then
+    else if
+        case feed.feed.data of
+            PostFeedData activityLogList ->
+                activityLogList == []
+
+            NotificationFeedData gangedNotificationList ->
+                gangedNotificationList == []
+    then
         text ""
 
     else
@@ -2143,25 +2400,22 @@ nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
 
 
-feedDataRow : Float -> Feed Msg -> Bool -> Zone -> FeedData -> ( String, Element Msg )
-feedDataRow baseFontSize feed isToplevel here data =
-    case data of
-        PostFeedData log ->
-            ( log.id
-            , postRow baseFontSize feed isToplevel here log
-            )
+postFeedDataRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> ( String, Element Msg )
+postFeedDataRow baseFontSize feed isToplevel here log =
+    ( log.id
+    , postRow baseFontSize feed isToplevel here log
+    )
 
-        GangedNotificationData notification ->
-            ( notification.notification.id
-            , notificationRow baseFontSize
-                feed.columnWidth
-                isToplevel
-                here
-                notification
-            )
 
-        _ ->
-            ( "Can't happen", text "" )
+notificationFeedDataRow : Float -> Feed Msg -> Bool -> Zone -> GangedNotification -> ( String, Element Msg )
+notificationFeedDataRow baseFontSize feed isToplevel here notification =
+    ( notification.notification.id
+    , notificationRow baseFontSize
+        feed.columnWidth
+        isToplevel
+        here
+        notification
+    )
 
 
 type alias FeedStuff =
@@ -2539,7 +2793,7 @@ gangedTypes =
     [ LikeNotification, RepostNotification, FollowNotification ]
 
 
-trimComments : List FeedData -> List FeedData
+trimComments : List ActivityLog -> List ActivityLog
 trimComments data =
     let
         isSameCommentedPost post1 parent1Id log2 =
@@ -2566,7 +2820,7 @@ trimComments data =
 
                 head :: tail ->
                     if head.type_ /= "post" then
-                        loop tail (PostFeedData head :: res)
+                        loop tail (head :: res)
 
                     else
                         let
@@ -2574,7 +2828,7 @@ trimComments data =
                                 head.post
                         in
                         if not post.is_reply then
-                            loop tail (PostFeedData head :: res)
+                            loop tail (head :: res)
 
                         else
                             case post.related of
@@ -2589,23 +2843,38 @@ trimComments data =
                                                     (isSameCommentedPost post p.id)
                                                     tail
                                                 )
-                                                (PostFeedData head :: res)
-
-        getLog feedData =
-            case feedData of
-                PostFeedData log ->
-                    Just log
-
-                _ ->
-                    Nothing
-
-        logs =
-            List.filterMap getLog data
+                                                (head :: res)
     in
-    loop logs []
+    loop data []
 
 
-gangNotifications : List FeedData -> List FeedData
+ungangNotifications : List GangedNotification -> List Notification
+ungangNotifications data =
+    let
+        loop rest res =
+            case rest of
+                [] ->
+                    List.reverse res
+
+                head :: tail ->
+                    loop tail <|
+                        let
+                            notification =
+                                head.notification
+                        in
+                        List.concat
+                            [ List.map
+                                (\user ->
+                                    { notification | actuser = user }
+                                )
+                                head.users
+                            , notification :: res
+                            ]
+    in
+    loop data []
+
+
+gangNotifications : List Notification -> List GangedNotification
 gangNotifications data =
     let
         notesAreSimilar note1 note2 =
@@ -2628,7 +2897,7 @@ gangNotifications data =
             else
                 False
 
-        loop : List Notification -> List FeedData -> List FeedData
+        loop : List Notification -> List GangedNotification -> List GangedNotification
         loop rest res =
             case rest of
                 [] ->
@@ -2643,26 +2912,13 @@ gangNotifications data =
                             List.map .actuser similars
 
                         ganged =
-                            GangedNotificationData
-                                (GangedNotification head <|
-                                    List.reverse users
-                                )
+                            GangedNotification head <|
+                                List.reverse users
                     in
                     loop (LE.filterNot (notesAreSimilar head) tail)
                         (ganged :: res)
-
-        getNote feedData =
-            case feedData of
-                NotificationFeedData note ->
-                    Just note
-
-                _ ->
-                    Nothing
-
-        notes =
-            List.filterMap getNote data
     in
-    loop notes []
+    loop data []
 
 
 notificationRow : Float -> Int -> Bool -> Zone -> GangedNotification -> Element Msg
