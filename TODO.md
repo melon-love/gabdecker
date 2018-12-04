@@ -3,18 +3,18 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* Feed icons in left column. Click on one to scroll it horizontally into view.
+  Highlight the clicked feed somehow.
+* Scroll to feed after adding it.
 * If a comment has an empty body and only a photo, display the photo, or
   the date gets covered by the parent below.
 * It looks like the notification API doesn't return comments on comments.
-  It should.
+  It should. Verify this, then report it.
 * Clicking on a name should give option of adding feed or opening profile.
   Same with group and topic, once those feeds are in the API.
   Should also be able to mute/unmute user.
 * Clicking on a post time should give the option of opening in Gab
   or performing an action, all five actions displayed in a feed.
-* Feed icons in left column. Click on one to scroll it horizontally into view.
-  Highlight the clicked feed somehow.
-* Scroll to feed after adding it.
 * Profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.
@@ -47,6 +47,8 @@ This is a place to collect things left to do for GabDecker.
   "foo reposted bar's comment"
 * Optimize rendering.
   Eliminate delay between clicking on refresh button and orange highlight.
+  The problem is the isLoading parameter to feedColumnInternal.
+  Can likely do this with a port that adjusts the colors.
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.

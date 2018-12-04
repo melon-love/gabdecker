@@ -2501,7 +2501,11 @@ postRowInternal stuff =
 
         ( repostString, iconUrl ) =
             if log.type_ == "repost" then
-                ( "reposted", icons.refresh )
+                if post.is_quote then
+                    ( "quoted", chars.leftCurlyQuote )
+
+                else
+                    ( "reposted", icons.refresh )
 
             else if post.is_reply then
                 ( "commented", icons.comment )
@@ -2537,7 +2541,21 @@ postRowInternal stuff =
                     [ row
                         [ paddingEach { zeroes | top = 5, bottom = 5 }
                         ]
-                        [ heightImage iconUrl "refresh" 10
+                        [ if iconUrl == chars.leftCurlyQuote then
+                            row
+                                [ Font.bold
+                                , paddingEach
+                                    { zeroes
+                                        | top =
+                                            round <| 0.9 * baseFontSize
+                                    }
+                                , height (px <| round <| 0.9 * baseFontSize)
+                                , Font.size (round <| 1.8 * baseFontSize)
+                                ]
+                                [ text chars.leftCurlyQuote ]
+
+                          else
+                            heightImage iconUrl "refresh" 10
                         , newTabLink ("https://gab.com/" ++ actusername)
                             (" " ++ actuser.name ++ " " ++ repostString)
                         ]
