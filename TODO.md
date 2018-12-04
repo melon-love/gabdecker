@@ -3,8 +3,7 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Feed icons in left column. Click on one to scroll it horizontally into view.
-  Highlight the clicked feed somehow.
+* User images in left column instead of icons.user.
 * Scroll to feed after adding it.
 * If a comment has an empty body and only a photo, display the photo, or
   the date gets covered by the parent below.

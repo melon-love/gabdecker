@@ -1843,7 +1843,7 @@ mainPage model =
         ]
         [ column []
             [ row [ height <| px model.windowHeight ]
-                [ controlColumn ccw model -- Doesn't work in Brave or Safari
+                [ controlColumn ccw model
                 ]
             ]
         , column []
@@ -2162,7 +2162,9 @@ controlColumn columnWidth model =
                     { zeroes
                         | top = columnBorderWidth
                         , bottom = columnBorderWidth
+                        , right = columnBorderWidth
                     }
+              , Border.color styleColors.border
               , Background.color styleColors.headerBackground
               , spacing 10
               , idAttribute controlColumnId
@@ -2224,11 +2226,14 @@ feedSelectorButton iconHeight feed =
             text ""
 
         ( url, label ) ->
-            standardButtonWithDontHover False
-                label
-                (ScrollToFeed feed.feedType)
-            <|
-                heightImage url label iconHeight
+            row
+                [ centerX ]
+                [ standardButtonWithDontHover False
+                    label
+                    (ScrollToFeed feed.feedType)
+                  <|
+                    heightImage url label iconHeight
+                ]
 
 
 zeroes =
