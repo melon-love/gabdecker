@@ -212,6 +212,9 @@ type Msg
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
     | MoveFeedRight FeedType
+    | ScrollToFeed FeedType
+    | ScrollToViewport (Result Dom.Error Dom.Element)
+    | ScrollToColumn Dom.Element (Result Dom.Error Dom.Element)
     | AddFeed
     | AddedUserFeedName String
     | AddNewFeed FeedType
@@ -764,6 +767,57 @@ update msg model =
 
         MoveFeedRight feedType ->
             moveFeedRight feedType model
+
+        ScrollToFeed feedType ->
+            case findFeed feedType model of
+                Nothing ->
+                    model |> withNoCmd
+
+                Just feed ->
+                    model
+                        |> withCmd
+                            (Task.attempt ScrollToViewport <|
+                                Dom.getElement (columnId feed.id)
+                            )
+
+        ScrollToViewport result ->
+            case result of
+                Err _ ->
+                    model |> withNoCmd
+
+                Ok feedElement ->
+                    model
+                        |> withCmd
+                            (Task.attempt (ScrollToColumn feedElement) <|
+                                Dom.getElement controlColumnId
+                            )
+
+        ScrollToColumn feedElement result ->
+            case result of
+                Err _ ->
+                    model |> withNoCmd
+
+                Ok controlElement ->
+                    let
+                        fe =
+                            Debug.log "feedElement" feedElement
+
+                        ce =
+                            Debug.log "controlElement" controlElement
+
+                        cw =
+                            Debug.log "cw" <| controlElement.element.width + 8
+
+                        fx =
+                            Debug.log "fx" feedElement.element.x
+
+                        fw =
+                            Debug.log "fw" feedElement.element.width
+
+                        sw =
+                            Debug.log "sw" feedElement.scene.width
+                    in
+                    model |> withNoCmd
 
         AddFeed ->
             { model
@@ -2002,6 +2056,11 @@ controlColumnWidth state baseFontSize =
             round (baseFontSize * 20)
 
 
+controlColumnId : String
+controlColumnId =
+    "controlColumn"
+
+
 controlColumn : Int -> Model -> Element Msg
 controlColumn columnWidth model =
     let
@@ -2026,22 +2085,70 @@ controlColumn columnWidth model =
                     }
               , Background.color styleColors.headerBackground
               , spacing 10
+              , idAttribute controlColumnId
               ]
             , columnBorderAttributes True
             ]
         )
-        [ row [ centerX ]
-            [ standardButton
-                "Refresh All Feeds"
-                LoadAll
-                (widthImage icons.reload "Refresh" iconHeight)
+    <|
+        List.concat
+            [ [ row
+                    [ centerX
+                    , paddingEach { zeroes | bottom = iconHeight // 2 }
+                    ]
+                    [ standardButton
+                        "Refresh All Feeds"
+                        LoadAll
+                        (widthImage icons.reload "Refresh" iconHeight)
+                    ]
+              ]
+            , List.map (feedSelectorButton iconHeight) model.feeds
+            , [ row
+                    [ Font.size <| 7 * iconHeight // 4
+                    , centerX
+                    ]
+                    [ standardButton "Add New Feed" AddFeed (text "+") ]
+              ]
             ]
-        , row
-            [ Font.size <| 7 * iconHeight // 4
-            , centerX
-            ]
-            [ standardButton "Add New Feed" AddFeed (text "+") ]
-        ]
+
+
+feedTypeIconUrl : FeedType -> ( String, String )
+feedTypeIconUrl feedType =
+    case feedType of
+        HomeFeed ->
+            ( icons.home, "Home" )
+
+        UserFeed username ->
+            ( icons.user, "User: " ++ username )
+
+        GroupFeed groupid ->
+            ( "", "Group: " ++ groupid )
+
+        TopicFeed topicid ->
+            ( "", "Topic: " ++ topicid )
+
+        PopularFeed ->
+            ( icons.popular, "Popular" )
+
+        NotificationsFeed ->
+            ( icons.notifications, "Notifications" )
+
+        _ ->
+            ( "", "" )
+
+
+feedSelectorButton : Int -> Feed Msg -> Element Msg
+feedSelectorButton iconHeight feed =
+    case feedTypeIconUrl feed.feedType of
+        ( "", _ ) ->
+            text ""
+
+        ( url, label ) ->
+            standardButtonWithDontHover False
+                label
+                (ScrollToFeed feed.feedType)
+            <|
+                heightImage url label iconHeight
 
 
 zeroes =

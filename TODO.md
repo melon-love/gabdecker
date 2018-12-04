@@ -8,6 +8,8 @@ This is a place to collect things left to do for GabDecker.
 * Scroll to feed after adding it.
 * If a comment has an empty body and only a photo, display the photo, or
   the date gets covered by the parent below.
+  Likewise for the parent post. If it has no body, but does have an attachment,
+  show the attachment (usually an image).
 * It looks like the notification API doesn't return comments on comments.
   It should. Verify this, then report it.
 * Clicking on a name should give option of adding feed or opening profile.
