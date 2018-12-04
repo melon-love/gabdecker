@@ -818,7 +818,7 @@ update msg model =
                                 (ScrollToContent feedElement controlElement)
                              <|
                                 Dom.getElement <|
-                                    Debug.log "firstColId" firstcolId
+                                    firstcolId
                             )
 
         ScrollToContent feedElement controlElement result ->
@@ -826,44 +826,55 @@ update msg model =
                 Err _ ->
                     model |> withNoCmd
 
-                Ok columnElement ->
+                Ok firstElement ->
                     let
                         fe =
-                            Debug.log "feedElement" feedElement
+                            feedElement
 
                         ctrle =
-                            Debug.log "controlElement" controlElement
+                            controlElement
 
-                        conte =
-                            Debug.log "columnElement" columnElement
+                        frst =
+                            firstElement
 
-                        cw =
-                            Debug.log "cw" <| controlElement.element.width + 8
+                        ctrlw =
+                            controlElement.element.width + 8
 
                         fx =
-                            Debug.log "fx" feedElement.element.x
+                            feedElement.element.x
 
                         fy =
-                            Debug.log "fy" feedElement.element.y
+                            feedElement.element.y
 
                         fw =
-                            Debug.log "fw" feedElement.element.width
+                            feedElement.element.width
 
                         sw =
-                            Debug.log "sw" feedElement.scene.width
+                            feedElement.scene.width
+
+                        frstx =
+                            firstElement.element.x
+
+                        targetLeft =
+                            ctrlw
+
+                        targetRight =
+                            sw - fw
+
+                        pos =
+                            fx - frstx
 
                         nullMsg =
                             \_ -> Noop
                     in
-                    if fx >= cw then
-                        if fx + fw <= sw then
+                    if fx >= targetLeft then
+                        if fx <= targetRight then
                             model |> withNoCmd
 
                         else
-                            -- Need to scroll left a little
                             let
                                 scrollx =
-                                    Debug.log "scrollx" <| sw - fx - cw
+                                    pos - targetRight + ctrlw
                             in
                             model
                                 |> withCmd
@@ -872,10 +883,14 @@ update msg model =
                                     )
 
                     else
+                        let
+                            scrollx =
+                                pos
+                        in
                         model
                             |> withCmd
                                 (Task.attempt nullMsg <|
-                                    Dom.setViewportOf contentId (0 - fx) fy
+                                    Dom.setViewportOf contentId scrollx fy
                                 )
 
         AddFeed ->
