@@ -250,7 +250,16 @@ lookupUserIconUrl username icons =
             iconUrls.user
 
 
-updateUserIconUrl : String -> String -> Model -> ( Model, Cmd Msg )
+storeIcons : Icons -> Model -> Cmd Msg
+storeIcons icons model =
+    localStorageSend
+        (LocalStorage.put storageKeys.icons
+            (Just <| ED.encodeIcons icons)
+        )
+        model
+
+
+updateUserIconUrl : String -> String -> Model -> ( Model, Bool )
 updateUserIconUrl username url model =
     case
         LE.find
@@ -265,7 +274,7 @@ updateUserIconUrl username url model =
             (List.map .feedType model.feeds)
     of
         Nothing ->
-            model |> withNoCmd
+            ( model, False )
 
         Just _ ->
             let
@@ -280,21 +289,16 @@ updateUserIconUrl username url model =
                                     Dict.insert username url icons.user
                             }
                     in
-                    { model
+                    ( { model
                         | icons = newIcons
-                    }
-                        |> withCmd
-                            (localStorageSend
-                                (LocalStorage.put storageKeys.icons
-                                    (Just <| ED.encodeIcons icons)
-                                )
-                                model
-                            )
+                      }
+                    , True
+                    )
             in
             case Dict.get username icons.user of
                 Just u ->
                     if u == url then
-                        model |> withNoCmd
+                        ( model, False )
 
                     else
                         updateUserIcons ()
@@ -1526,16 +1530,26 @@ updateIcons logList model =
     case logList.data of
         PostFeedData logLists ->
             let
-                folder log ( mdl, cmd ) =
+                folder log ( mdl, bool ) =
                     let
-                        ( m, c ) =
+                        ( m, b ) =
                             updateUserIconUrl log.actuser.username
                                 log.actuser.picture_url
                                 mdl
                     in
-                    m |> withCmds [ cmd, c ]
+                    ( m, bool || b )
+
+                ( model2, needsUpdate ) =
+                    List.foldl folder ( model, False ) logLists
             in
-            List.foldl folder ( model, Cmd.none ) logLists
+            model2
+                |> withCmd
+                    (if needsUpdate then
+                        storeIcons model.icons model
+
+                     else
+                        Cmd.none
+                    )
 
         _ ->
             model |> withNoCmd
