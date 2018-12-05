@@ -185,6 +185,8 @@ type alias Model =
     , username : String
     , addedUserFeedName : String
     , icons : Icons
+
+    -- This is only used at startup. It's not accurate after that.
     , feedTypes : List FeedType
     , nextId : Int
     , feeds : List (Feed Msg)
@@ -260,7 +262,7 @@ updateUserIconUrl username url model =
                     _ ->
                         False
             )
-            model.feedTypes
+            (List.map .feedType model.feeds)
     of
         Nothing ->
             model |> withNoCmd
@@ -550,7 +552,7 @@ feedTypeDescription : FeedType -> Float -> Icons -> Element Msg
 feedTypeDescription feedType baseFontSize icons =
     let
         iconHeight =
-            userIconHeight baseFontSize
+            smallUserIconHeight baseFontSize
 
         feedRow url elements =
             styledLink True [] url (row [] elements)
@@ -619,7 +621,7 @@ receiveToken mv model =
                                 model.loggedInUser
                                 model.columnWidth
                                 backend
-                                model.feedTypes
+                                (List.map .feedType model.feeds)
                                 0
                     in
                     List.foldl setLoadingFeed
@@ -665,7 +667,9 @@ receiveFeedTypes value model =
                     model |> withCmd cmd
 
                 Ok feedTypes ->
-                    { model | feedTypes = feedTypes }
+                    { model
+                        | feedTypes = feedTypes
+                    }
                         |> withCmd cmd
 
 
@@ -2226,7 +2230,7 @@ controlColumnWidth : ExpandedState -> Float -> Int
 controlColumnWidth state baseFontSize =
     case state of
         ContractedState ->
-            userIconHeight baseFontSize + 2 * columnPadding
+            smallUserIconHeight baseFontSize + 2 * columnPadding
 
         ExpandedState ->
             round (baseFontSize * 20)
@@ -2252,7 +2256,7 @@ controlColumn columnWidth model =
             width <| px columnWidth
 
         iconHeight =
-            userIconHeight model.fontSize
+            smallUserIconHeight model.fontSize
     in
     column
         (List.concat
@@ -2391,6 +2395,11 @@ columnPadding =
 userIconHeight : Float -> Int
 userIconHeight baseFontSize =
     round (4 * baseFontSize / 3)
+
+
+smallUserIconHeight : Float -> Int
+smallUserIconHeight baseFontSize =
+    round (3 * baseFontSize / 2)
 
 
 columnBorderWidth : Int
