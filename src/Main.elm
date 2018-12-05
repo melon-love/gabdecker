@@ -474,9 +474,18 @@ init flags url key =
                 Just st ->
                     Http.send ReceiveLoggedInUser <|
                         Gab.me st.token
-            , Cmd.batch <|
-                List.map (loadMore False) model.feeds
+            , loadAllCmd
             ]
+
+
+loadAllCmd : Cmd Msg
+loadAllCmd =
+    Task.perform (\_ -> LoadAll) <| Task.succeed ()
+
+
+loadMoreCmd : Bool -> Feed Msg -> Cmd Msg
+loadMoreCmd appendResult feed =
+    Task.perform (LoadMore appendResult) <| Task.succeed feed
 
 
 getViewport : Viewport -> Msg
@@ -625,7 +634,7 @@ receiveToken mv model =
                                 model.loggedInUser
                                 model.columnWidth
                                 backend
-                                (List.map .feedType model.feeds)
+                                model.feedTypes
                                 0
                     in
                     List.foldl setLoadingFeed
@@ -645,8 +654,7 @@ receiveToken mv model =
                               else
                                 Http.send ReceiveLoggedInUser <|
                                     Gab.me savedToken.token
-                            , Cmd.batch <|
-                                List.map (loadMore False) feeds
+                            , loadAllCmd
                             ]
 
 
@@ -667,14 +675,31 @@ receiveFeedTypes value model =
 
         Just v ->
             case ED.decodeFeedTypes v of
-                Err _ ->
+                Err err ->
                     model |> withCmd cmd
 
                 Ok feedTypes ->
+                    let
+                        ( feeds, cmd2 ) =
+                            case model.backend of
+                                Nothing ->
+                                    ( model.feeds, Cmd.none )
+
+                                backend ->
+                                    ( feedTypesToFeeds model.fontSize
+                                        model.loggedInUser
+                                        model.columnWidth
+                                        backend
+                                        feedTypes
+                                        0
+                                    , loadAllCmd
+                                    )
+                    in
                     { model
                         | feedTypes = feedTypes
+                        , feeds = feeds
                     }
-                        |> withCmd cmd
+                        |> withCmds [ cmd, cmd2 ]
 
 
 receiveIcons : Maybe Value -> Model -> ( Model, Cmd Msg )
@@ -1419,7 +1444,7 @@ addNewFeed feedType baseFontSize model =
                 , nextId = model.nextId + 1
             }
                 |> withCmds
-                    [ loadMore False feed
+                    [ loadMoreCmd False feed
                     , saveFeeds feeds model
                     ]
     in
@@ -1545,7 +1570,7 @@ updateIcons logList model =
             model2
                 |> withCmd
                     (if needsUpdate then
-                        storeIcons model.icons model
+                        storeIcons model2.icons model
 
                      else
                         Cmd.none
