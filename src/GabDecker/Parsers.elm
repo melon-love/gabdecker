@@ -18,6 +18,7 @@ module GabDecker.Parsers exposing
     , fullyParse
     , htmlOneParser
     , htmlParser
+    , htmlStringParser
     , multiParseString
     , parseElements
     , parseOne
@@ -208,7 +209,13 @@ sharpOneParser =
 
 htmlParser : Parser (Element msg)
 htmlParser =
-    (P.succeed String.slice
+    htmlStringParser
+        |> P.andThen (\s -> P.succeed <| newTabLink s s)
+
+
+htmlStringParser : Parser String
+htmlStringParser =
+    P.succeed String.slice
         |= P.getOffset
         |. P.symbol "http"
         |. P.oneOf [ P.chompIf ((==) 's'), P.succeed () ]
@@ -216,8 +223,6 @@ htmlParser =
         |. nonWhitespace
         |= P.getOffset
         |= P.getSource
-    )
-        |> P.andThen (\s -> P.succeed <| newTabLink s s)
 
 
 htmlOneParser : OneParser (Element msg)
@@ -225,8 +230,8 @@ htmlOneParser =
     parseOne htmlParser
 
 
-r : Char
-r =
+ctrlR : Char
+ctrlR =
     Char.fromCode 0x0D
 
 
@@ -237,4 +242,4 @@ allOneParsers =
 
 nonWhitespace : Parser ()
 nonWhitespace =
-    P.chompWhile (\c -> not <| List.member c [ ' ', '\t', '\n', r ])
+    P.chompWhile (\c -> not <| List.member c [ ' ', '\t', '\n', ctrlR ])

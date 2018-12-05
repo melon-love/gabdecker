@@ -3,8 +3,6 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Bug in URL parsing. Gets cruft at the end.
-  E.g. https://gab.com/billstclair/posts/42716809
 * Scroll to feed after adding it.
 * When somebody "mentioned you in a comment", include an interaction row.
 * If a comment has an empty body and only a photo, display the photo, or
@@ -57,6 +55,9 @@ This is a place to collect things left to do for GabDecker.
   The problem is the isLoading parameter to feedColumnInternal.
   Can likely do this with a port that adjusts the colors.
 * If lots of people like a post, wrap the icon list in the notification entry.
+* Bug in URL parsing. Sometimes gets cruft at the end.
+  E.g. https://gab.com/billstclair/posts/42716809
+  Looked at this in `elm repl`. Couldn't reproduce. Try again.
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.

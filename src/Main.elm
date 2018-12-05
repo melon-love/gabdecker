@@ -999,7 +999,9 @@ update msg model =
                         else
                             let
                                 scrollx =
-                                    pos - targetRight + ctrlw
+                                    -- 4 gets white space on the right in Chrome,
+                                    -- and perfect in Brave and Safari
+                                    pos - targetRight + ctrlw + 4
                             in
                             model
                                 |> withCmd
@@ -1024,7 +1026,8 @@ update msg model =
                 , dialogError = Nothing
                 , addedUserFeedName = ""
             }
-                |> withNoCmd
+                |> withCmd
+                    (Task.attempt (\_ -> Noop) <| Dom.focus userFeedInputId)
 
         AddedUserFeedName username ->
             { model | addedUserFeedName = username } |> withNoCmd
@@ -1446,6 +1449,7 @@ addNewFeed feedType baseFontSize model =
                 |> withCmds
                     [ loadMoreCmd False feed
                     , saveFeeds feeds model
+                    , Task.perform ScrollToFeed <| Task.succeed feed.feedType
                     ]
     in
     if feedType == LastClosedFeed then
@@ -2132,6 +2136,22 @@ operationErrorDialog err model =
         ]
 
 
+onEnterAttribute : Msg -> Attribute Msg
+onEnterAttribute msg =
+    Html.Events.on "keydown"
+        (Html.Events.keyCode |> JD.andThen (is13 msg))
+        |> Element.htmlAttribute
+
+
+is13 : a -> Int -> Decoder a
+is13 a code =
+    if code == 13 then
+        JD.succeed a
+
+    else
+        JD.fail "not the right key code"
+
+
 addFeedDialog : Model -> Element Msg
 addFeedDialog model =
     let
@@ -2145,18 +2165,25 @@ addFeedDialog model =
                     "+"
 
         addUserFeedRow =
+            let
+                feedType =
+                    UserFeed model.addedUserFeedName
+            in
             { label = "User: "
             , element =
-                Input.text [ width <| px 200 ]
+                Input.text
+                    [ width <| px 200
+                    , idAttribute userFeedInputId
+                    , onEnterAttribute (AddNewFeed feedType)
+                    ]
                     { onChange = AddedUserFeedName
                     , text = model.addedUserFeedName
                     , placeholder =
                         Just <|
-                            Input.placeholder []
-                                (text "username")
+                            Input.placeholder [] (text "username")
                     , label = Input.labelHidden "User Feed Name"
                     }
-            , feedType = Just <| UserFeed model.addedUserFeedName
+            , feedType = Just feedType
             }
 
         makeRow ( label, feedType ) =
@@ -2283,6 +2310,11 @@ controlColumnId =
 contentId : String
 contentId =
     "contentColumn"
+
+
+userFeedInputId : String
+userFeedInputId =
+    "userFeedInput"
 
 
 controlColumn : Int -> Model -> Element Msg
