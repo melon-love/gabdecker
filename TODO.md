@@ -3,13 +3,16 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* User images in left column instead of icons.user.
+* Bug in URL parsing. Gets cruft at the end.
+  E.g. https://gab.com/billstclair/posts/42716809
 * Scroll to feed after adding it.
+* When somebody "mentioned you in a comment", include an interaction row.
 * If a comment has an empty body and only a photo, display the photo, or
   the date gets covered by the parent below.
   Likewise for the parent post. If it has no body, but does have an attachment,
   show the attachment (usually an image).
 * It looks like the notification API doesn't return comments on comments.
+  Looks like it doesn't return commenst either, unless they get liked.
   It should. Verify this, then report it.
 * Clicking on a name should give option of adding feed or opening profile.
   Same with group and topic, once those feeds are in the API.
@@ -37,6 +40,9 @@ This is a place to collect things left to do for GabDecker.
   `<u>foo</u>`.
 * Mark the boundary between just loaded posts and older ones.
 * Single `<br />` -> multiple `row`s.
+* A faster way than move-left-or-right clicks to move a column.
+  Dragging in the control column would be great, but just typing a number
+  in a popup would be good enough.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Multiple named pages of feeds, selectable on the left column.
@@ -50,6 +56,7 @@ This is a place to collect things left to do for GabDecker.
   Eliminate delay between clicking on refresh button and orange highlight.
   The problem is the isLoading parameter to feedColumnInternal.
   Can likely do this with a port that adjusts the colors.
+* If lots of people like a post, wrap the icon list in the notification entry.
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.

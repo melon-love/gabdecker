@@ -7,9 +7,12 @@ module GabDecker.Types exposing
     , FeedTagger
     , FeedType(..)
     , GangedNotification
+    , Icons
     , LogList
+    , emptyIcons
     )
 
+import Dict exposing (Dict)
 import Element exposing (Element)
 import Gab.Types
     exposing
@@ -62,7 +65,6 @@ type alias LogList x =
 type alias Feed msg =
     { getter : FeedGetter msg
     , feedType : FeedType
-    , description : Element msg
     , feed : LogList FeedData
     , error : Maybe ApiError
     , columnWidth : Int
@@ -79,3 +81,15 @@ type alias GangedNotification =
 type FeedData
     = PostFeedData (List ActivityLog)
     | NotificationFeedData (List GangedNotification)
+
+
+type alias Icons =
+    { user : Dict String String
+    , group : Dict String String
+    , topic : Dict String String
+    }
+
+
+emptyIcons : Icons
+emptyIcons =
+    Icons Dict.empty Dict.empty Dict.empty

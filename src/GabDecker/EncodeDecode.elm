@@ -1,11 +1,14 @@
 module GabDecker.EncodeDecode exposing
     ( decodeFeedType
     , decodeFeedTypes
+    , decodeIcons
     , encodeFeedType
     , encodeFeedTypes
+    , encodeIcons
     )
 
-import GabDecker.Types exposing (FeedType(..))
+import Dict exposing (Dict)
+import GabDecker.Types exposing (FeedType(..), Icons)
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
 
@@ -125,3 +128,26 @@ decodeFeedTypes : Value -> Result String (List FeedType)
 decodeFeedTypes value =
     JD.decodeValue feedTypesDecoder value
         |> fixDecodeResult
+
+
+encodeIcons : Icons -> Value
+encodeIcons icons =
+    JE.object
+        [ ( "user", JE.dict identity JE.string icons.user )
+        , ( "group", JE.dict identity JE.string icons.group )
+        , ( "topic", JE.dict identity JE.string icons.topic )
+        ]
+
+
+decodeIcons : Value -> Result String Icons
+decodeIcons value =
+    JD.decodeValue iconsDecoder value
+        |> fixDecodeResult
+
+
+iconsDecoder : Decoder Icons
+iconsDecoder =
+    JD.map3 Icons
+        (JD.field "user" <| JD.dict JD.string)
+        (JD.field "group" <| JD.dict JD.string)
+        (JD.field "topic" <| JD.dict JD.string)

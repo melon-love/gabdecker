@@ -100,6 +100,7 @@ import GabDecker.Types as Types
         , FeedResult
         , FeedType(..)
         , GangedNotification
+        , Icons
         , LogList
         )
 import Html exposing (Html)
@@ -162,12 +163,15 @@ type alias Model =
     , windowHeight : Int
     , columnWidth : Int
     , fontSize : Float
+    , here : Zone
+
+    -- A kluge because Lazy.lazy5 is the largest number of args
+    , fontSize_here : ( Float, Zone )
     , maxPosts : Int
     , backend : Maybe Backend
     , key : Key
     , funnelState : PortFunnels.State
     , controlColumnState : ExpandedState
-    , here : Zone
     , token : Maybe SavedToken
     , state : Maybe String
     , msg : Maybe String
@@ -180,6 +184,7 @@ type alias Model =
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
     , addedUserFeedName : String
+    , icons : Icons
     , feedTypes : List FeedType
     , nextId : Int
     , feeds : List (Feed Msg)
@@ -231,6 +236,69 @@ type Operation
     = UpvoteOperation FeedType Int Bool
     | DownvoteOperation FeedType Int Bool
     | RepostOperation FeedType Int
+
+
+lookupUserIconUrl : String -> Icons -> String
+lookupUserIconUrl username icons =
+    case Dict.get username icons.user of
+        Just icon ->
+            icon
+
+        Nothing ->
+            iconUrls.user
+
+
+updateUserIconUrl : String -> String -> Model -> ( Model, Cmd Msg )
+updateUserIconUrl username url model =
+    case
+        LE.find
+            (\feedType ->
+                case feedType of
+                    UserFeed name ->
+                        username == name
+
+                    _ ->
+                        False
+            )
+            model.feedTypes
+    of
+        Nothing ->
+            model |> withNoCmd
+
+        Just _ ->
+            let
+                icons =
+                    model.icons
+
+                updateUserIcons () =
+                    let
+                        newIcons =
+                            { icons
+                                | user =
+                                    Dict.insert username url icons.user
+                            }
+                    in
+                    { model
+                        | icons = newIcons
+                    }
+                        |> withCmd
+                            (localStorageSend
+                                (LocalStorage.put storageKeys.icons
+                                    (Just <| ED.encodeIcons icons)
+                                )
+                                model
+                            )
+            in
+            case Dict.get username icons.user of
+                Just u ->
+                    if u == url then
+                        model |> withNoCmd
+
+                    else
+                        updateUserIcons ()
+
+                Nothing ->
+                    updateUserIcons ()
 
 
 {-| GitHub requires the "User-Agent" header.
@@ -354,10 +422,11 @@ init flags url key =
             , windowHeight = 1024
             , columnWidth = defaultColumnWidth
             , fontSize = defaultFontSize
+            , here = Time.utc
+            , fontSize_here = ( defaultFontSize, Time.utc )
             , maxPosts = defaultMaxPosts
             , funnelState = PortFunnels.initialState localStoragePrefix
             , controlColumnState = ContractedState
-            , here = Time.utc
             , token = savedToken
             , state = state
             , msg = msg
@@ -370,6 +439,7 @@ init flags url key =
             , tokenAuthorization = authorization
             , username = "xossbow"
             , addedUserFeedName = ""
+            , icons = Types.emptyIcons
             , feedTypes = initialFeeds
             , nextId = List.length feeds
             , feeds = feeds
@@ -387,7 +457,8 @@ init flags url key =
 
                 Nothing ->
                     Cmd.none
-            , localStorageSend (LocalStorage.get feedsKey) model
+            , localStorageSend (LocalStorage.get storageKeys.feeds) model
+            , localStorageSend (LocalStorage.get storageKeys.icons) model
             , Task.perform getViewport Dom.getViewport
             , Task.perform Here Time.here
             , case savedToken of
@@ -446,7 +517,6 @@ feedTypeToFeed baseFontSize username columnWidth backend feedType id =
     in
     { getter = Api.feedTypeToGetter ft backend
     , feedType = ft
-    , description = feedTypeDescription ft baseFontSize
     , feed =
         { data =
             case ft of
@@ -476,8 +546,8 @@ postUrl post =
         ++ String.fromInt post.id
 
 
-feedTypeDescription : FeedType -> Float -> Element Msg
-feedTypeDescription feedType baseFontSize =
+feedTypeDescription : FeedType -> Float -> Icons -> Element Msg
+feedTypeDescription feedType baseFontSize icons =
     let
         iconHeight =
             userIconHeight baseFontSize
@@ -489,14 +559,14 @@ feedTypeDescription feedType baseFontSize =
         HomeFeed ->
             feedRow "https://gab.com/"
                 [ text "Home "
-                , heightImage icons.home "Home" iconHeight
+                , heightImage iconUrls.home "Home" iconHeight
                 ]
 
         UserFeed user ->
             feedRow ("https://gab.com/" ++ user)
                 [ text user
                 , text " "
-                , heightImage icons.user "frob" iconHeight
+                , heightImage (lookupUserIconUrl user icons) "frob" iconHeight
                 ]
 
         -- Need to look up group name
@@ -510,13 +580,13 @@ feedTypeDescription feedType baseFontSize =
         PopularFeed ->
             feedRow "https://gab.com/popular"
                 [ text "Popular "
-                , heightImage icons.popular "Popular" iconHeight
+                , heightImage iconUrls.popular "Popular" iconHeight
                 ]
 
         NotificationsFeed ->
             feedRow "https://gab.com/notifications"
                 [ text "Notifications "
-                , heightImage icons.notifications "Notifications" iconHeight
+                , heightImage iconUrls.notifications "Notifications" iconHeight
                 ]
 
         _ ->
@@ -580,7 +650,7 @@ receiveFeedTypes value model =
         cmd =
             case model.token of
                 Nothing ->
-                    localStorageSend (LocalStorage.get tokenKey) model
+                    localStorageSend (LocalStorage.get storageKeys.token) model
 
                 _ ->
                     Cmd.none
@@ -599,15 +669,33 @@ receiveFeedTypes value model =
                         |> withCmd cmd
 
 
+receiveIcons : Maybe Value -> Model -> ( Model, Cmd Msg )
+receiveIcons value model =
+    case value of
+        Nothing ->
+            model |> withNoCmd
+
+        Just v ->
+            case ED.decodeIcons v of
+                Err _ ->
+                    model |> withNoCmd
+
+                Ok icons ->
+                    { model | icons = icons } |> withNoCmd
+
+
 storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
 storageHandler response state model =
     case response of
         LocalStorage.GetResponse { key, value } ->
-            if key == tokenKey && model.backend == Nothing then
+            if key == storageKeys.token && model.backend == Nothing then
                 receiveToken value model
 
-            else if key == feedsKey then
+            else if key == storageKeys.feeds then
                 receiveFeedTypes value model
+
+            else if key == storageKeys.icons then
+                receiveIcons value model
 
             else
                 model |> withNoCmd
@@ -696,7 +784,7 @@ update msg model =
             in
             ( model
             , localStorageSend
-                (LocalStorage.put tokenKey <| Just value)
+                (LocalStorage.put storageKeys.token <| Just value)
                 model
             )
 
@@ -721,7 +809,11 @@ update msg model =
                 |> withNoCmd
 
         Here zone ->
-            { model | here = zone } |> withNoCmd
+            { model
+                | here = zone
+                , fontSize_here = ( model.fontSize, zone )
+            }
+                |> withNoCmd
 
         Login ->
             case model.tokenAuthorization of
@@ -1299,7 +1391,7 @@ saveFeeds feeds model =
                 |> ED.encodeFeedTypes
     in
     localStorageSend
-        (LocalStorage.put feedsKey <| Just value)
+        (LocalStorage.put storageKeys.feeds <| Just value)
         model
 
 
@@ -1425,6 +1517,26 @@ loadMore appendResult feed =
             getter (ReceiveNotificationsFeed (not appendResult) feed.feedType) before
 
 
+updateIcons : LogList FeedData -> Model -> ( Model, Cmd Msg )
+updateIcons logList model =
+    case logList.data of
+        PostFeedData logLists ->
+            let
+                folder log ( mdl, cmd ) =
+                    let
+                        ( m, c ) =
+                            updateUserIconUrl log.actuser.username
+                                log.actuser.picture_url
+                                mdl
+                    in
+                    m |> withCmds [ cmd, c ]
+            in
+            List.foldl folder ( model, Cmd.none ) logLists
+
+        _ ->
+            model |> withNoCmd
+
+
 receiveFeed : Bool -> FeedType -> FeedResult (LogList FeedData) -> Model -> ( Model, Cmd Msg )
 receiveFeed scrollToTop feedType result model =
     let
@@ -1438,10 +1550,9 @@ receiveFeed scrollToTop feedType result model =
                         _ ->
                             model |> withNoCmd
 
-                _ ->
-                    model |> withNoCmd
-    in
-    let
+                Ok logList ->
+                    updateIcons logList model
+
         ( id, feeds ) =
             updateFeeds (not scrollToTop) feedType result mdl.feeds
     in
@@ -1477,7 +1588,7 @@ processReceivedError err model =
             mdl
                 |> withCmd
                     (localStorageSend
-                        (LocalStorage.put tokenKey Nothing)
+                        (LocalStorage.put storageKeys.token Nothing)
                         mdl
                     )
 
@@ -1722,16 +1833,6 @@ type alias PostOrder =
     ( Bool, Order )
 
 
-tokenKey : String
-tokenKey =
-    "token"
-
-
-feedsKey : String
-feedsKey =
-    "feeds"
-
-
 funnelDict : FunnelDict Model Msg
 funnelDict =
     PortFunnels.makeFunnelDict [ LocalStorageHandler storageHandler ] getCmdPort
@@ -1879,8 +1980,8 @@ mainPage model =
                         ( feedTypeToString feed.feedType
                         , feedColumn (feedIsLoading feed model)
                             model.windowHeight
-                            model.fontSize
-                            model.here
+                            model.fontSize_here
+                            model.icons
                             feed
                         )
                     )
@@ -1970,7 +2071,7 @@ operationErrorDialog err model =
         ]
         [ let
             closeIcon =
-                heightImage icons.close "Close" iconHeight
+                heightImage iconUrls.close "Close" iconHeight
           in
           row [ width Element.fill ]
             [ row
@@ -2040,7 +2141,7 @@ addFeedDialog model =
         ]
         [ let
             closeIcon =
-                heightImage icons.close "Close" iconHeight
+                heightImage iconUrls.close "Close" iconHeight
           in
           row [ width Element.fill ]
             [ row
@@ -2181,10 +2282,10 @@ controlColumn columnWidth model =
                     [ standardButton
                         "Refresh All Feeds"
                         LoadAll
-                        (widthImage icons.reload "Refresh" iconHeight)
+                        (widthImage iconUrls.reload "Refresh" iconHeight)
                     ]
               ]
-            , List.map (feedSelectorButton iconHeight) model.feeds
+            , List.map (feedSelectorButton iconHeight model.icons) model.feeds
             , [ row
                     [ Font.size <| 7 * iconHeight // 4
                     , centerX
@@ -2194,14 +2295,14 @@ controlColumn columnWidth model =
             ]
 
 
-feedTypeIconUrl : FeedType -> ( String, String )
-feedTypeIconUrl feedType =
+feedTypeIconUrl : FeedType -> Icons -> ( String, String )
+feedTypeIconUrl feedType icons =
     case feedType of
         HomeFeed ->
-            ( icons.home, "Home" )
+            ( iconUrls.home, "Home" )
 
         UserFeed username ->
-            ( icons.user, "User: " ++ username )
+            ( lookupUserIconUrl username icons, "User: " ++ username )
 
         GroupFeed groupid ->
             ( "", "Group: " ++ groupid )
@@ -2210,18 +2311,18 @@ feedTypeIconUrl feedType =
             ( "", "Topic: " ++ topicid )
 
         PopularFeed ->
-            ( icons.popular, "Popular" )
+            ( iconUrls.popular, "Popular" )
 
         NotificationsFeed ->
-            ( icons.notifications, "Notifications" )
+            ( iconUrls.notifications, "Notifications" )
 
         _ ->
             ( "", "" )
 
 
-feedSelectorButton : Int -> Feed Msg -> Element Msg
-feedSelectorButton iconHeight feed =
-    case feedTypeIconUrl feed.feedType of
+feedSelectorButton : Int -> Icons -> Feed Msg -> Element Msg
+feedSelectorButton iconHeight icons feed =
+    case feedTypeIconUrl feed.feedType icons of
         ( "", _ ) ->
             text ""
 
@@ -2336,19 +2437,19 @@ feedIsLoading feed model =
     Set.member (feedTypeToString feed.feedType) model.loadingFeeds
 
 
-feedColumn : Bool -> Int -> Float -> Zone -> Feed Msg -> Element Msg
-feedColumn isLoading windowHeight baseFontSize here feed =
+feedColumn : Bool -> Int -> ( Float, Zone ) -> Icons -> Feed Msg -> Element Msg
+feedColumn isLoading windowHeight fontSize_here icons feed =
     Lazy.lazy5
         feedColumnInternal
         isLoading
         windowHeight
-        baseFontSize
-        here
+        fontSize_here
+        icons
         feed
 
 
-feedColumnInternal : Bool -> Int -> Float -> Zone -> Feed Msg -> Element Msg
-feedColumnInternal isLoading windowHeight baseFontSize here feed =
+feedColumnInternal : Bool -> Int -> ( Float, Zone ) -> Icons -> Feed Msg -> Element Msg
+feedColumnInternal isLoading windowHeight ( baseFontSize, here ) icons feed =
     let
         colw =
             width <| px feed.columnWidth
@@ -2374,13 +2475,13 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
             [ column [ colw ]
                 [ let
                     closeIcon =
-                        heightImage icons.close "Close" iconHeight
+                        heightImage iconUrls.close "Close" iconHeight
 
                     prevIcon =
-                        heightImage icons.previous "Move Left" iconHeight
+                        heightImage iconUrls.previous "Move Left" iconHeight
 
                     nextIcon =
-                        heightImage icons.next "Move Right" iconHeight
+                        heightImage iconUrls.next "Move Right" iconHeight
                   in
                   row
                     [ padding columnPadding
@@ -2411,9 +2512,9 @@ feedColumnInternal isLoading windowHeight baseFontSize here feed =
                             standardButtonWithDontHover isLoading
                                 "Refresh Feed"
                                 (LoadMore False feed)
-                                (heightImage icons.reload "Refresh" iconHeight)
+                                (heightImage iconUrls.reload "Refresh" iconHeight)
                         , text " "
-                        , feed.description
+                        , feedTypeDescription feed.feedType baseFontSize icons
                         ]
                     , el [ alignRight ]
                         (standardButton "Close Feed" (CloseFeed feed) closeIcon)
@@ -2610,49 +2711,11 @@ notificationFeedDataRow baseFontSize feed isToplevel here notification =
     )
 
 
-type alias FeedStuff =
-    { baseFontSize : Float
-    , columnWidth : Int
-    , feedType : FeedType
-    , isTopLevel : Bool
-    , here : Zone
-    , log : ActivityLog
-    }
-
-
 postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
 postRow baseFontSize feed isToplevel here log =
     let
-        stuff =
-            FeedStuff baseFontSize
-                feed.columnWidth
-                feed.feedType
-                isToplevel
-                here
-                log
-    in
-    --Lazy.lazy
-    postRowInternal
-        stuff
-
-
-postRowInternal : FeedStuff -> Element Msg
-postRowInternal stuff =
-    let
-        baseFontSize =
-            stuff.baseFontSize
-
         cw =
-            stuff.columnWidth
-
-        isToplevel =
-            stuff.isTopLevel
-
-        here =
-            stuff.here
-
-        log =
-            stuff.log
+            feed.columnWidth
 
         pad =
             5
@@ -2697,10 +2760,10 @@ postRowInternal stuff =
                     ( "quoted", chars.leftCurlyQuote )
 
                 else
-                    ( "reposted", icons.refresh )
+                    ( "reposted", iconUrls.refresh )
 
             else if post.is_reply then
-                ( "commented", icons.comment )
+                ( "commented", iconUrls.comment )
 
             else
                 ( "", "" )
@@ -2792,24 +2855,24 @@ postRowInternal stuff =
                                         text ""
 
                                     Just parentPost ->
-                                        postRowInternal
-                                            { stuff
-                                                | columnWidth = cwp - 10
-                                                , log =
-                                                    { log
-                                                        | post =
-                                                            { parentPost
-                                                                | body_html =
-                                                                    if post.is_quote then
-                                                                        parentPost.body_html
+                                        postRow
+                                            baseFontSize
+                                            { feed | columnWidth = cwp - 10 }
+                                            False
+                                            here
+                                            { log
+                                                | post =
+                                                    { parentPost
+                                                        | body_html =
+                                                            if post.is_quote then
+                                                                parentPost.body_html
 
-                                                                    else
-                                                                        parentPost.body_html_summary
-                                                                , body =
-                                                                    truncatePost parentPost.body
-                                                            }
-                                                        , type_ = "post"
+                                                            else
+                                                                parentPost.body_html_summary
+                                                        , body =
+                                                            truncatePost parentPost.body
                                                     }
+                                                , type_ = "post"
                                             }
                         ]
                     ]
@@ -2818,7 +2881,7 @@ postRowInternal stuff =
                 text ""
 
               else
-                interactionRow baseFontSize colwp stuff post
+                interactionRow baseFontSize colwp feed.feedType post
             ]
         ]
 
@@ -3372,8 +3435,8 @@ highlightElement color element =
     el attrs element
 
 
-interactionRow : Float -> Attribute Msg -> FeedStuff -> Post -> Element Msg
-interactionRow baseFontSize colwp stuff post =
+interactionRow : Float -> Attribute Msg -> FeedType -> Post -> Element Msg
+interactionRow baseFontSize colwp feedType post =
     let
         fsize =
             round <| baseFontSize * 0.8
@@ -3412,9 +3475,6 @@ interactionRow baseFontSize colwp stuff post =
                        )
                 ]
 
-        feedType =
-            stuff.feedType
-
         postid =
             post.id
     in
@@ -3423,25 +3483,25 @@ interactionRow baseFontSize colwp stuff post =
         , colwp
         , Font.size fsize
         ]
-        [ onecol (heightImage icons.like "upvote" fsize)
+        [ onecol (heightImage iconUrls.like "upvote" fsize)
             ( post.liked, GreenHighlight )
             ""
             post.like_count
             "upvote"
             (Upvote feedType post)
-        , onecol (heightImage icons.dislike "downvote" fsize)
+        , onecol (heightImage iconUrls.dislike "downvote" fsize)
             ( post.disliked, RedHighlight )
             ""
             post.dislike_count
             "downvote"
             (Downvote feedType post)
-        , onecol (heightImage icons.comment "comment" fsize)
+        , onecol (heightImage iconUrls.comment "comment" fsize)
             ( False, NoHighlight )
             ""
             post.reply_count
             ""
             Noop
-        , onecol (heightImage icons.refresh "reposted" fsize)
+        , onecol (heightImage iconUrls.refresh "reposted" fsize)
             ( post.repost, GreenHighlight )
             ""
             post.repost_count
@@ -3705,6 +3765,13 @@ codestr code =
     String.fromList [ Char.fromCode code ]
 
 
+storageKeys =
+    { token = "token"
+    , feeds = "feeds"
+    , icons = "icons"
+    }
+
+
 chars =
     { leftCurlyQuote = codestr 0x201C
     , copyright = codestr 0xA9
@@ -3712,7 +3779,7 @@ chars =
     }
 
 
-icons =
+iconUrls =
     { reload = "icon/reload.svg"
     , refresh = "icon/refresh-arrow.svg"
     , close = "icon/cancel.svg"
