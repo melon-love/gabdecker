@@ -1,5 +1,8 @@
 #!/bin/bash
 
+cp src/GabDecker/Authorization.elm src/GabDecker/Authorization.elm.save
+cp src/GabDecker/Authorization.elm.live src/GabDecker/Authorization.elm
 elm make src/Main.elm --output site/elm.js
+mv src/GabDecker/Authorization.elm.save src/GabDecker/Authorization.elm
 cd site
 rsyncit -av elm.js

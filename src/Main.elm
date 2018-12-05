@@ -10,8 +10,6 @@
 -- Search for TODO to see remaining work.
 -- Also see ../TODO.md
 --
--- Remember to call gangNotifications or trimComments while processing feed.
---
 ----------------------------------------------------------------------
 
 
@@ -1802,7 +1800,11 @@ canonicalizeData key new old =
         mapper dat =
             case Dict.get (key dat) dict of
                 Just v ->
-                    v
+                    if dat == v then
+                        v
+
+                    else
+                        dat
 
                 Nothing ->
                     dat

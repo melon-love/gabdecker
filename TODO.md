@@ -3,7 +3,10 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Scroll to feed after adding it.
+* After a reload, of one or all feeds, a new post count should be shown
+  in the sidebar.
+  Also mark the separation between new and old somehow, likely a colored
+  line.
 * When somebody "mentioned you in a comment", include an interaction row.
 * If a comment has an empty body and only a photo, display the photo, or
   the date gets covered by the parent below.
@@ -28,6 +31,10 @@ This is a place to collect things left to do for GabDecker.
   Those fields need to be added to `Gab.Types.Post`.
   post.parent was there, and I used it. Check if I really need
   post.conversation_parent.
+* Make the sidebar scroll vertically, probably just limit the size of the
+  feed portion and scroll that, ensuring that the "+" to add a feed, and
+  the settings and whatever else at the bottom are always visible.
+* Incremental search. Show only posts containing the string the user types.
 * Pop up small profile page on hover over name, just like Gab.com.
   Or maybe this should be another choice on click.
 * Verified, pro, and donor identification for users.
