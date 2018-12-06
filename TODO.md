@@ -57,7 +57,8 @@ This is a place to collect things left to do for GabDecker.
 * Colored versions of icons instead of rectangular background color highlight.
 * If a comment is reposted it should say:
   "foo reposted bar's comment"
-* Optimize rendering.
+* Optimize rendering. It's pretty good, but keystrokes in the "Add Feed"
+  dialog take a long time to appear, when you have lots of columns.
   Eliminate delay between clicking on refresh button and orange highlight.
   The problem is the isLoading parameter to feedColumnInternal.
   Can likely do this with a port that adjusts the colors.

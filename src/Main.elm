@@ -330,6 +330,7 @@ subscriptions model =
     Sub.batch
         [ PortFunnels.subscriptions ProcessLocalStorage model
         , Events.onResize WindowResize
+        , Events.onKeyDown <| keydownDecoder keycodes.escape CloseDialog
         ]
 
 
@@ -1987,6 +1988,7 @@ mainPage model =
     in
     row
         [ fontSize model.fontSize 1
+        , onMousedownAttribute CloseDialog
         , Border.widthEach
             { zeroes
                 | left = 5
@@ -2152,6 +2154,12 @@ styleAttribute name value =
         |> Element.htmlAttribute
 
 
+{-| Should probably put a transparent layer over the main view,
+so clicks intended to close the dialog don't hit mouse-sensitive regions there.
+
+Or not.
+
+-}
 imageDialog : String -> Model -> Element Msg
 imageDialog url model =
     let
@@ -2165,7 +2173,7 @@ imageDialog url model =
             9 * model.windowHeight // 10
 
         maxhs =
-            String.fromInt (9 * model.windowHeight // 10) ++ "px"
+            String.fromInt maxh ++ "px"
     in
     column
         -- This is black magic.
@@ -2189,20 +2197,42 @@ imageDialog url model =
         ]
 
 
-onEnterAttribute : Msg -> Attribute Msg
-onEnterAttribute msg =
-    Html.Events.on "keydown"
-        (Html.Events.keyCode |> JD.andThen (is13 msg))
+onMousedownAttribute : msg -> Attribute msg
+onMousedownAttribute msg =
+    Html.Events.on "mousedown" (JD.succeed msg)
         |> Element.htmlAttribute
 
 
-is13 : a -> Int -> Decoder a
-is13 a code =
-    if code == 13 then
-        JD.succeed a
+onKeyDownAttribute : Int -> msg -> Attribute msg
+onKeyDownAttribute keycode msg =
+    onKeysDownAttribute [ ( keycode, msg ) ]
 
-    else
-        JD.fail "not the right key code"
+
+onKeysDownAttribute : List ( Int, msg ) -> Attribute msg
+onKeysDownAttribute pairs =
+    Html.Events.on "keydown"
+        (Html.Events.keyCode |> JD.andThen (isKeycode pairs))
+        |> Element.htmlAttribute
+
+
+keydownDecoder : Int -> msg -> Decoder msg
+keydownDecoder keycode msg =
+    keysdownDecoder [ ( keycode, msg ) ]
+
+
+keysdownDecoder : List ( Int, msg ) -> Decoder msg
+keysdownDecoder pairs =
+    Html.Events.keyCode |> JD.andThen (isKeycode pairs)
+
+
+isKeycode : List ( Int, msg ) -> Int -> Decoder msg
+isKeycode pairs keycode =
+    case LE.find (\( kc, _ ) -> kc == keycode) pairs of
+        Just ( _, msg ) ->
+            JD.succeed msg
+
+        Nothing ->
+            JD.fail "These are not the keycodes you're looking for."
 
 
 addFeedDialog : Model -> Element Msg
@@ -2227,7 +2257,10 @@ addFeedDialog model =
                 Input.text
                     [ width <| px 200
                     , idAttribute userFeedInputId
-                    , onEnterAttribute (AddNewFeed feedType)
+                    , onKeysDownAttribute
+                        [ ( keycodes.escape, CloseDialog )
+                        , ( keycodes.enter, AddNewFeed feedType )
+                        ]
                     ]
                     { onChange = AddedUserFeedName
                     , text = model.addedUserFeedName
@@ -3913,6 +3946,12 @@ chars =
     { leftCurlyQuote = codestr 0x201C
     , copyright = codestr 0xA9
     , nbsp = codestr 0xA0
+    }
+
+
+keycodes =
+    { enter = 13
+    , escape = 27
     }
 
 
