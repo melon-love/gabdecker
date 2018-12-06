@@ -2146,29 +2146,47 @@ operationErrorDialog err model =
         ]
 
 
+styleAttribute : String -> String -> Attribute msg
+styleAttribute name value =
+    Attributes.style name value
+        |> Element.htmlAttribute
+
+
 imageDialog : String -> Model -> Element Msg
 imageDialog url model =
-    el
-        [ Border.width 2
-        , centerX
+    let
+        maxw =
+            9 * model.windowWidth // 10
+
+        maxws =
+            String.fromInt maxw ++ "px"
+
+        maxh =
+            9 * model.windowHeight // 10
+
+        maxhs =
+            String.fromInt (9 * model.windowHeight // 10) ++ "px"
+    in
+    column
+        -- This is black magic.
+        -- It took much play with the CSS to get it right.
+        [ centerX
         , centerY
         ]
-        (standardButton "Close Dialog" CloseDialog <|
-            Element.image
-                [ titleAttribute "Click the image to close it."
-                , width
-                    (Element.fill
-                        |> Element.maximum (9 * model.windowWidth // 10)
-                    )
-                , height
-                    (Element.fill
-                        |> Element.maximum (9 * model.windowHeight // 10)
-                    )
+        [ standardButton "" CloseDialog <|
+            (Html.img
+                [ Attributes.style "object-fit" "contain"
+                , Attributes.style "max-width" maxws
+                , Attributes.style "max-height" maxhs
+                , Attributes.style "border" "2px solid black"
+                , Attributes.style "width" "auto"
+                , Attributes.style "height" "auto"
+                , Attributes.src url
                 ]
-                { src = url
-                , description = url
-                }
-        )
+                []
+                |> Element.html
+            )
+        ]
 
 
 onEnterAttribute : Msg -> Attribute Msg

@@ -40,7 +40,6 @@ This is a place to collect things left to do for GabDecker.
 * Pop up small profile page on hover over name, just like Gab.com.
   Or maybe this should be another choice on click.
 * Verified, pro, and donor identification for users.
-* Open clicked image in overlay pane.
 * Link user image to profile page.
 * HTML elements, "`&amp;`" -> "`&`".
 * `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`,
