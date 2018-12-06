@@ -5,9 +5,11 @@ This is a place to collect things left to do for GabDecker.
 * Post / reply / quote / repost
 * After a reload, of one or all feeds, a new post count should be shown
   in the sidebar.
-  Also mark the separation between new and old somehow, likely a colored
+  Also mark the boundary between new and old somehow, likely a colored
   line.
 * When somebody "mentioned you in a comment", include an interaction row.
+* Figure out the proper way to compute `repostString`. It's wrong now.
+  repost, repost a comment, quote, quote a comment, comment, comment on a comment.
 * If a comment has an empty body and only a photo, display the photo, or
   the date gets covered by the parent below.
   Likewise for the parent post. If it has no body, but does have an attachment,
@@ -43,7 +45,6 @@ This is a place to collect things left to do for GabDecker.
 * HTML elements, "`&amp;`" -> "`&`".
 * `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`,
   `<u>foo</u>`.
-* Mark the boundary between just loaded posts and older ones.
 * Single `<br />` -> multiple `row`s.
 * A faster way than move-left-or-right clicks to move a column.
   Dragging in the control column would be great, but just typing a number
@@ -61,7 +62,7 @@ This is a place to collect things left to do for GabDecker.
   Eliminate delay between clicking on refresh button and orange highlight.
   The problem is the isLoading parameter to feedColumnInternal.
   Can likely do this with a port that adjusts the colors.
-* If lots of people like a post, wrap the icon list in the notification entry.
+* If lots of people like a post, line-wrap the icon list in the notification entry.
 * Bug in URL parsing. Sometimes gets cruft at the end.
   E.g. https://gab.com/billstclair/posts/42716809
   Looked at this in `elm repl`. Couldn't reproduce. Try again.

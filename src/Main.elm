@@ -150,6 +150,7 @@ allScopes =
 type DialogType
     = NoDialog
     | AddFeedDialog
+    | ImageDialog String
     | OperationErrorDialog String
 
 
@@ -217,6 +218,7 @@ type Msg
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
     | MoveFeedRight FeedType
+    | ShowImageDialog String
     | ScrollToFeed FeedType
     | ScrollToViewport String (Result Dom.Error Dom.Element)
     | ScrollToControl String Dom.Element (Result Dom.Error Dom.Element)
@@ -888,6 +890,9 @@ update msg model =
 
         MoveFeedLeft feedType ->
             moveFeedLeft feedType model
+
+        ShowImageDialog url ->
+            { model | showDialog = ImageDialog url } |> withNoCmd
 
         MoveFeedRight feedType ->
             moveFeedRight feedType model
@@ -1927,6 +1932,9 @@ view model =
                 AddFeedDialog ->
                     [ Element.inFront <| addFeedDialog model ]
 
+                ImageDialog url ->
+                    [ Element.inFront <| imageDialog url model ]
+
                 OperationErrorDialog err ->
                     [ Element.inFront <| operationErrorDialog err model ]
 
@@ -2136,6 +2144,31 @@ operationErrorDialog err model =
         , row [ paddingEach { zeroes | top = 20 } ]
             [ text err ]
         ]
+
+
+imageDialog : String -> Model -> Element Msg
+imageDialog url model =
+    el
+        [ Border.width 2
+        , centerX
+        , centerY
+        ]
+        (standardButton "Close Dialog" CloseDialog <|
+            Element.image
+                [ titleAttribute "Click the image to close it."
+                , width
+                    (Element.fill
+                        |> Element.maximum (9 * model.windowWidth // 10)
+                    )
+                , height
+                    (Element.fill
+                        |> Element.maximum (9 * model.windowHeight // 10)
+                    )
+                ]
+                { src = url
+                , description = url
+                }
+        )
 
 
 onEnterAttribute : Msg -> Attribute Msg
@@ -3606,7 +3639,7 @@ interactionRow baseFontSize colwp feedType post =
         ]
 
 
-mediaRow : Attribute msg -> MediaRecord -> Element msg
+mediaRow : Attribute Msg -> MediaRecord -> Element Msg
 mediaRow colw record =
     row
         [ paddingEach
@@ -3615,11 +3648,15 @@ mediaRow colw record =
                 , bottom = 5
             }
         ]
-        [ image
-            [ colw ]
-            { src = record.url_thumbnail
-            , description = "image"
-            }
+        [ standardButtonWithDontHover True
+            ""
+            (ShowImageDialog record.url_full)
+          <|
+            image
+                [ colw ]
+                { src = record.url_thumbnail
+                , description = "image"
+                }
         ]
 
 
