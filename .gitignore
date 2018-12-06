@@ -1,5 +1,7 @@
 elm-stuff
 src/GabDecker/Authorization.elm
+src/GabDecker/Authorization.elm.live
+126466-multimedia-collection
 site/authorization.json
 site/simulator.html
 site/elm.js

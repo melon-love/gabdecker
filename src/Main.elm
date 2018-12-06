@@ -330,7 +330,7 @@ subscriptions model =
     Sub.batch
         [ PortFunnels.subscriptions ProcessLocalStorage model
         , Events.onResize WindowResize
-        , Events.onKeyDown <| keydownDecoder keycodes.escape CloseDialog
+        , Events.onKeyDown <| keyDownDecoder keycodes.escape CloseDialog
         ]
 
 
@@ -2215,13 +2215,13 @@ onKeysDownAttribute pairs =
         |> Element.htmlAttribute
 
 
-keydownDecoder : Int -> msg -> Decoder msg
-keydownDecoder keycode msg =
-    keysdownDecoder [ ( keycode, msg ) ]
+keyDownDecoder : Int -> msg -> Decoder msg
+keyDownDecoder keycode msg =
+    keysDownDecoder [ ( keycode, msg ) ]
 
 
-keysdownDecoder : List ( Int, msg ) -> Decoder msg
-keysdownDecoder pairs =
+keysDownDecoder : List ( Int, msg ) -> Decoder msg
+keysDownDecoder pairs =
     Html.Events.keyCode |> JD.andThen (isKeycode pairs)
 
 
@@ -3071,11 +3071,16 @@ postUserRow colwp here post =
                 { zeroes | right = 5 }
             ]
             [ row []
-                [ heightImage user.picture_url username 40 ]
+                [ styledLink True
+                    [ titleAttribute user.name ]
+                    (userUrl user)
+                  <|
+                    heightImage user.picture_url username 40
+                ]
             ]
         , column []
             [ row [ nameBottomPadding ]
-                [ newTabLink ("https://gab.com/" ++ username) <|
+                [ newTabLink (userUrl user) <|
                     embiggen user.name
                 , text <| " (" ++ username ++ ")"
                 ]

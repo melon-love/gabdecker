@@ -7,6 +7,9 @@ This is a place to collect things left to do for GabDecker.
   in the sidebar.
   Also mark the boundary between new and old somehow, likely a colored
   line.
+* Profile at top of newly-added user feed.
+  Ability to toggle it off and back on.
+  Choice is persistent.
 * When somebody "mentioned you in a comment", include an interaction row.
 * Figure out the proper way to compute `repostString`. It's wrong now.
   repost, repost a comment, quote, quote a comment, comment, comment on a comment.
@@ -22,9 +25,6 @@ This is a place to collect things left to do for GabDecker.
   Should also be able to mute/unmute user.
 * Clicking on a post time should give the option of opening in Gab
   or performing an action, all five actions displayed in a feed.
-* Profile at top of newly-added user feed.
-  Ability to toggle it off and back on.
-  Choice is persistent.
 * Font size and column width preferences.
   "Show comments in feeds" preference, or maybe per-feed.
 * Encode the preferences as a string, so you can paste them into another browser.
@@ -66,6 +66,8 @@ This is a place to collect things left to do for GabDecker.
 * Bug in URL parsing. Sometimes gets cruft at the end.
   E.g. https://gab.com/billstclair/posts/42716809
   Looked at this in `elm repl`. Couldn't reproduce. Try again.
+* When a post has multiple images, the pop-up viewer should have a way
+  to navigate through them.
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.
