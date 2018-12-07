@@ -151,6 +151,7 @@ type DialogType
     = NoDialog
     | AddFeedDialog
     | ImageDialog String
+    | SaveFeedsDialog
     | OperationErrorDialog String
 
 
@@ -192,7 +193,7 @@ type alias Model =
     , receivedScopes : List String
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
-    , addedUserFeedName : String
+    , dialogInput : String
     , icons : Icons
 
     -- This is only used at startup. It's not accurate after that.
@@ -234,7 +235,9 @@ type Msg
     | ScrollToControl String Dom.Element (Result Dom.Error Dom.Element)
     | ScrollToContent Dom.Element Dom.Element (Result Dom.Error Dom.Element)
     | AddFeed
-    | AddedUserFeedName String
+    | SaveFeedTypes
+    | RestoreFeedTypes
+    | DialogInput String
     | AddNewFeed FeedType
     | Upvote FeedType Post
     | Downvote FeedType Post
@@ -446,7 +449,7 @@ init flags url key =
             , receivedScopes = scopes
             , tokenAuthorization = authorization
             , username = "xossbow"
-            , addedUserFeedName = ""
+            , dialogInput = ""
             , icons = Types.emptyIcons
             , feedTypes = initialFeeds
             , nextId = List.length feeds
@@ -655,6 +658,28 @@ receiveToken mv model =
                                     Gab.me savedToken.token
                             , loadAllCmd
                             ]
+
+
+restoreFeedTypes : List FeedType -> Model -> ( Model, Cmd Msg )
+restoreFeedTypes feedTypes model =
+    case model.backend of
+        Nothing ->
+            { model
+                | feedTypes = feedTypes
+                , feeds = []
+            }
+                |> withNoCmd
+
+        backend ->
+            let
+                feeds =
+                    feedTypesToFeeds model.loggedInUser
+                        backend
+                        feedTypes
+                        0
+            in
+            { model | feeds = feeds }
+                |> withCmd loadAllCmd
 
 
 receiveFeedTypes : Maybe Value -> Model -> ( Model, Cmd Msg )
@@ -1029,13 +1054,44 @@ update msg model =
             { model
                 | showDialog = AddFeedDialog
                 , dialogError = Nothing
-                , addedUserFeedName = ""
+                , dialogInput = ""
             }
                 |> withCmd
                     (Task.attempt (\_ -> Noop) <| Dom.focus userFeedInputId)
 
-        AddedUserFeedName username ->
-            { model | addedUserFeedName = username } |> withNoCmd
+        SaveFeedTypes ->
+            let
+                typesString =
+                    List.map .feedType model.feeds
+                        |> ED.encodeFeedTypes
+                        |> JE.encode 0
+            in
+            { model
+                | showDialog = SaveFeedsDialog
+                , dialogError = Nothing
+                , dialogInput = typesString
+            }
+                |> withCmd
+                    (Task.attempt (\_ -> Noop) <| Dom.focus feedsStringInputId)
+
+        RestoreFeedTypes ->
+            case JD.decodeString ED.feedTypesDecoder model.dialogInput of
+                Err err ->
+                    { model | dialogError = Just <| JD.errorToString err }
+                        |> withNoCmd
+
+                Ok feedTypes ->
+                    let
+                        mdl =
+                            { model
+                                | showDialog = NoDialog
+                                , dialogError = Nothing
+                            }
+                    in
+                    restoreFeedTypes feedTypes mdl
+
+        DialogInput username ->
+            { model | dialogInput = username } |> withNoCmd
 
         AddNewFeed feedType ->
             addNewFeed feedType model.settings.fontSize model
@@ -1920,25 +1976,30 @@ view model =
     , body =
         [ Element.layoutWith
             { options = [ focusStyle ] }
-            (case model.showDialog of
-                AddFeedDialog ->
-                    [ Element.inFront <| addFeedDialog model ]
+            [ Element.inFront <|
+                case model.showDialog of
+                    AddFeedDialog ->
+                        addFeedDialog model
 
-                ImageDialog url ->
-                    [ Element.inFront <| imageDialog url model ]
+                    ImageDialog url ->
+                        imageDialog url model
 
-                OperationErrorDialog err ->
-                    [ Element.inFront <| operationErrorDialog err model ]
+                    SaveFeedsDialog ->
+                        saveFeedsDialog model
 
-                _ ->
-                    []
-            )
+                    OperationErrorDialog err ->
+                        operationErrorDialog err model
+
+                    _ ->
+                        text ""
+            ]
             (case model.backend of
                 Nothing ->
                     loginPage model.settings
 
                 Just backend ->
-                    Lazy.lazy4 mainPage
+                    Lazy.lazy4
+                        mainPage
                         model.settings
                         model.icons
                         model.loadingFeeds
@@ -2083,6 +2144,16 @@ addFeedChoices model =
         ]
 
 
+dialogAttributes : List (Attribute msg)
+dialogAttributes =
+    [ Border.width 5
+    , centerX
+    , centerY
+    , Background.color colors.verylightgray
+    , paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
+    ]
+
+
 operationErrorDialog : String -> Model -> Element Msg
 operationErrorDialog err model =
     let
@@ -2092,13 +2163,7 @@ operationErrorDialog err model =
         iconHeight =
             userIconHeight baseFontSize
     in
-    column
-        [ Border.width 5
-        , centerX
-        , centerY
-        , Background.color colors.verylightgray
-        , paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
-        ]
+    column dialogAttributes
         [ let
             closeIcon =
                 heightImage iconUrls.close "Close" iconHeight
@@ -2209,6 +2274,78 @@ isKeycode pairs keycode =
             JD.fail "These are not the keycodes you're looking for."
 
 
+dialogTitleBar : Float -> String -> Element Msg
+dialogTitleBar baseFontSize title =
+    let
+        iconHeight =
+            userIconHeight baseFontSize
+
+        closeIcon =
+            heightImage iconUrls.close "Close" iconHeight
+    in
+    row [ width Element.fill ]
+        [ row
+            [ centerX
+            , centerY
+            , Font.bold
+            , fontSize baseFontSize 1.5
+            ]
+            [ text title ]
+        , el [ alignRight ]
+            (standardButton "Close Dialog" CloseDialog closeIcon)
+        ]
+
+
+dialogErrorRow : Model -> Element msg
+dialogErrorRow model =
+    case model.dialogError of
+        Nothing ->
+            text ""
+
+        Just err ->
+            row
+                [ paddingEach { zeroes | top = 10 }
+                , Font.color colors.red
+                ]
+                [ text err ]
+
+
+saveFeedsDialog : Model -> Element Msg
+saveFeedsDialog model =
+    let
+        baseFontSize =
+            model.settings.fontSize
+
+        iconHeight =
+            userIconHeight (2 * baseFontSize)
+    in
+    column dialogAttributes
+        [ dialogTitleBar baseFontSize "Save/Restore Feeds "
+        , dialogErrorRow model
+        , row [ paddingEach { zeroes | top = 10 } ]
+            [ Input.text
+                [ width <| px 400
+                , idAttribute feedsStringInputId
+                , onKeysDownAttribute
+                    [ ( keycodes.escape, CloseDialog )
+                    , ( keycodes.enter, RestoreFeedTypes )
+                    ]
+                ]
+                { onChange = DialogInput
+                , text = model.dialogInput
+                , placeholder =
+                    Just <|
+                        Input.placeholder [] (text "username")
+                , label = Input.labelHidden "User Feed Name"
+                }
+            , el [ paddingEach { zeroes | left = 10 } ]
+                (standardButton "Restore" RestoreFeedTypes <|
+                    heightImage iconUrls.save "Restore" iconHeight
+                )
+            ]
+        ]
+
+
 addFeedDialog : Model -> Element Msg
 addFeedDialog model =
     let
@@ -2227,7 +2364,7 @@ addFeedDialog model =
         addUserFeedRow =
             let
                 feedType =
-                    UserFeed model.addedUserFeedName
+                    UserFeed model.dialogInput
             in
             { label = "User: "
             , element =
@@ -2239,8 +2376,8 @@ addFeedDialog model =
                         , ( keycodes.enter, AddNewFeed feedType )
                         ]
                     ]
-                    { onChange = AddedUserFeedName
-                    , text = model.addedUserFeedName
+                    { onChange = DialogInput
+                    , text = model.dialogInput
                     , placeholder =
                         Just <|
                             Input.placeholder [] (text "username")
@@ -2265,38 +2402,9 @@ addFeedDialog model =
         data =
             addUserFeedRow :: List.map makeRow choices
     in
-    column
-        [ Border.width 5
-        , centerX
-        , centerY
-        , Background.color colors.verylightgray
-        , paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
-        ]
-        [ let
-            closeIcon =
-                heightImage iconUrls.close "Close" iconHeight
-          in
-          row [ width Element.fill ]
-            [ row
-                [ centerX
-                , centerY
-                , Font.bold
-                , fontSize baseFontSize 1.5
-                ]
-                [ text "Add Feed" ]
-            , el [ alignRight ]
-                (standardButton "Close Dialog" CloseDialog closeIcon)
-            ]
-        , case model.dialogError of
-            Nothing ->
-                text ""
-
-            Just err ->
-                row
-                    [ paddingEach { zeroes | top = 10 }
-                    , Font.color colors.red
-                    ]
-                    [ text err ]
+    column dialogAttributes
+        [ dialogTitleBar baseFontSize "Add Feed"
+        , dialogErrorRow model
         , row []
             [ Element.table
                 [ spacing 10, centerX ]
@@ -2370,6 +2478,11 @@ userFeedInputId =
     "userFeedInput"
 
 
+feedsStringInputId : String
+feedsStringInputId =
+    "feedsStringInput"
+
+
 controlColumn : Int -> Settings -> Icons -> List (Feed Msg) -> Element Msg
 controlColumn columnWidth settings icons feeds =
     let
@@ -2416,6 +2529,15 @@ controlColumn columnWidth settings icons feeds =
                     , centerX
                     ]
                     [ standardButton "Add New Feed" AddFeed (text "+") ]
+              , el
+                    [ alignBottom
+                    , paddingEach { zeroes | bottom = 10 }
+                    ]
+                    (standardButton
+                        "Restore Feeds"
+                        SaveFeedTypes
+                        (widthImage iconUrls.save "Save" iconHeight)
+                    )
               ]
             ]
 
@@ -2676,8 +2798,8 @@ renderRowContents settings feed =
             userIconHeight baseFontSize
     in
     row []
-        [ --keyedColumn
-          Keyed.column
+        [ keyedColumn
+            --Keyed.column
             [ colw
             , height <|
                 px
@@ -3336,7 +3458,7 @@ gangNotifications data =
 
 notificationRow : Settings -> Bool -> GangedNotification -> Element Msg
 notificationRow settings isToplevel gangedNotification =
-    --Lazy.lazy5
+    --Lazy.lazy3
     notificationRowInternal
         settings
         isToplevel
@@ -3950,4 +4072,5 @@ iconUrls =
     , previous = "icon/back.svg"
     , comment = "icon/chat-2.svg"
     , notification = "icon/hand.svg"
+    , save = "icon/folder.svg"
     }

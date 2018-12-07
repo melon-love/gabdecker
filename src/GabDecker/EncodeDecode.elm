@@ -5,6 +5,8 @@ module GabDecker.EncodeDecode exposing
     , encodeFeedType
     , encodeFeedTypes
     , encodeIcons
+    , feedTypeDecoder
+    , feedTypesDecoder
     )
 
 import Dict exposing (Dict)
