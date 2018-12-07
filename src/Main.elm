@@ -662,11 +662,16 @@ receiveToken mv model =
 
 restoreFeedTypes : List FeedType -> Model -> ( Model, Cmd Msg )
 restoreFeedTypes feedTypes model =
+    let
+        icons =
+            Types.emptyIcons
+    in
     case model.backend of
         Nothing ->
             { model
                 | feedTypes = feedTypes
                 , feeds = []
+                , icons = icons
             }
                 |> withNoCmd
 
@@ -678,8 +683,15 @@ restoreFeedTypes feedTypes model =
                         feedTypes
                         0
             in
-            { model | feeds = feeds }
-                |> withCmd loadAllCmd
+            { model
+                | feeds = feeds
+                , icons = icons
+            }
+                |> withCmds
+                    [ loadAllCmd
+                    , saveFeeds feeds model
+                    , storeIcons icons model
+                    ]
 
 
 receiveFeedTypes : Maybe Value -> Model -> ( Model, Cmd Msg )
@@ -2691,8 +2703,8 @@ feedIsLoading feed loadingFeeds =
 
 feedColumn : Bool -> Settings -> Icons -> Feed Msg -> Element Msg
 feedColumn isLoading settings icons feed =
-    Lazy.lazy4
-        feedColumnInternal
+    --Lazy.lazy4
+    feedColumnInternal
         isLoading
         settings
         icons
