@@ -2010,8 +2010,7 @@ view model =
                     loginPage model.settings
 
                 Just backend ->
-                    Lazy.lazy4
-                        mainPage
+                    optimizers.mainPage
                         model.settings
                         model.icons
                         model.loadingFeeds
@@ -2069,8 +2068,7 @@ mainPage settings icons loadingFeeds feeds =
                 ]
             ]
         , column []
-            [ keyedRow
-                --Keyed.row
+            [ optimizers.keyedFeedColumn
                 [ height <| px settings.windowHeight
                 , Element.scrollbarY
                 , width <| px (min (settings.windowWidth - ccw) contentWidth)
@@ -2079,7 +2077,8 @@ mainPage settings icons loadingFeeds feeds =
                 (List.map
                     (\feed ->
                         ( feedTypeToString feed.feedType
-                        , feedColumn (feedIsLoading feed loadingFeeds)
+                        , optimizers.feedColumn
+                            (feedIsLoading feed loadingFeeds)
                             settings
                             icons
                             feed
@@ -2703,16 +2702,6 @@ feedIsLoading feed loadingFeeds =
 
 feedColumn : Bool -> Settings -> Icons -> Feed Msg -> Element Msg
 feedColumn isLoading settings icons feed =
-    --Lazy.lazy4
-    feedColumnInternal
-        isLoading
-        settings
-        icons
-        feed
-
-
-feedColumnInternal : Bool -> Settings -> Icons -> Feed Msg -> Element Msg
-feedColumnInternal isLoading settings icons feed =
     let
         baseFontSize =
             settings.fontSize
@@ -2787,8 +2776,7 @@ feedColumnInternal isLoading settings icons feed =
                     ]
                 ]
             ]
-        , Lazy.lazy2
-            renderRowContents
+        , optimizers.renderRowContents
             settings
             feed
         ]
@@ -2810,8 +2798,7 @@ renderRowContents settings feed =
             userIconHeight baseFontSize
     in
     row []
-        [ keyedColumn
-            --Keyed.column
+        [ column
             [ colw
             , height <|
                 px
@@ -2836,37 +2823,48 @@ renderRowContents settings feed =
                 rows =
                     case data of
                         PostFeedData activityLogList ->
-                            List.map
-                                (postFeedDataRow settings
-                                    feed
-                                    True
-                                )
-                                activityLogList
+                            optimizers.keyedPostRow
+                                []
+                            <|
+                                List.map
+                                    (\log ->
+                                        ( log.id
+                                        , optimizers.postRow
+                                            settings
+                                            feed
+                                            True
+                                            log
+                                        )
+                                    )
+                                    activityLogList
 
                         NotificationFeedData gangedNotificationList ->
-                            List.map
-                                (notificationFeedDataRow settings
-                                    feed
-                                    True
-                                )
-                                gangedNotificationList
+                            optimizers.keyedNotificationRow
+                                []
+                            <|
+                                List.map
+                                    (\notification ->
+                                        ( notification.notification.id
+                                        , optimizers.notificationRow
+                                            settings
+                                            True
+                                            notification
+                                        )
+                                    )
+                                    gangedNotificationList
             in
             let
                 typeString =
                     feedTypeToString feed.feedType
             in
-            List.concat
-                [ if False then
-                    undoneRows typeString
+            [ if False then
+                undoneRow typeString
 
-                  else
-                    []
-                , rows
-                , [ ( typeString ++ "moreRow"
-                    , moreRow colw feed
-                    )
-                  ]
-                ]
+              else
+                text ""
+            , rows
+            , moreRow colw feed
+            ]
         ]
 
 
@@ -2886,26 +2884,23 @@ keyedRow attributes pairs =
 
 {-| Not currently used. Saved for the next incomplete column
 -}
-undoneRows : String -> List ( String, Element Msg )
-undoneRows typeString =
-    [ ( typeString ++ ".undoneRows"
-      , row
-            [ fillWidth
-            , paddingEach
-                { zeroes
-                    | left = columnPadding
-                    , top = 5
-                    , bottom = 5
-                }
-            , Font.bold
-            , Border.widthEach
-                { zeroes | bottom = 2 }
-            , Border.color styleColors.border
-            ]
-            [ text "Comment parents are coming."
-            ]
-      )
-    ]
+undoneRow : String -> Element Msg
+undoneRow typeString =
+    row
+        [ fillWidth
+        , paddingEach
+            { zeroes
+                | left = columnPadding
+                , top = 5
+                , bottom = 5
+            }
+        , Font.bold
+        , Border.widthEach
+            { zeroes | bottom = 2 }
+        , Border.color styleColors.border
+        ]
+        [ text "Comment parents are coming."
+        ]
 
 
 moreRow : Attribute Msg -> Feed Msg -> Element Msg
@@ -2960,22 +2955,6 @@ userPadding =
 nameBottomPadding : Attribute msg
 nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
-
-
-postFeedDataRow : Settings -> Feed Msg -> Bool -> ActivityLog -> ( String, Element Msg )
-postFeedDataRow settings feed isToplevel log =
-    ( log.id
-    , postRow settings feed isToplevel log
-    )
-
-
-notificationFeedDataRow : Settings -> Feed Msg -> Bool -> GangedNotification -> ( String, Element Msg )
-notificationFeedDataRow settings feed isToplevel notification =
-    ( notification.notification.id
-    , notificationRow settings
-        isToplevel
-        notification
-    )
 
 
 postRow : Settings -> Feed Msg -> Bool -> ActivityLog -> Element Msg
@@ -3470,15 +3449,6 @@ gangNotifications data =
 
 notificationRow : Settings -> Bool -> GangedNotification -> Element Msg
 notificationRow settings isToplevel gangedNotification =
-    --Lazy.lazy3
-    notificationRowInternal
-        settings
-        isToplevel
-        gangedNotification
-
-
-notificationRowInternal : Settings -> Bool -> GangedNotification -> Element Msg
-notificationRowInternal settings isToplevel gangedNotification =
     let
         baseFontSize =
             settings.fontSize
@@ -4085,4 +4055,68 @@ iconUrls =
     , comment = "icon/chat-2.svg"
     , notification = "icon/hand.svg"
     , save = "icon/folder.svg"
+    }
+
+
+optimizers =
+    { mainPage =
+        if optimizations.lazyMainPage then
+            Lazy.lazy4 mainPage
+
+        else
+            mainPage
+    , renderRowContents =
+        if optimizations.lazyRenderRowContents then
+            Lazy.lazy2 renderRowContents
+
+        else
+            renderRowContents
+    , keyedFeedColumn =
+        if optimizations.keyedFeedColumn then
+            Keyed.row
+
+        else
+            keyedRow
+    , feedColumn =
+        if optimizations.lazyFeedColumn then
+            Lazy.lazy4 feedColumn
+
+        else
+            feedColumn
+    , keyedPostRow =
+        if optimizations.keyedPostRow then
+            Keyed.column
+
+        else
+            keyedColumn
+    , postRow =
+        if optimizations.lazyPostRow then
+            Lazy.lazy4 postRow
+
+        else
+            postRow
+    , keyedNotificationRow =
+        if optimizations.keyedPostRow then
+            Keyed.column
+
+        else
+            keyedColumn
+    , notificationRow =
+        if optimizations.lazyPostRow then
+            Lazy.lazy3 notificationRow
+
+        else
+            notificationRow
+    }
+
+
+{-| These allow quick switching of all the Keyed and Lazy uses.
+-}
+optimizations =
+    { lazyMainPage = True
+    , lazyRenderRowContents = True
+    , keyedFeedColumn = True
+    , lazyFeedColumn = True
+    , keyedPostRow = True
+    , lazyPostRow = True
     }
