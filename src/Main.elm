@@ -154,23 +154,33 @@ type DialogType
     | OperationErrorDialog String
 
 
+type alias Settings =
+    { columnWidth : Int
+    , fontSize : Float
+    , here : Zone
+    , windowWidth : Int
+    , windowHeight : Int
+    }
+
+
+defaultSettings : Settings
+defaultSettings =
+    { columnWidth = defaultColumnWidth
+    , fontSize = defaultFontSize
+    , here = Time.utc
+    , windowWidth = 1260
+    , windowHeight = 1024
+    }
+
+
 type alias Model =
     { showDialog : DialogType
     , dialogError : Maybe String
     , useSimulator : Bool
-    , windowWidth : Int
-    , windowHeight : Int
-    , columnWidth : Int
-    , fontSize : Float
-    , here : Zone
-
-    -- A kluge because Lazy.lazy5 is the largest number of args
-    , fontSize_here : ( Float, Zone )
-    , maxPosts : Int
+    , settings : Settings
     , backend : Maybe Backend
     , key : Key
     , funnelState : PortFunnels.State
-    , controlColumnState : ExpandedState
     , token : Maybe SavedToken
     , state : Maybe String
     , msg : Maybe String
@@ -413,9 +423,7 @@ init flags url key =
                                 ( be, Just auth )
 
                 feeds =
-                    feedTypesToFeeds defaultFontSize
-                        Nothing
-                        defaultColumnWidth
+                    feedTypesToFeeds Nothing
                         backend
                         initialFeeds
                         0
@@ -425,15 +433,8 @@ init flags url key =
             , useSimulator = useSimulator
             , backend = backend
             , key = key
-            , windowWidth = 1260
-            , windowHeight = 1024
-            , columnWidth = defaultColumnWidth
-            , fontSize = defaultFontSize
-            , here = Time.utc
-            , fontSize_here = ( defaultFontSize, Time.utc )
-            , maxPosts = defaultMaxPosts
+            , settings = defaultSettings
             , funnelState = PortFunnels.initialState localStoragePrefix
-            , controlColumnState = ContractedState
             , token = savedToken
             , state = state
             , msg = msg
@@ -498,14 +499,14 @@ getViewport viewport =
     WindowResize (round vp.width) (round vp.height)
 
 
-feedTypesToFeeds : Float -> Maybe String -> Int -> Maybe Backend -> List FeedType -> Int -> List (Feed Msg)
-feedTypesToFeeds baseFontSize username columnWidth maybeBackend feedTypes startId =
+feedTypesToFeeds : Maybe String -> Maybe Backend -> List FeedType -> Int -> List (Feed Msg)
+feedTypesToFeeds username maybeBackend feedTypes startId =
     case maybeBackend of
         Nothing ->
             []
 
         Just backend ->
-            List.map2 (feedTypeToFeed baseFontSize username columnWidth backend)
+            List.map2 (feedTypeToFeed username backend)
                 feedTypes
             <|
                 List.range startId (startId + List.length feedTypes - 1)
@@ -516,8 +517,8 @@ defaultColumnWidth =
     350
 
 
-feedTypeToFeed : Float -> Maybe String -> Int -> Backend -> FeedType -> Int -> Feed Msg
-feedTypeToFeed baseFontSize username columnWidth backend feedType id =
+feedTypeToFeed : Maybe String -> Backend -> FeedType -> Int -> Feed Msg
+feedTypeToFeed username backend feedType id =
     let
         ft =
             if feedType == LoggedInUserFeed then
@@ -544,7 +545,6 @@ feedTypeToFeed baseFontSize username columnWidth backend feedType id =
         , no_more = False
         }
     , error = Nothing
-    , columnWidth = columnWidth
     , id = id
     }
 
@@ -631,9 +631,7 @@ receiveToken mv model =
                                 RealBackend savedToken.token
 
                         feeds =
-                            feedTypesToFeeds model.fontSize
-                                model.loggedInUser
-                                model.columnWidth
+                            feedTypesToFeeds model.loggedInUser
                                 backend
                                 model.feedTypes
                                 0
@@ -687,9 +685,7 @@ receiveFeedTypes value model =
                                     ( model.feeds, Cmd.none )
 
                                 backend ->
-                                    ( feedTypesToFeeds model.fontSize
-                                        model.loggedInUser
-                                        model.columnWidth
+                                    ( feedTypesToFeeds model.loggedInUser
                                         backend
                                         feedTypes
                                         0
@@ -836,17 +832,22 @@ update msg model =
                     res
 
         WindowResize w h ->
+            let
+                settings =
+                    model.settings
+            in
             { model
-                | windowWidth = w
-                , windowHeight = h
+                | settings =
+                    { settings | windowWidth = w, windowHeight = h }
             }
                 |> withNoCmd
 
         Here zone ->
-            { model
-                | here = zone
-                , fontSize_here = ( model.fontSize, zone )
-            }
+            let
+                settings =
+                    model.settings
+            in
+            { model | settings = { settings | here = zone } }
                 |> withNoCmd
 
         Login ->
@@ -1037,7 +1038,7 @@ update msg model =
             { model | addedUserFeedName = username } |> withNoCmd
 
         AddNewFeed feedType ->
-            addNewFeed feedType model.fontSize model
+            addNewFeed feedType model.settings.fontSize model
 
         Upvote feedType post ->
             upvote feedType post model
@@ -1497,9 +1498,7 @@ addNewFeed feedType baseFontSize model =
 
                         else
                             addit
-                                (feedTypeToFeed baseFontSize
-                                    model.loggedInUser
-                                    model.columnWidth
+                                (feedTypeToFeed model.loggedInUser
                                     backend
                                     feedType
                                     model.nextId
@@ -1611,10 +1610,6 @@ receiveFeed scrollToTop feedType result model =
         | feeds = feeds
         , loadingFeeds =
             Set.remove (feedTypeToString feedType) model.loadingFeeds
-
-        --, lastFeeds =
-        --    List.map (\feed -> ( feedTypeToString feed.feedType, feed )) mdl.feeds
-        --        |> Dict.fromList
     }
         |> withCmds
             [ cmd
@@ -1921,10 +1916,6 @@ focusStyle =
 
 view : Model -> Document Msg
 view model =
-    let
-        body =
-            pageBody model
-    in
     { title = pageTitle
     , body =
         [ Element.layoutWith
@@ -1942,14 +1933,19 @@ view model =
                 _ ->
                     []
             )
-            body
+            (case model.backend of
+                Nothing ->
+                    loginPage model.settings
+
+                Just backend ->
+                    Lazy.lazy4 mainPage
+                        model.settings
+                        model.icons
+                        model.loadingFeeds
+                        model.feeds
+            )
         ]
     }
-
-
-defaultMaxPosts : Int
-defaultMaxPosts =
-    100
 
 
 defaultFontSize : Float
@@ -1962,38 +1958,31 @@ fontSize baseFontSize scale =
     Font.size <| round (scale * baseFontSize)
 
 
-pageBody : Model -> Element Msg
-pageBody model =
-    case model.backend of
-        Nothing ->
-            loginPage model
-
-        Just _ ->
-            mainPage model
-
-
 fillWidth : Attribute msg
 fillWidth =
     width Element.fill
 
 
-mainPage : Model -> Element Msg
-mainPage model =
+mainPage : Settings -> Icons -> Set String -> List (Feed Msg) -> Element Msg
+mainPage settings icons loadingFeeds feeds =
     let
+        baseFontSize =
+            settings.fontSize
+
         ccw =
-            controlColumnWidth model.controlColumnState model.fontSize
+            controlColumnWidth baseFontSize
 
         contentWidth =
-            model.columnWidth * List.length model.feeds
+            settings.columnWidth * List.length feeds
     in
     row
-        [ fontSize model.fontSize 1
+        [ fontSize baseFontSize 1
         , onMousedownAttribute CloseDialog
         , Border.widthEach
             { zeroes
                 | left = 5
                 , right =
-                    if [] == model.feeds then
+                    if [] == feeds then
                         5
 
                     else
@@ -2002,49 +1991,28 @@ mainPage model =
         , Border.color styleColors.border
         ]
         [ column []
-            [ row [ height <| px model.windowHeight ]
-                [ controlColumn ccw model
+            [ row [ height <| px settings.windowHeight ]
+                [ controlColumn ccw settings icons feeds
                 ]
             ]
         , column []
             [ keyedRow
                 --Keyed.row
-                [ height <| px model.windowHeight
+                [ height <| px settings.windowHeight
                 , Element.scrollbarY
-                , width <| px (min (model.windowWidth - ccw) contentWidth)
+                , width <| px (min (settings.windowWidth - ccw) contentWidth)
                 , idAttribute contentId
                 ]
                 (List.map
                     (\feed ->
-                        let
-                            ignore =
-                                case
-                                    Dict.get (feedTypeToString feed.feedType)
-                                        model.lastFeeds
-                                of
-                                    Nothing ->
-                                        feed
-
-                                    Just lastFeed ->
-                                        if feed /= lastFeed then
-                                            let
-                                                foo =
-                                                    Debug.log "feed" feed
-                                            in
-                                            Debug.log "lastFeed" lastFeed
-
-                                        else
-                                            feed
-                        in
                         ( feedTypeToString feed.feedType
-                        , feedColumn (feedIsLoading feed model)
-                            model.windowHeight
-                            model.fontSize_here
-                            model.icons
+                        , feedColumn (feedIsLoading feed loadingFeeds)
+                            settings
+                            icons
                             feed
                         )
                     )
-                    model.feeds
+                    feeds
                 )
             ]
         ]
@@ -2118,8 +2086,11 @@ addFeedChoices model =
 operationErrorDialog : String -> Model -> Element Msg
 operationErrorDialog err model =
     let
+        baseFontSize =
+            model.settings.fontSize
+
         iconHeight =
-            userIconHeight model.fontSize
+            userIconHeight baseFontSize
     in
     column
         [ Border.width 5
@@ -2137,7 +2108,7 @@ operationErrorDialog err model =
                 [ centerX
                 , centerY
                 , Font.bold
-                , fontSize model.fontSize 1.5
+                , fontSize baseFontSize 1.5
                 ]
                 [ el [ Font.color colors.red ] <| text "Operation Error " ]
             , el [ alignRight ]
@@ -2163,14 +2134,17 @@ Or not.
 imageDialog : String -> Model -> Element Msg
 imageDialog url model =
     let
+        settings =
+            model.settings
+
         maxw =
-            9 * model.windowWidth // 10
+            9 * settings.windowWidth // 10
 
         maxws =
             String.fromInt maxw ++ "px"
 
         maxh =
-            9 * model.windowHeight // 10
+            9 * settings.windowHeight // 10
 
         maxhs =
             String.fromInt maxh ++ "px"
@@ -2238,8 +2212,11 @@ isKeycode pairs keycode =
 addFeedDialog : Model -> Element Msg
 addFeedDialog model =
     let
+        baseFontSize =
+            model.settings.fontSize
+
         iconHeight =
-            userIconHeight model.fontSize
+            userIconHeight baseFontSize
 
         addButton feedType =
             el [ Font.size <| 7 * iconHeight // 4 ] <|
@@ -2304,7 +2281,7 @@ addFeedDialog model =
                 [ centerX
                 , centerY
                 , Font.bold
-                , fontSize model.fontSize 1.5
+                , fontSize baseFontSize 1.5
                 ]
                 [ text "Add Feed" ]
             , el [ alignRight ]
@@ -2358,7 +2335,7 @@ addFeedHeader model =
     el
         [ centerX
         , Font.bold
-        , fontSize model.fontSize 1.5
+        , fontSize model.settings.fontSize 1.5
         ]
     <|
         text "Add Feed"
@@ -2373,19 +2350,9 @@ okButton =
         [ Html.text "OK" ]
 
 
-type ExpandedState
-    = ContractedState
-    | ExpandedState
-
-
-controlColumnWidth : ExpandedState -> Float -> Int
-controlColumnWidth state baseFontSize =
-    case state of
-        ContractedState ->
-            smallUserIconHeight baseFontSize + 2 * columnPadding
-
-        ExpandedState ->
-            round (baseFontSize * 20)
+controlColumnWidth : Float -> Int
+controlColumnWidth baseFontSize =
+    smallUserIconHeight baseFontSize + 2 * columnPadding
 
 
 controlColumnId : String
@@ -2403,17 +2370,14 @@ userFeedInputId =
     "userFeedInput"
 
 
-controlColumn : Int -> Model -> Element Msg
-controlColumn columnWidth model =
+controlColumn : Int -> Settings -> Icons -> List (Feed Msg) -> Element Msg
+controlColumn columnWidth settings icons feeds =
     let
-        state =
-            model.controlColumnState
-
         colw =
             width <| px columnWidth
 
         iconHeight =
-            smallUserIconHeight model.fontSize
+            smallUserIconHeight settings.fontSize
     in
     column
         (List.concat
@@ -2446,7 +2410,7 @@ controlColumn columnWidth model =
                         (widthImage iconUrls.reload "Refresh" iconHeight)
                     ]
               ]
-            , List.map (feedSelectorButton iconHeight model.icons) model.feeds
+            , List.map (feedSelectorButton iconHeight icons) feeds
             , [ row
                     [ Font.size <| 7 * iconHeight // 4
                     , centerX
@@ -2598,27 +2562,29 @@ feedTypeToString feedType =
             "unknown"
 
 
-feedIsLoading : Feed Msg -> Model -> Bool
-feedIsLoading feed model =
-    Set.member (feedTypeToString feed.feedType) model.loadingFeeds
+feedIsLoading : Feed Msg -> Set String -> Bool
+feedIsLoading feed loadingFeeds =
+    Set.member (feedTypeToString feed.feedType) loadingFeeds
 
 
-feedColumn : Bool -> Int -> ( Float, Zone ) -> Icons -> Feed Msg -> Element Msg
-feedColumn isLoading windowHeight fontSize_here icons feed =
-    Lazy.lazy5
+feedColumn : Bool -> Settings -> Icons -> Feed Msg -> Element Msg
+feedColumn isLoading settings icons feed =
+    Lazy.lazy4
         feedColumnInternal
         isLoading
-        windowHeight
-        fontSize_here
+        settings
         icons
         feed
 
 
-feedColumnInternal : Bool -> Int -> ( Float, Zone ) -> Icons -> Feed Msg -> Element Msg
-feedColumnInternal isLoading windowHeight ( baseFontSize, here ) icons feed =
+feedColumnInternal : Bool -> Settings -> Icons -> Feed Msg -> Element Msg
+feedColumnInternal isLoading settings icons feed =
     let
+        baseFontSize =
+            settings.fontSize
+
         colw =
-            width <| px feed.columnWidth
+            width <| px settings.columnWidth
 
         iconHeight =
             userIconHeight baseFontSize
@@ -2687,19 +2653,24 @@ feedColumnInternal isLoading windowHeight ( baseFontSize, here ) icons feed =
                     ]
                 ]
             ]
-        , Lazy.lazy4
+        , Lazy.lazy2
             renderRowContents
-            windowHeight
-            baseFontSize
-            here
+            settings
             feed
         ]
 
 
-renderRowContents windowHeight baseFontSize here feed =
+renderRowContents : Settings -> Feed Msg -> Element Msg
+renderRowContents settings feed =
     let
+        baseFontSize =
+            settings.fontSize
+
+        windowHeight =
+            settings.windowHeight
+
         colw =
-            width <| px feed.columnWidth
+            width <| px settings.columnWidth
 
         iconHeight =
             userIconHeight baseFontSize
@@ -2732,19 +2703,17 @@ renderRowContents windowHeight baseFontSize here feed =
                     case data of
                         PostFeedData activityLogList ->
                             List.map
-                                (postFeedDataRow baseFontSize
+                                (postFeedDataRow settings
                                     feed
                                     True
-                                    here
                                 )
                                 activityLogList
 
                         NotificationFeedData gangedNotificationList ->
                             List.map
-                                (notificationFeedDataRow baseFontSize
+                                (notificationFeedDataRow settings
                                     feed
                                     True
-                                    here
                                 )
                                 gangedNotificationList
             in
@@ -2859,29 +2828,30 @@ nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
 
 
-postFeedDataRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> ( String, Element Msg )
-postFeedDataRow baseFontSize feed isToplevel here log =
+postFeedDataRow : Settings -> Feed Msg -> Bool -> ActivityLog -> ( String, Element Msg )
+postFeedDataRow settings feed isToplevel log =
     ( log.id
-    , postRow baseFontSize feed isToplevel here log
+    , postRow settings feed isToplevel log
     )
 
 
-notificationFeedDataRow : Float -> Feed Msg -> Bool -> Zone -> GangedNotification -> ( String, Element Msg )
-notificationFeedDataRow baseFontSize feed isToplevel here notification =
+notificationFeedDataRow : Settings -> Feed Msg -> Bool -> GangedNotification -> ( String, Element Msg )
+notificationFeedDataRow settings feed isToplevel notification =
     ( notification.notification.id
-    , notificationRow baseFontSize
-        feed.columnWidth
+    , notificationRow settings
         isToplevel
-        here
         notification
     )
 
 
-postRow : Float -> Feed Msg -> Bool -> Zone -> ActivityLog -> Element Msg
-postRow baseFontSize feed isToplevel here log =
+postRow : Settings -> Feed Msg -> Bool -> ActivityLog -> Element Msg
+postRow settings feed isToplevel log =
     let
+        baseFontSize =
+            settings.fontSize
+
         cw =
-            feed.columnWidth
+            settings.columnWidth
 
         pad =
             5
@@ -2981,7 +2951,7 @@ postRow baseFontSize feed isToplevel here log =
                             (" " ++ actuser.name ++ " " ++ repostString)
                         ]
                     ]
-            , postUserRow colwp here post
+            , postUserRow colwp settings.here post
             , row []
                 [ Element.textColumn
                     [ paragraphSpacing baseFontSize
@@ -3022,10 +2992,9 @@ postRow baseFontSize feed isToplevel here log =
 
                                     Just parentPost ->
                                         postRow
-                                            baseFontSize
-                                            { feed | columnWidth = cwp - 10 }
+                                            { settings | columnWidth = cwp - 10 }
+                                            feed
                                             False
-                                            here
                                             { log
                                                 | post =
                                                     { parentPost
@@ -3365,20 +3334,24 @@ gangNotifications data =
     loop data []
 
 
-notificationRow : Float -> Int -> Bool -> Zone -> GangedNotification -> Element Msg
-notificationRow baseFontSize cw isToplevel here gangedNotification =
+notificationRow : Settings -> Bool -> GangedNotification -> Element Msg
+notificationRow settings isToplevel gangedNotification =
     --Lazy.lazy5
     notificationRowInternal
-        baseFontSize
-        cw
+        settings
         isToplevel
-        here
         gangedNotification
 
 
-notificationRowInternal : Float -> Int -> Bool -> Zone -> GangedNotification -> Element Msg
-notificationRowInternal baseFontSize cw isToplevel here gangedNotification =
+notificationRowInternal : Settings -> Bool -> GangedNotification -> Element Msg
+notificationRowInternal settings isToplevel gangedNotification =
     let
+        baseFontSize =
+            settings.fontSize
+
+        here =
+            settings.here
+
         notification =
             gangedNotification.notification
 
@@ -3394,6 +3367,9 @@ notificationRowInternal baseFontSize cw isToplevel here gangedNotification =
 
             else
                 5
+
+        cw =
+            settings.columnWidth
 
         cwp =
             cw - 2 * colpad - 6
@@ -3478,7 +3454,7 @@ notificationRowInternal baseFontSize cw isToplevel here gangedNotification =
                                         ]
                                         [ postCreatedLink post here ]
                                   ]
-                                , notificationsBody baseFontSize post
+                                , notificationsBody settings post
                                 ]
                 ]
             , case maybePost of
@@ -3489,8 +3465,7 @@ notificationRowInternal baseFontSize cw isToplevel here gangedNotification =
                     case maybeParent of
                         Just pp ->
                             notificationParentRow (cw - colpad)
-                                baseFontSize
-                                here
+                                settings
                                 pp
 
                         Nothing ->
@@ -3522,8 +3497,8 @@ notificationRowInternal baseFontSize cw isToplevel here gangedNotification =
         ]
 
 
-notificationParentRow : Int -> Float -> Zone -> Post -> Element Msg
-notificationParentRow cw baseFontSize here post =
+notificationParentRow : Int -> Settings -> Post -> Element Msg
+notificationParentRow cw settings post =
     let
         colpad =
             5
@@ -3547,8 +3522,8 @@ notificationParentRow cw baseFontSize here post =
             ]
           <|
             List.concat
-                [ [ postUserRow colwp here post ]
-                , notificationsBody baseFontSize post
+                [ [ postUserRow colwp settings.here post ]
+                , notificationsBody settings post
                 ]
         ]
 
@@ -3558,11 +3533,11 @@ truncatePost body =
     String.left 200 body
 
 
-notificationsBody : Float -> Post -> List (Element Msg)
-notificationsBody baseFontSize post =
+notificationsBody : Settings -> Post -> List (Element Msg)
+notificationsBody settings post =
     case post.body_html_summary of
         Just html ->
-            htmlBodyElements baseFontSize html
+            htmlBodyElements settings.fontSize html
 
         Nothing ->
             let
@@ -3579,7 +3554,7 @@ notificationsBody baseFontSize post =
                     else
                         body1 ++ "..."
             in
-            htmlBodyElements baseFontSize <|
+            htmlBodyElements settings.fontSize <|
                 newlinesToPs body
 
 
@@ -3806,11 +3781,11 @@ splitIntoParagraphs string =
         |> List.concat
 
 
-loginPage : Model -> Element Msg
-loginPage model =
+loginPage : Settings -> Element Msg
+loginPage settings =
     let
         baseFontSize =
-            model.fontSize
+            settings.fontSize
     in
     row
         [ fillWidth

@@ -67,7 +67,6 @@ type alias Feed msg =
     , feedType : FeedType
     , feed : LogList FeedData
     , error : Maybe ApiError
-    , columnWidth : Int
     , id : Int
     }
 
