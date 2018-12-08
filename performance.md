@@ -6,7 +6,7 @@ There are 6 flags at the bottom of `src/Main.elm`, define in the `optimizations`
 
 The order is a gray code, so I could change one flag at a time.
 
-There are two measurements for each, the time to bring up the "Add Feed" dialog on clicking "+", and the time to process a click on the refresh arrow for the "Home" feed. Each is <total>/<scripting>+<rendering>.
+There are two measurements for each, the time to bring up the "Add Feed" dialog on clicking "+", and the time to process a click on the refresh arrow for the "Home" feed. Each is `<total>/<scripting>+<rendering>`.
 
 Best balance: 111010
 
