@@ -180,6 +180,7 @@ type alias Model =
     , useSimulator : Bool
     , settings : Settings
     , backend : Maybe Backend
+    , url : Url
     , key : Key
     , funnelState : PortFunnels.State
     , token : Maybe SavedToken
@@ -224,6 +225,7 @@ type Msg
     | WindowResize Int Int
     | Here Zone
     | Login
+    | Logout
     | LoadMore Bool (Feed Msg)
     | LoadAll
     | CloseFeed (Feed Msg)
@@ -438,6 +440,7 @@ init flags url key =
             , dialogError = Nothing
             , useSimulator = useSimulator
             , backend = backend
+            , url = url
             , key = key
             , settings = defaultSettings
             , funnelState = PortFunnels.initialState localStoragePrefix
@@ -891,21 +894,38 @@ update msg model =
                 |> withNoCmd
 
         Login ->
-            case model.tokenAuthorization of
-                Nothing ->
-                    { model | msg = Just "Failure to parse authorization." }
-                        |> withNoCmd
+            if model.useSimulator then
+                init JE.null model.url model.key
 
-                Just authorization ->
-                    model
-                        |> withCmd
-                            (case authorize { authorization | scope = model.scopes } of
-                                Nothing ->
-                                    Cmd.none
+            else
+                case model.tokenAuthorization of
+                    Nothing ->
+                        { model | msg = Just "Failure to parse authorization." }
+                            |> withNoCmd
 
-                                Just url ->
-                                    Navigation.load <| Url.toString url
-                            )
+                    Just authorization ->
+                        model
+                            |> withCmd
+                                (case authorize { authorization | scope = model.scopes } of
+                                    Nothing ->
+                                        Cmd.none
+
+                                    Just url ->
+                                        Navigation.load <| Url.toString url
+                                )
+
+        Logout ->
+            { model
+                | backend = Nothing
+                , feeds = []
+            }
+                |> withCmd
+                    (localStorageSend
+                        (LocalStorage.put storageKeys.token
+                            Nothing
+                        )
+                        model
+                    )
 
         LoadMore appendResult feed ->
             ( setLoadingFeed feed model
@@ -2353,7 +2373,10 @@ saveFeedsDialog model =
                         Input.placeholder [] (text "username")
                 , label = Input.labelHidden "User Feed Name"
                 }
-            , el [ paddingEach { zeroes | left = 10 } ]
+            , el
+                [ paddingEach { zeroes | left = 10 }
+                , spacing 5
+                ]
                 (standardButton "Restore" RestoreFeedTypes <|
                     heightImage iconUrls.save "Restore" iconHeight
                 )
@@ -2544,15 +2567,19 @@ controlColumn columnWidth settings icons feeds =
                     , centerX
                     ]
                     [ standardButton "Add New Feed" AddFeed (text "+") ]
-              , el
+              , row
                     [ alignBottom
                     , paddingEach { zeroes | bottom = 10 }
                     ]
-                    (standardButton
-                        "Restore Feeds"
-                        SaveFeedTypes
-                        (widthImage iconUrls.save "Save" iconHeight)
-                    )
+                    [ column [ spacing 10 ]
+                        [ standardButton "Logout" Logout <|
+                            heightImage iconUrls.logout "Logout" iconHeight
+                        , standardButton
+                            "Restore Feeds"
+                            SaveFeedTypes
+                            (widthImage iconUrls.save "Save" iconHeight)
+                        ]
+                    ]
               ]
             ]
 
@@ -4048,21 +4075,22 @@ keycodes =
 
 
 iconUrls =
-    { reload = "icon/reload.svg"
-    , refresh = "icon/refresh-arrow.svg"
-    , close = "icon/cancel.svg"
-    , like = "icon/like.svg"
+    { close = "icon/cancel.svg"
+    , comment = "icon/chat-2.svg"
     , dislike = "icon/dislike.svg"
+    , home = "icon/house.svg"
+    , like = "icon/like.svg"
+    , logout = "icon/logout.svg"
+    , next = "icon/next-1.svg"
+    , notification = "icon/hand.svg"
+    , notifications = "icon/glasses.svg"
+    , popular = "icon/star.svg"
+    , previous = "icon/back.svg"
+    , refresh = "icon/refresh-arrow.svg"
+    , reload = "icon/reload.svg"
+    , save = "icon/folder.svg"
     , settings = "icon/settings.svg"
     , user = "icon/avatar.svg"
-    , home = "icon/house.svg"
-    , popular = "icon/star.svg"
-    , notifications = "icon/glasses.svg"
-    , next = "icon/next-1.svg"
-    , previous = "icon/back.svg"
-    , comment = "icon/chat-2.svg"
-    , notification = "icon/hand.svg"
-    , save = "icon/folder.svg"
     }
 
 
