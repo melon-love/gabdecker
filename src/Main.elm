@@ -360,6 +360,9 @@ initialFeeds =
 init : Value -> Url -> Key -> ( Model, Cmd Msg )
 init flags url key =
     let
+        opts =
+            Debug.log "optimizations" optimizationsToBits
+
         tokenAndState =
             receiveTokenAndState url
 
@@ -1751,7 +1754,8 @@ canonicalizeFeed newFeed feed =
     if newData == feedData then
         let
             ignore =
-                Debug.log "Canonical" feed.feedType
+                --Debug.log "Canonical" feed.feedType
+                1
         in
         feed
 
@@ -2815,11 +2819,10 @@ renderRowContents settings feed =
                 data =
                     feed.feed.data
 
-                ignore =
-                    Debug.log
-                        "Rendering"
-                        feed.feedType
-
+                --                ignore =
+                --                    Debug.log
+                --                        "Rendering"
+                --                        feed.feedType
                 rows =
                     case data of
                         PostFeedData activityLogList ->
@@ -4110,13 +4113,30 @@ optimizers =
     }
 
 
+optimizationsToBits =
+    let
+        bit accessor =
+            if accessor optimizations then
+                "1"
+
+            else
+                "0"
+    in
+    bit .lazyMainPage
+        ++ bit .lazyRenderRowContents
+        ++ bit .keyedFeedColumn
+        ++ bit .lazyFeedColumn
+        ++ bit .keyedPostRow
+        ++ bit .lazyPostRow
+
+
 {-| These allow quick switching of all the Keyed and Lazy uses.
 -}
 optimizations =
     { lazyMainPage = True
     , lazyRenderRowContents = True
     , keyedFeedColumn = True
-    , lazyFeedColumn = True
+    , lazyFeedColumn = False
     , keyedPostRow = True
-    , lazyPostRow = True
+    , lazyPostRow = False
     }

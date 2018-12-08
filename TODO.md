@@ -10,6 +10,9 @@ This is a place to collect things left to do for GabDecker.
 * Profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.
+* Bug in URL parsing. Sometimes gets cruft at the end.
+  E.g. https://gab.com/billstclair/posts/42716809
+  Looked at this in `elm repl`. Couldn't reproduce. Try again.
 * When somebody "mentioned you in a comment", include an interaction row.
 * Figure out the proper way to compute `repostString`. It's wrong now.
   repost, repost a comment, quote, quote a comment, comment, comment on a comment.
@@ -57,17 +60,11 @@ This is a place to collect things left to do for GabDecker.
 * Colored versions of icons instead of rectangular background color highlight.
 * If a comment is reposted it should say:
   "foo reposted bar's comment"
-* Optimize rendering. It's pretty good, but keystrokes in the "Add Feed"
-  dialog take a long time to appear, when you have lots of columns.
-  Eliminate delay between clicking on refresh button and orange highlight.
-  The problem is the isLoading parameter to feedColumnInternal.
-  Can likely do this with a port that adjusts the colors.
 * If lots of people like a post, line-wrap the icon list in the notification entry.
-* Bug in URL parsing. Sometimes gets cruft at the end.
-  E.g. https://gab.com/billstclair/posts/42716809
-  Looked at this in `elm repl`. Couldn't reproduce. Try again.
 * When a post has multiple images, the pop-up viewer should have a way
   to navigate through them.
+* Reduce the size of the JSON for saved feeds.
+  ["notification", {"user: "billstclair"}, {"group": "groupid"}, ...]
 * Help, About
 * One ad per column, unless paid to eliminate them.
   Gotta make money off of this somehow.
