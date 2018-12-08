@@ -19,34 +19,25 @@ encodeFeedType : FeedType -> Value
 encodeFeedType feedType =
     case feedType of
         HomeFeed ->
-            JE.object [ ( "feedType", JE.string "HomeFeed" ) ]
+            JE.string "home"
 
         UserFeed username ->
-            JE.object
-                [ ( "feedType", JE.string "UserFeed" )
-                , ( "param", JE.string username )
-                ]
+            JE.object [ ( "user", JE.string username ) ]
 
         GroupFeed groupid ->
-            JE.object
-                [ ( "feedType", JE.string "GroupFeed" )
-                , ( "param", JE.string groupid )
-                ]
+            JE.object [ ( "group", JE.string groupid ) ]
 
         TopicFeed topicid ->
-            JE.object
-                [ ( "feedType", JE.string "TopicFeed" )
-                , ( "param", JE.string topicid )
-                ]
+            JE.object [ ( "topic", JE.string topicid ) ]
 
         PopularFeed ->
-            JE.object [ ( "feedType", JE.string "PopularFeed" ) ]
+            JE.string "popular"
 
         NotificationsFeed ->
-            JE.object [ ( "feedType", JE.string "NotificationsFeed" ) ]
+            JE.string "notification"
 
         _ ->
-            JE.object [ ( "feedType", JE.string "unknown" ) ]
+            JE.string "Unsaveable feed type"
 
 
 encodeFeedTypes : List FeedType -> Value
@@ -54,8 +45,8 @@ encodeFeedTypes feedTypes =
     JE.list encodeFeedType feedTypes
 
 
-feedTypeDecoder : Decoder FeedType
-feedTypeDecoder =
+oldFeedTypeDecoder : Decoder FeedType
+oldFeedTypeDecoder =
     let
         fail =
             JD.fail "Missing param"
@@ -103,6 +94,33 @@ feedTypeDecoder =
                             decoder feedType maybeParam
                         )
             )
+
+
+decodeStringFeed : String -> Decoder FeedType
+decodeStringFeed string =
+    case string of
+        "home" ->
+            JD.succeed HomeFeed
+
+        "popular" ->
+            JD.succeed PopularFeed
+
+        "notification" ->
+            JD.succeed NotificationsFeed
+
+        _ ->
+            JD.fail "Not home, popular, or noticication."
+
+
+feedTypeDecoder : Decoder FeedType
+feedTypeDecoder =
+    JD.oneOf
+        [ JD.string |> JD.andThen decodeStringFeed
+        , JD.map UserFeed <| JD.field "user" JD.string
+        , JD.map GroupFeed <| JD.field "group" JD.string
+        , JD.map TopicFeed <| JD.field "topic" JD.string
+        , oldFeedTypeDecoder
+        ]
 
 
 feedTypesDecoder : Decoder (List FeedType)

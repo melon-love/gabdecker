@@ -204,6 +204,7 @@ type alias Model =
     , lastFeeds : Dict String (Feed Msg)
     , loadingFeeds : Set String
     , lastClosedFeed : Maybe (Feed Msg)
+    , scrollToFeed : Maybe FeedType
     }
 
 
@@ -233,6 +234,7 @@ type Msg
     | MoveFeedRight FeedType
     | ShowImageDialog String
     | ScrollToFeed FeedType
+    | ScrollToNewFeed FeedType
     | ScrollToViewport String (Result Dom.Error Dom.Element)
     | ScrollToControl String Dom.Element (Result Dom.Error Dom.Element)
     | ScrollToContent Dom.Element Dom.Element (Result Dom.Error Dom.Element)
@@ -346,6 +348,12 @@ subscriptions model =
         [ PortFunnels.subscriptions ProcessLocalStorage model
         , Events.onResize WindowResize
         , Events.onKeyDown <| keyDownDecoder keycodes.escape CloseDialog
+        , case model.scrollToFeed of
+            Just feedType ->
+                Time.every 100 (\_ -> ScrollToFeed feedType)
+
+            Nothing ->
+                Sub.none
         ]
 
 
@@ -463,6 +471,7 @@ init flags url key =
             , lastFeeds = Dict.empty
             , loadingFeeds = Set.empty
             , lastClosedFeed = Nothing
+            , scrollToFeed = Nothing
             }
     in
     List.foldl setLoadingFeed model model.feeds
@@ -960,29 +969,10 @@ update msg model =
             moveFeedRight feedType model
 
         ScrollToFeed feedType ->
-            case findFeed feedType model of
-                Nothing ->
-                    model |> withNoCmd
+            scrollToFeed feedType model
 
-                Just feed ->
-                    let
-                        colid =
-                            columnId feed.id
-
-                        firstcolId =
-                            case List.head model.feeds of
-                                Nothing ->
-                                    ""
-
-                                Just f ->
-                                    columnId f.id
-                    in
-                    model
-                        |> withCmd
-                            (Task.attempt (ScrollToViewport firstcolId) <|
-                                Dom.getElement <|
-                                    Debug.log "colid" colid
-                            )
+        ScrollToNewFeed feedType ->
+            scrollToFeed feedType { model | scrollToFeed = Nothing }
 
         ScrollToViewport firstcolId result ->
             case result of
@@ -1007,8 +997,7 @@ update msg model =
                             (Task.attempt
                                 (ScrollToContent feedElement controlElement)
                              <|
-                                Dom.getElement <|
-                                    firstcolId
+                                Dom.getElement firstcolId
                             )
 
         ScrollToContent feedElement controlElement result ->
@@ -1154,6 +1143,32 @@ update msg model =
                 feedType
                 (boxNotificationsLogResult result)
                 model
+
+
+scrollToFeed : FeedType -> Model -> ( Model, Cmd Msg )
+scrollToFeed feedType model =
+    case findFeed feedType model of
+        Nothing ->
+            model |> withNoCmd
+
+        Just feed ->
+            let
+                colid =
+                    columnId feed.id
+
+                firstcolId =
+                    case List.head model.feeds of
+                        Nothing ->
+                            ""
+
+                        Just f ->
+                            columnId f.id
+            in
+            model
+                |> withCmd
+                    (Task.attempt (ScrollToViewport firstcolId) <|
+                        Dom.getElement colid
+                    )
 
 
 boxActivityLogListResult : FeedResult ActivityLogList -> FeedResult (LogList FeedData)
@@ -1541,11 +1556,11 @@ addNewFeed feedType baseFontSize model =
                 , dialogError = Nothing
                 , lastClosedFeed = Nothing
                 , nextId = model.nextId + 1
+                , scrollToFeed = Just feed.feedType
             }
                 |> withCmds
                     [ loadMoreCmd False feed
                     , saveFeeds feeds model
-                    , Task.perform ScrollToFeed <| Task.succeed feed.feedType
                     ]
     in
     if feedType == LastClosedFeed then
@@ -2572,12 +2587,12 @@ controlColumn columnWidth settings icons feeds =
                     , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ column [ spacing 10 ]
-                        [ standardButton "Logout" Logout <|
-                            heightImage iconUrls.logout "Logout" iconHeight
-                        , standardButton
+                        [ standardButton
                             "Restore Feeds"
                             SaveFeedTypes
                             (widthImage iconUrls.save "Save" iconHeight)
+                        , standardButton "Logout" Logout <|
+                            heightImage iconUrls.logout "Logout" iconHeight
                         ]
                     ]
               ]

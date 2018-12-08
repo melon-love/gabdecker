@@ -51,9 +51,9 @@ type FeedType
     | GroupFeed String
     | TopicFeed String
     | PopularFeed
+    | NotificationsFeed
     | LastClosedFeed
     | LoggedInUserFeed
-    | NotificationsFeed
 
 
 type alias LogList x =
