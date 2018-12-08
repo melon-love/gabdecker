@@ -350,7 +350,7 @@ subscriptions model =
         , Events.onKeyDown <| keyDownDecoder keycodes.escape CloseDialog
         , case model.scrollToFeed of
             Just feedType ->
-                Time.every 100 (\_ -> ScrollToFeed feedType)
+                Time.every 100 (\_ -> ScrollToNewFeed feedType)
 
             Nothing ->
                 Sub.none
