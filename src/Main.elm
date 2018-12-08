@@ -3919,9 +3919,9 @@ loginPage settings =
             , row [ centerX ]
                 [ textButton "" Login "Login" ]
             , row [ centerX ]
-                [ simpleImage "images/deck-with-frog-671x425.jpg"
-                    "Deck with Frog"
-                    ( 671, 425 )
+                [ simpleImage "images/gabdecker-background-gahtannd.jpg"
+                    "GabDecker Splash Image"
+                    ( 768, 432 )
                 ]
             , row [ centerX ]
                 [ simpleLink "news/" "News" ]
@@ -3933,6 +3933,11 @@ loginPage settings =
                         [ text "Icons by "
                         , simpleLink "https://www.flaticon.com/authors/gregor-cresnar"
                             "Gregor Cresnar"
+                        ]
+                    , row [ centerX ]
+                        [ text "Splash screen and favicon by "
+                        , simpleLink "https://gab.com/gahtannd"
+                            "Gabriel Tannd"
                         ]
                     , row [ centerX ]
                         [ text <| chars.copyright ++ " 2018 Bill St. Clair" ]

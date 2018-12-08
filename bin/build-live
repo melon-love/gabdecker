@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cp -f src/GabDecker/Authorization.elm src/GabDecker/Authorization.elm.save
+cp -f src/GabDecker/Authorization.elm.live src/GabDecker/Authorization.elm
+elm make src/Main.elm --output site/elm.js
+mv -f src/GabDecker/Authorization.elm.save src/GabDecker/Authorization.elm
+rm -r elm-stuff
