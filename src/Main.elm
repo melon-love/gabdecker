@@ -2030,7 +2030,13 @@ canonicalizeData key new old =
         loop rest count result =
             case rest of
                 [] ->
-                    ( List.reverse result, count )
+                    ( List.reverse result
+                    , if old == [] then
+                        0
+
+                      else
+                        count
+                    )
 
                 head :: tail ->
                     case Dict.get (key head) dict of
