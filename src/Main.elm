@@ -2076,7 +2076,19 @@ updateFeed appendResult result feed =
                             }
                     }
             in
-            canonicalizeFeed newFeed feed
+            let
+                res =
+                    canonicalizeFeed newFeed feed
+            in
+            if appendResult then
+                if res.newPosts == 0 then
+                    res
+
+                else
+                    { res | newPosts = 0 }
+
+            else
+                res
 
 
 updateFeedData : Bool -> FeedData -> FeedData -> FeedData
