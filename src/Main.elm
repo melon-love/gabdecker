@@ -644,7 +644,7 @@ feedTypeDescription style newPosts feedType baseFontSize icons =
                 , circularHeightImageWithCount newPosts
                     (lookupUserIconUrl style user icons)
                     "frob"
-                    iconHeight
+                    (adjustUserIconHeight iconHeight)
                 ]
 
         -- Need to look up group name
@@ -2872,7 +2872,12 @@ feedSelectorButton style iconHeight icons feed =
                         feed.newPosts
                         url
                         label
-                        iconHeight
+                        (if isCircular then
+                            adjustUserIconHeight iconHeight
+
+                         else
+                            iconHeight
+                        )
                 ]
 
 
@@ -2970,6 +2975,13 @@ columnBorderAttributes style isControlColumn =
 columnPadding : Int
 columnPadding =
     10
+
+
+{-| Circular images look smaller. Accomodate.
+-}
+adjustUserIconHeight : Int -> Int
+adjustUserIconHeight iconHeight =
+    11 * iconHeight // 10
 
 
 userIconHeight : Float -> Int
