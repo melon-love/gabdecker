@@ -617,8 +617,8 @@ postUrl post =
         ++ String.fromInt post.id
 
 
-feedTypeDescription : Style -> FeedType -> Float -> Icons -> Element Msg
-feedTypeDescription style feedType baseFontSize icons =
+feedTypeDescription : Style -> Int -> FeedType -> Float -> Icons -> Element Msg
+feedTypeDescription style newPosts feedType baseFontSize icons =
     let
         iconHeight =
             smallUserIconHeight baseFontSize
@@ -630,14 +630,20 @@ feedTypeDescription style feedType baseFontSize icons =
         HomeFeed ->
             feedRow "https://gab.com/"
                 [ text "Home "
-                , heightImage (getIconUrl style .home) "Home" iconHeight
+                , heightImageWithCount newPosts
+                    (getIconUrl style .home)
+                    "Home"
+                    iconHeight
                 ]
 
         UserFeed user ->
             feedRow ("https://gab.com/" ++ user)
                 [ text user
                 , text " "
-                , heightImage (lookupUserIconUrl style user icons) "frob" iconHeight
+                , heightImageWithCount newPosts
+                    (lookupUserIconUrl style user icons)
+                    "frob"
+                    iconHeight
                 ]
 
         -- Need to look up group name
@@ -657,7 +663,10 @@ feedTypeDescription style feedType baseFontSize icons =
         NotificationsFeed ->
             feedRow "https://gab.com/notifications"
                 [ text "Notifications "
-                , heightImage (getIconUrl style .notifications) "Notifications" iconHeight
+                , heightImageWithCount newPosts
+                    (getIconUrl style .notifications)
+                    "Notifications"
+                    iconHeight
                 ]
 
         _ ->
@@ -3071,7 +3080,11 @@ feedColumn isLoading settings icons feed =
                                 (LoadMore False feed)
                                 (heightImage (getIconUrl style .reload) "Refresh" iconHeight)
                         , text " "
-                        , feedTypeDescription style feed.feedType baseFontSize icons
+                        , feedTypeDescription style
+                            feed.newPosts
+                            feed.feedType
+                            baseFontSize
+                            icons
                         ]
                     , el [ alignRight ]
                         (standardButton style "Close Feed" (CloseFeed feed) closeIcon)
