@@ -3,10 +3,9 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* After a reload, of one or all feeds, a new post count should be shown
-  in the sidebar.
-  Also mark the boundary between new and old somehow, likely a colored
-  line.
+* Also mark the boundary between new and old posts with a thicker, black separator.
+  Put the new post count in a circular, not rectangular background:
+  probably with a Background.image of an SVG circle.
 * Profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.

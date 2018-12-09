@@ -1947,12 +1947,19 @@ canonicalizeFeed newFeed feed =
                     | feed =
                         { feed_feed | data = data }
                 }
+
+            np =
+                if feed.feedType == PopularFeed then
+                    0
+
+                else
+                    newPosts
         in
-        if newPosts == res.newPosts then
+        if np == res.newPosts then
             res
 
         else
-            { res | newPosts = newPosts }
+            { res | newPosts = np }
 
 
 logDifferences : List ActivityLog -> List ActivityLog -> ()
@@ -2834,15 +2841,6 @@ feedTypeIconUrl style feedType icons =
 
 feedSelectorButton : Style -> Int -> Icons -> Feed Msg -> Element Msg
 feedSelectorButton style iconHeight icons feed =
-    let
-        newPosts =
-            case feed.feedType of
-                NotificationsFeed ->
-                    0
-
-                _ ->
-                    feed.newPosts
-    in
     case feedTypeIconUrl style feed.feedType icons of
         ( "", _ ) ->
             text ""
@@ -2855,7 +2853,7 @@ feedSelectorButton style iconHeight icons feed =
                     label
                     (ScrollToFeed feed.feedType)
                   <|
-                    heightImageWithCount newPosts url label iconHeight
+                    heightImageWithCount feed.newPosts url label iconHeight
                 ]
 
 
