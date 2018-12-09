@@ -79,11 +79,14 @@ import GabDecker.Authorization as Auth
 import GabDecker.Elements
     exposing
         ( colors
+        , darkStyle
+        , defaultStyles
+        , getIconUrl
         , heightImage
+        , lightStyle
         , newTabLink
         , simpleImage
         , simpleLink
-        , styleColors
         , styledLink
         , widthImage
         )
@@ -98,8 +101,10 @@ import GabDecker.Types as Types
         , FeedResult
         , FeedType(..)
         , GangedNotification
+        , IconUrls
         , Icons
         , LogList
+        , Style
         )
 import Html exposing (Html)
 import Html.Attributes as Attributes exposing (class, href, rel)
@@ -152,6 +157,7 @@ type DialogType
     | AddFeedDialog
     | ImageDialog String
     | SaveFeedsDialog
+    | SettingsDialog
     | OperationErrorDialog String
 
 
@@ -161,6 +167,7 @@ type alias Settings =
     , here : Zone
     , windowWidth : Int
     , windowHeight : Int
+    , style : Style
     }
 
 
@@ -171,13 +178,20 @@ defaultSettings =
     , here = Time.utc
     , windowWidth = 1260
     , windowHeight = 1024
+    , style = lightStyle
     }
+
+
+type StyleOption
+    = LightStyle
+    | DarkStyle
 
 
 type alias Model =
     { showDialog : DialogType
     , dialogError : Maybe String
     , useSimulator : Bool
+    , styleOption : StyleOption
     , settings : Settings
     , backend : Maybe Backend
     , url : Url
@@ -240,6 +254,8 @@ type Msg
     | ScrollToContent Dom.Element Dom.Element (Result Dom.Error Dom.Element)
     | AddFeed
     | SaveFeedTypes
+    | ShowSettings
+    | SetStyle StyleOption
     | RestoreFeedTypes
     | DialogInput String
     | AddNewFeed FeedType
@@ -257,14 +273,14 @@ type Operation
     | RepostOperation FeedType Int
 
 
-lookupUserIconUrl : String -> Icons -> String
-lookupUserIconUrl username icons =
+lookupUserIconUrl : Style -> String -> Icons -> String
+lookupUserIconUrl style username icons =
     case Dict.get username icons.user of
         Just icon ->
             icon
 
         Nothing ->
-            iconUrls.user
+            getIconUrl style .user
 
 
 storeIcons : Icons -> Model -> Cmd Msg
@@ -272,6 +288,24 @@ storeIcons icons model =
     localStorageSend
         (LocalStorage.put storageKeys.icons
             (Just <| ED.encodeIcons icons)
+        )
+        model
+
+
+storeStyle : StyleOption -> Model -> Cmd Msg
+storeStyle option model =
+    let
+        string =
+            case option of
+                DarkStyle ->
+                    "dark"
+
+                LightStyle ->
+                    "light"
+    in
+    localStorageSend
+        (LocalStorage.put storageKeys.style
+            (Just <| JE.string string)
         )
         model
 
@@ -450,6 +484,7 @@ init flags url key =
             , backend = backend
             , url = url
             , key = key
+            , styleOption = LightStyle
             , settings = defaultSettings
             , funnelState = PortFunnels.initialState localStoragePrefix
             , token = savedToken
@@ -485,6 +520,7 @@ init flags url key =
                     Cmd.none
             , localStorageSend (LocalStorage.get storageKeys.feeds) model
             , localStorageSend (LocalStorage.get storageKeys.icons) model
+            , localStorageSend (LocalStorage.get storageKeys.style) model
             , Task.perform getViewport Dom.getViewport
             , Task.perform Here Time.here
             , case savedToken of
@@ -580,27 +616,27 @@ postUrl post =
         ++ String.fromInt post.id
 
 
-feedTypeDescription : FeedType -> Float -> Icons -> Element Msg
-feedTypeDescription feedType baseFontSize icons =
+feedTypeDescription : Style -> FeedType -> Float -> Icons -> Element Msg
+feedTypeDescription style feedType baseFontSize icons =
     let
         iconHeight =
             smallUserIconHeight baseFontSize
 
         feedRow url elements =
-            styledLink True [] url (row [] elements)
+            styledLink True style [] url (row [] elements)
     in
     case feedType of
         HomeFeed ->
             feedRow "https://gab.com/"
                 [ text "Home "
-                , heightImage iconUrls.home "Home" iconHeight
+                , heightImage (getIconUrl style .home) "Home" iconHeight
                 ]
 
         UserFeed user ->
             feedRow ("https://gab.com/" ++ user)
                 [ text user
                 , text " "
-                , heightImage (lookupUserIconUrl user icons) "frob" iconHeight
+                , heightImage (lookupUserIconUrl style user icons) "frob" iconHeight
                 ]
 
         -- Need to look up group name
@@ -614,13 +650,13 @@ feedTypeDescription feedType baseFontSize icons =
         PopularFeed ->
             feedRow "https://gab.com/popular"
                 [ text "Popular "
-                , heightImage iconUrls.popular "Popular" iconHeight
+                , heightImage (getIconUrl style .popular) "Popular" iconHeight
                 ]
 
         NotificationsFeed ->
             feedRow "https://gab.com/notifications"
                 [ text "Notifications "
-                , heightImage iconUrls.notifications "Notifications" iconHeight
+                , heightImage (getIconUrl style .notifications) "Notifications" iconHeight
                 ]
 
         _ ->
@@ -751,6 +787,48 @@ receiveFeedTypes value model =
                         |> withCmds [ cmd, cmd2 ]
 
 
+receiveStyle : Maybe Value -> Model -> ( Model, Cmd Msg )
+receiveStyle value model =
+    case value of
+        Nothing ->
+            model |> withNoCmd
+
+        Just v ->
+            case JD.decodeValue JD.string v of
+                Err _ ->
+                    model |> withNoCmd
+
+                Ok style ->
+                    let
+                        option =
+                            case style of
+                                "light" ->
+                                    LightStyle
+
+                                "dark" ->
+                                    DarkStyle
+
+                                _ ->
+                                    model.styleOption
+
+                        settings =
+                            model.settings
+
+                        newStyle =
+                            case option of
+                                LightStyle ->
+                                    lightStyle
+
+                                DarkStyle ->
+                                    darkStyle
+                    in
+                    { model
+                        | settings = { settings | style = newStyle }
+                        , styleOption = option
+                    }
+                        |> withNoCmd
+
+
 receiveIcons : Maybe Value -> Model -> ( Model, Cmd Msg )
 receiveIcons value model =
     case value of
@@ -778,6 +856,9 @@ storageHandler response state model =
 
             else if key == storageKeys.icons then
                 receiveIcons value model
+
+            else if key == storageKeys.style then
+                receiveStyle value model
 
             else
                 model |> withNoCmd
@@ -1097,6 +1178,33 @@ update msg model =
             }
                 |> withCmd
                     (Task.attempt (\_ -> Noop) <| Dom.focus feedsStringInputId)
+
+        ShowSettings ->
+            { model
+                | showDialog = SettingsDialog
+                , dialogError = Nothing
+            }
+                |> withNoCmd
+
+        SetStyle option ->
+            let
+                style =
+                    case option of
+                        LightStyle ->
+                            lightStyle
+
+                        DarkStyle ->
+                            darkStyle
+
+                settings =
+                    model.settings
+            in
+            { model
+                | settings =
+                    { settings | style = style }
+                , styleOption = option
+            }
+                |> withCmd (storeStyle option model)
 
         RestoreFeedTypes ->
             case JD.decodeString ED.feedTypesDecoder model.dialogInput of
@@ -2023,6 +2131,10 @@ focusStyle =
 
 view : Model -> Document Msg
 view model =
+    let
+        style =
+            model.settings.style
+    in
     { title = pageTitle
     , body =
         [ Element.layoutWith
@@ -2038,11 +2150,16 @@ view model =
                     SaveFeedsDialog ->
                         saveFeedsDialog model
 
+                    SettingsDialog ->
+                        settingsDialog model
+
                     OperationErrorDialog err ->
-                        operationErrorDialog err model
+                        operationErrorDialog style err model
 
                     _ ->
                         text ""
+            , Background.color <| style.background
+            , Font.color <| style.text
             ]
             (case model.backend of
                 Nothing ->
@@ -2077,6 +2194,9 @@ fillWidth =
 mainPage : Settings -> Icons -> Set String -> List (Feed Msg) -> Element Msg
 mainPage settings icons loadingFeeds feeds =
     let
+        style =
+            settings.style
+
         baseFontSize =
             settings.fontSize
 
@@ -2099,7 +2219,7 @@ mainPage settings icons loadingFeeds feeds =
                     else
                         0
             }
-        , Border.color styleColors.border
+        , Border.color style.border
         ]
         [ column []
             [ row [ height <| px settings.windowHeight ]
@@ -2194,18 +2314,18 @@ addFeedChoices model =
         ]
 
 
-dialogAttributes : List (Attribute msg)
-dialogAttributes =
+dialogAttributes : Style -> List (Attribute msg)
+dialogAttributes style =
     [ Border.width 5
     , centerX
     , centerY
-    , Background.color colors.verylightgray
+    , Background.color style.dialogBackground
     , paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
     ]
 
 
-operationErrorDialog : String -> Model -> Element Msg
-operationErrorDialog err model =
+operationErrorDialog : Style -> String -> Model -> Element Msg
+operationErrorDialog style err model =
     let
         baseFontSize =
             model.settings.fontSize
@@ -2213,10 +2333,10 @@ operationErrorDialog err model =
         iconHeight =
             userIconHeight baseFontSize
     in
-    column dialogAttributes
+    column (dialogAttributes style)
         [ let
             closeIcon =
-                heightImage iconUrls.close "Close" iconHeight
+                heightImage (getIconUrl style .close) "Close" iconHeight
           in
           row [ width Element.fill ]
             [ row
@@ -2227,7 +2347,7 @@ operationErrorDialog err model =
                 ]
                 [ el [ Font.color colors.red ] <| text "Operation Error " ]
             , el [ alignRight ]
-                (standardButton "Close Dialog" CloseDialog closeIcon)
+                (standardButton style "Close Dialog" CloseDialog closeIcon)
             ]
         , row [ paddingEach { zeroes | top = 20 } ]
             [ text err ]
@@ -2252,6 +2372,9 @@ imageDialog url model =
         settings =
             model.settings
 
+        style =
+            settings.style
+
         maxw =
             9 * settings.windowWidth // 10
 
@@ -2270,7 +2393,7 @@ imageDialog url model =
         [ centerX
         , centerY
         ]
-        [ standardButton "" CloseDialog <|
+        [ standardButton style "" CloseDialog <|
             (Html.img
                 [ Attributes.style "object-fit" "contain"
                 , Attributes.style "max-width" maxws
@@ -2324,14 +2447,14 @@ isKeycode pairs keycode =
             JD.fail "These are not the keycodes you're looking for."
 
 
-dialogTitleBar : Float -> String -> Element Msg
-dialogTitleBar baseFontSize title =
+dialogTitleBar : Style -> Float -> String -> Element Msg
+dialogTitleBar style baseFontSize title =
     let
         iconHeight =
             userIconHeight baseFontSize
 
         closeIcon =
-            heightImage iconUrls.close "Close" iconHeight
+            heightImage (getIconUrl style .close) "Close" iconHeight
     in
     row [ width Element.fill ]
         [ row
@@ -2342,7 +2465,7 @@ dialogTitleBar baseFontSize title =
             ]
             [ text title ]
         , el [ alignRight ]
-            (standardButton "Close Dialog" CloseDialog closeIcon)
+            (standardButton style "Close Dialog" CloseDialog closeIcon)
         ]
 
 
@@ -2360,17 +2483,53 @@ dialogErrorRow model =
                 [ text err ]
 
 
-saveFeedsDialog : Model -> Element Msg
-saveFeedsDialog model =
+settingsDialog : Model -> Element Msg
+settingsDialog model =
     let
+        style =
+            model.settings.style
+
         baseFontSize =
             model.settings.fontSize
 
         iconHeight =
             userIconHeight (2 * baseFontSize)
     in
-    column dialogAttributes
-        [ dialogTitleBar baseFontSize "Save/Restore Feeds "
+    column (dialogAttributes style)
+        [ dialogTitleBar style baseFontSize "Settings "
+        , dialogErrorRow model
+        , row [ paddingEach { zeroes | top = 10 } ]
+            [ el [ paddingEach { zeroes | right = 5 } ]
+                (text "Style: ")
+            , Input.radioRow
+                [ spacing 10
+                ]
+                { onChange = SetStyle
+                , selected = Just model.styleOption
+                , label = Input.labelLeft [] (text "")
+                , options =
+                    [ Input.option LightStyle (text "Light")
+                    , Input.option DarkStyle (text "Dark")
+                    ]
+                }
+            ]
+        ]
+
+
+saveFeedsDialog : Model -> Element Msg
+saveFeedsDialog model =
+    let
+        style =
+            model.settings.style
+
+        baseFontSize =
+            model.settings.fontSize
+
+        iconHeight =
+            userIconHeight (2 * baseFontSize)
+    in
+    column (dialogAttributes style)
+        [ dialogTitleBar style baseFontSize "Save/Restore Feeds "
         , dialogErrorRow model
         , row [ paddingEach { zeroes | top = 10 } ]
             [ Input.text
@@ -2392,8 +2551,8 @@ saveFeedsDialog model =
                 [ paddingEach { zeroes | left = 10 }
                 , spacing 5
                 ]
-                (standardButton "Restore" RestoreFeedTypes <|
-                    heightImage iconUrls.save "Restore" iconHeight
+                (standardButton style "Restore" RestoreFeedTypes <|
+                    heightImage (getIconUrl style .save) "Restore" iconHeight
                 )
             ]
         ]
@@ -2402,6 +2561,9 @@ saveFeedsDialog model =
 addFeedDialog : Model -> Element Msg
 addFeedDialog model =
     let
+        style =
+            model.settings.style
+
         baseFontSize =
             model.settings.fontSize
 
@@ -2410,7 +2572,8 @@ addFeedDialog model =
 
         addButton feedType =
             el [ Font.size <| 7 * iconHeight // 4 ] <|
-                textButton "Add Feed"
+                textButton style
+                    "Add Feed"
                     (AddNewFeed feedType)
                     "+"
 
@@ -2443,7 +2606,8 @@ addFeedDialog model =
             { label = ""
             , element =
                 el [ Font.bold ] <|
-                    textButton "Add Feed"
+                    textButton style
+                        "Add Feed"
                         (AddNewFeed feedType)
                         label
             , feedType = Nothing
@@ -2455,8 +2619,8 @@ addFeedDialog model =
         data =
             addUserFeedRow :: List.map makeRow choices
     in
-    column dialogAttributes
-        [ dialogTitleBar baseFontSize "Add Feed"
+    column (dialogAttributes style)
+        [ dialogTitleBar style baseFontSize "Add Feed"
         , dialogErrorRow model
         , row []
             [ Element.table
@@ -2539,6 +2703,9 @@ feedsStringInputId =
 controlColumn : Int -> Settings -> Icons -> List (Feed Msg) -> Element Msg
 controlColumn columnWidth settings icons feeds =
     let
+        style =
+            settings.style
+
         colw =
             width <| px columnWidth
 
@@ -2556,12 +2723,12 @@ controlColumn columnWidth settings icons feeds =
                         , bottom = columnBorderWidth
                         , right = columnBorderWidth
                     }
-              , Border.color styleColors.border
-              , Background.color styleColors.headerBackground
+              , Border.color style.border
+              , Background.color style.headerBackground
               , spacing 10
               , idAttribute controlColumnId
               ]
-            , columnBorderAttributes True
+            , columnBorderAttributes style True
             ]
         )
     <|
@@ -2570,43 +2737,47 @@ controlColumn columnWidth settings icons feeds =
                     [ centerX
                     , paddingEach { zeroes | bottom = iconHeight // 2 }
                     ]
-                    [ standardButton
+                    [ standardButton style
                         "Refresh All Feeds"
                         LoadAll
-                        (widthImage iconUrls.reload "Refresh" iconHeight)
+                        (widthImage (getIconUrl style .reload) "Refresh" iconHeight)
                     ]
               ]
-            , List.map (feedSelectorButton iconHeight icons) feeds
+            , List.map (feedSelectorButton style iconHeight icons) feeds
             , [ row
                     [ Font.size <| 7 * iconHeight // 4
                     , centerX
                     ]
-                    [ standardButton "Add New Feed" AddFeed (text "+") ]
+                    [ standardButton style "Add New Feed" AddFeed (text "+") ]
               , row
                     [ alignBottom
                     , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ column [ spacing 10 ]
-                        [ standardButton
+                        [ standardButton style
+                            "Settings"
+                            ShowSettings
+                            (widthImage (getIconUrl style .settings) "Settings" iconHeight)
+                        , standardButton style
                             "Restore Feeds"
                             SaveFeedTypes
-                            (widthImage iconUrls.save "Save" iconHeight)
-                        , standardButton "Logout" Logout <|
-                            heightImage iconUrls.logout "Logout" iconHeight
+                            (widthImage (getIconUrl style .save) "Save" iconHeight)
+                        , standardButton style "Logout" Logout <|
+                            heightImage (getIconUrl style .logout) "Logout" iconHeight
                         ]
                     ]
               ]
             ]
 
 
-feedTypeIconUrl : FeedType -> Icons -> ( String, String )
-feedTypeIconUrl feedType icons =
+feedTypeIconUrl : Style -> FeedType -> Icons -> ( String, String )
+feedTypeIconUrl style feedType icons =
     case feedType of
         HomeFeed ->
-            ( iconUrls.home, "Home" )
+            ( getIconUrl style .home, "Home" )
 
         UserFeed username ->
-            ( lookupUserIconUrl username icons, "User: " ++ username )
+            ( lookupUserIconUrl style username icons, "User: " ++ username )
 
         GroupFeed groupid ->
             ( "", "Group: " ++ groupid )
@@ -2615,25 +2786,26 @@ feedTypeIconUrl feedType icons =
             ( "", "Topic: " ++ topicid )
 
         PopularFeed ->
-            ( iconUrls.popular, "Popular" )
+            ( getIconUrl style .popular, "Popular" )
 
         NotificationsFeed ->
-            ( iconUrls.notifications, "Notifications" )
+            ( getIconUrl style .notifications, "Notifications" )
 
         _ ->
             ( "", "" )
 
 
-feedSelectorButton : Int -> Icons -> Feed Msg -> Element Msg
-feedSelectorButton iconHeight icons feed =
-    case feedTypeIconUrl feed.feedType icons of
+feedSelectorButton : Style -> Int -> Icons -> Feed Msg -> Element Msg
+feedSelectorButton style iconHeight icons feed =
+    case feedTypeIconUrl style feed.feedType icons of
         ( "", _ ) ->
             text ""
 
         ( url, label ) ->
             row
                 [ centerX ]
-                [ standardButtonWithDontHover False
+                [ standardButtonWithDontHover style
+                    False
                     label
                     (ScrollToFeed feed.feedType)
                   <|
@@ -2676,14 +2848,14 @@ columnIdAttribute idx =
     idAttribute <| columnId idx
 
 
-columnBorderAttributes : Bool -> List (Attribute msg)
-columnBorderAttributes isControlColumn =
+columnBorderAttributes : Style -> Bool -> List (Attribute msg)
+columnBorderAttributes style isControlColumn =
     [ if isControlColumn then
         Border.widthEach { zeroes | top = 3, bottom = 3 }
 
       else
         Border.width 3
-    , Border.color styleColors.border
+    , Border.color style.border
     ]
 
 
@@ -2749,6 +2921,9 @@ feedIsLoading feed loadingFeeds =
 feedColumn : Bool -> Settings -> Icons -> Feed Msg -> Element Msg
 feedColumn isLoading settings icons feed =
     let
+        style =
+            settings.style
+
         baseFontSize =
             settings.fontSize
 
@@ -2764,25 +2939,25 @@ feedColumn isLoading settings icons feed =
               , height Element.fill
               , Border.width columnBorderWidth
               ]
-            , columnBorderAttributes False
+            , columnBorderAttributes style False
             ]
         )
         [ row
             [ fillWidth
             , Border.widthEach { zeroes | bottom = 1 }
-            , Border.color styleColors.border
-            , Background.color styleColors.headerBackground
+            , Border.color style.border
+            , Background.color style.headerBackground
             ]
             [ column [ colw ]
                 [ let
                     closeIcon =
-                        heightImage iconUrls.close "Close" iconHeight
+                        heightImage (getIconUrl style .close) "Close" iconHeight
 
                     prevIcon =
-                        heightImage iconUrls.previous "Move Left" iconHeight
+                        heightImage (getIconUrl style .previous) "Move Left" iconHeight
 
                     nextIcon =
-                        heightImage iconUrls.next "Move Right" iconHeight
+                        heightImage (getIconUrl style .next) "Move Right" iconHeight
                   in
                   row
                     [ padding columnPadding
@@ -2792,11 +2967,13 @@ feedColumn isLoading settings icons feed =
                     , width Element.fill
                     ]
                     [ row [ alignLeft ]
-                        [ standardButton "Move Feed Left"
+                        [ standardButton style
+                            "Move Feed Left"
                             (MoveFeedLeft feed.feedType)
                             prevIcon
                         , text " "
-                        , standardButton "Move Feed Right"
+                        , standardButton style
+                            "Move Feed Right"
                             (MoveFeedRight feed.feedType)
                             nextIcon
                         ]
@@ -2810,15 +2987,16 @@ feedColumn isLoading settings icons feed =
                                 []
                             )
                           <|
-                            standardButtonWithDontHover isLoading
+                            standardButtonWithDontHover style
+                                isLoading
                                 "Refresh Feed"
                                 (LoadMore False feed)
-                                (heightImage iconUrls.reload "Refresh" iconHeight)
+                                (heightImage (getIconUrl style .reload) "Refresh" iconHeight)
                         , text " "
-                        , feedTypeDescription feed.feedType baseFontSize icons
+                        , feedTypeDescription style feed.feedType baseFontSize icons
                         ]
                     , el [ alignRight ]
-                        (standardButton "Close Feed" (CloseFeed feed) closeIcon)
+                        (standardButton style "Close Feed" (CloseFeed feed) closeIcon)
                     ]
                 ]
             ]
@@ -2831,6 +3009,9 @@ feedColumn isLoading settings icons feed =
 renderRowContents : Settings -> Feed Msg -> Element Msg
 renderRowContents settings feed =
     let
+        style =
+            settings.style
+
         baseFontSize =
             settings.fontSize
 
@@ -2903,12 +3084,12 @@ renderRowContents settings feed =
                     feedTypeToString feed.feedType
             in
             [ if False then
-                undoneRow typeString
+                undoneRow style typeString
 
               else
                 text ""
             , rows
-            , moreRow colw feed
+            , moreRow style colw feed
             ]
         ]
 
@@ -2929,8 +3110,8 @@ keyedRow attributes pairs =
 
 {-| Not currently used. Saved for the next incomplete column
 -}
-undoneRow : String -> Element Msg
-undoneRow typeString =
+undoneRow : Style -> String -> Element Msg
+undoneRow style typeString =
     row
         [ fillWidth
         , paddingEach
@@ -2942,14 +3123,14 @@ undoneRow typeString =
         , Font.bold
         , Border.widthEach
             { zeroes | bottom = 2 }
-        , Border.color styleColors.border
+        , Border.color style.border
         ]
         [ text "Comment parents are coming."
         ]
 
 
-moreRow : Attribute Msg -> Feed Msg -> Element Msg
-moreRow colw feed =
+moreRow : Style -> Attribute Msg -> Feed Msg -> Element Msg
+moreRow style colw feed =
     if feed.feed.no_more then
         text ""
 
@@ -2981,7 +3162,8 @@ moreRow colw feed =
                 msg =
                     LoadMore True feed
               in
-              textButton ""
+              textButton style
+                ""
                 msg
                 (nbsps ++ "Load More" ++ nbsps)
             ]
@@ -3005,6 +3187,9 @@ nameBottomPadding =
 postRow : Settings -> Feed Msg -> Bool -> ActivityLog -> Element Msg
 postRow settings feed isToplevel log =
     let
+        style =
+            settings.style
+
         baseFontSize =
             settings.fontSize
 
@@ -3054,10 +3239,10 @@ postRow settings feed isToplevel log =
                     ( "quoted", chars.leftCurlyQuote )
 
                 else
-                    ( "reposted", iconUrls.refresh )
+                    ( "reposted", getIconUrl style .refresh )
 
             else if post.is_reply then
-                ( "commented", iconUrls.comment )
+                ( "commented", getIconUrl style .comment )
 
             else
                 ( "", "" )
@@ -3075,7 +3260,7 @@ postRow settings feed isToplevel log =
 
             else
                 zeroes
-        , Border.color styleColors.border
+        , Border.color style.border
         ]
         [ column []
             [ if repostString == "" then
@@ -3084,7 +3269,7 @@ postRow settings feed isToplevel log =
               else
                 row
                     [ Border.widthEach { zeroes | bottom = 1 }
-                    , Border.color styleColors.border
+                    , Border.color style.border
                     , colwp
                     ]
                     [ row
@@ -3105,11 +3290,12 @@ postRow settings feed isToplevel log =
 
                           else
                             heightImage iconUrl "refresh" 10
-                        , newTabLink ("https://gab.com/" ++ actusername)
+                        , newTabLink style
+                            ("https://gab.com/" ++ actusername)
                             (" " ++ actuser.name ++ " " ++ repostString)
                         ]
                     ]
-            , postUserRow colwp settings.here post
+            , postUserRow style colwp settings.here post
             , row []
                 [ Element.textColumn
                     [ paragraphSpacing baseFontSize
@@ -3118,17 +3304,17 @@ postRow settings feed isToplevel log =
                   <|
                     case post.body_html of
                         Nothing ->
-                            htmlBodyElements baseFontSize <|
+                            htmlBodyElements style baseFontSize <|
                                 newlinesToPs post.body
 
                         Just html ->
-                            htmlBodyElements baseFontSize html
+                            htmlBodyElements style baseFontSize html
                 ]
             , row []
                 [ column [ colwp ] <|
                     case post.attachment of
                         MediaAttachment records ->
-                            List.map (mediaRow mediaw) records
+                            List.map (mediaRow style mediaw) records
 
                         _ ->
                             [ text "" ]
@@ -3138,9 +3324,9 @@ postRow settings feed isToplevel log =
                     [ paddingEach { zeroes | bottom = 5 } ]
                     [ row
                         [ paddingEach { zeroes | left = 5 }
-                        , Background.color styleColors.quotedPost
+                        , Background.color style.quotedPostBackground
                         , Border.width 1
-                        , Border.color styleColors.quotedPostBorder
+                        , Border.color style.quotedPostBorder
                         ]
                         [ case post.related of
                             RelatedPosts { parent } ->
@@ -3174,13 +3360,13 @@ postRow settings feed isToplevel log =
                 text ""
 
               else
-                interactionRow baseFontSize colwp feed.feedType post
+                interactionRow style baseFontSize colwp feed.feedType post
             ]
         ]
 
 
-postUserRow : Attribute Msg -> Zone -> Post -> Element Msg
-postUserRow colwp here post =
+postUserRow : Style -> Attribute Msg -> Zone -> Post -> Element Msg
+postUserRow style colwp here post =
     let
         user =
             post.user
@@ -3199,6 +3385,7 @@ postUserRow colwp here post =
             ]
             [ row []
                 [ styledLink True
+                    style
                     [ titleAttribute user.name ]
                     (userUrl user)
                   <|
@@ -3207,7 +3394,7 @@ postUserRow colwp here post =
             ]
         , column []
             [ row [ nameBottomPadding ]
-                [ newTabLink (userUrl user) <|
+                [ newTabLink style (userUrl user) <|
                     embiggen user.name
                 , text <| " (" ++ username ++ ")"
                 ]
@@ -3218,7 +3405,7 @@ postUserRow colwp here post =
                             "http://gab.com/groups/" ++ id
                     in
                     row [ nameBottomPadding ]
-                        [ newTabLink url <| "Group: " ++ title ]
+                        [ newTabLink style url <| "Group: " ++ title ]
 
                 _ ->
                     case post.topic of
@@ -3228,7 +3415,7 @@ postUserRow colwp here post =
                                     "http://gab.com/topic/" ++ id
                             in
                             row [ nameBottomPadding ]
-                                [ newTabLink url <| "Topic: " ++ title ]
+                                [ newTabLink style url <| "Topic: " ++ title ]
 
                         _ ->
                             text ""
@@ -3240,40 +3427,40 @@ postUserRow colwp here post =
                         ++ String.fromInt post.id
               in
               row []
-                [ newTabLink url <|
+                [ newTabLink style url <|
                     iso8601ToString here post.created_at
                 ]
             ]
         ]
 
 
-userNameLink : User -> Element el
-userNameLink user =
-    newTabLink (userUrl user) user.name
+userNameLink : Style -> User -> Element el
+userNameLink style user =
+    newTabLink style (userUrl user) user.name
 
 
-notificationDescriptionLine : User -> String -> Maybe Post -> String -> Element Msg
-notificationDescriptionLine user middle maybePost postName =
+notificationDescriptionLine : Style -> User -> String -> Maybe Post -> String -> Element Msg
+notificationDescriptionLine style user middle maybePost postName =
     row []
-        [ userNameLink user
+        [ userNameLink style user
         , text middle
         , case maybePost of
             Nothing ->
                 text postName
 
             Just post ->
-                newTabLink (postUrl post) postName
+                newTabLink style (postUrl post) postName
         , text "."
         ]
 
 
-postCreatedLink : Post -> Zone -> Element Msg
-postCreatedLink post here =
-    newTabLink (postUrl post) <| iso8601ToString here post.created_at
+postCreatedLink : Style -> Post -> Zone -> Element Msg
+postCreatedLink style post here =
+    newTabLink style (postUrl post) <| iso8601ToString here post.created_at
 
 
-notificationTypeToDescription : NotificationType -> Bool -> Notification -> List User -> Element Msg
-notificationTypeToDescription typ isComment notification otherUsers =
+notificationTypeToDescription : Style -> NotificationType -> Bool -> Notification -> List User -> Element Msg
+notificationTypeToDescription style typ isComment notification otherUsers =
     -- "comment", "follow", "like", "mention", "repost", "comment-reply"
     let
         postOrComment =
@@ -3309,38 +3496,44 @@ notificationTypeToDescription typ isComment notification otherUsers =
     in
     case typ of
         LikeNotification ->
-            notificationDescriptionLine actuser
+            notificationDescriptionLine style
+                actuser
                 (otherUsersString ++ " liked ")
                 maybePost
                 ("your " ++ postOrComment)
 
         RepostNotification ->
-            notificationDescriptionLine actuser
+            notificationDescriptionLine style
+                actuser
                 (otherUsersString ++ " reposted ")
                 maybePost
                 ("your " ++ postOrComment)
 
         FollowNotification ->
-            notificationDescriptionLine actuser
+            notificationDescriptionLine style
+                actuser
                 (otherUsersString ++ " followed you")
                 Nothing
                 ""
 
         MentionNotification ->
-            notificationDescriptionLine actuser
+            notificationDescriptionLine style
+                actuser
                 " mentioned you "
                 maybePost
                 -- Sometimes this should be "comment"
                 ("in a " ++ postOrComment)
 
         UnknownNotification "comment" ->
-            notificationDescriptionLine actuser
+            notificationDescriptionLine style
+                actuser
                 " commented on your "
                 maybePost
                 postOrComment
 
         UnknownNotification "comment-reply" ->
-            notificationDescriptionLine actuser
+            notificationDescriptionLine style
+                actuser
                 " replied to your "
                 maybePost
                 postOrComment
@@ -3351,11 +3544,11 @@ notificationTypeToDescription typ isComment notification otherUsers =
                     text notification.message
 
                 Just post ->
-                    newTabLink (postUrl post) notification.message
+                    newTabLink style (postUrl post) notification.message
 
 
-style : String -> Html msg
-style css =
+styleNode : String -> Html msg
+styleNode css =
     Html.node "style" [] [ Html.text css ]
 
 
@@ -3495,6 +3688,9 @@ gangNotifications data =
 notificationRow : Settings -> Bool -> GangedNotification -> Element Msg
 notificationRow settings isToplevel gangedNotification =
     let
+        style =
+            settings.style
+
         baseFontSize =
             settings.fontSize
 
@@ -3561,14 +3757,15 @@ notificationRow settings isToplevel gangedNotification =
 
             else
                 zeroes
-        , Border.color styleColors.border
+        , Border.color style.border
         ]
         [ column []
             [ row
                 [ paddingEach { zeroes | top = 5, bottom = 5 }
                 , Font.bold
                 ]
-                [ notificationTypeToDescription notification.type_
+                [ notificationTypeToDescription style
+                    notification.type_
                     (maybeParent /= Nothing)
                     notification
                     otherUsers
@@ -3594,14 +3791,14 @@ notificationRow settings isToplevel gangedNotification =
                                                 ++ String.fromInt spacing
                                                 ++ "px !important;"
                                     in
-                                    Element.html <| style css
+                                    Element.html <| styleNode css
                                   , row
                                         [ paddingEach { zeroes | top = 4 }
                                         , Element.htmlAttribute <|
                                             Attributes.class "moveup"
                                         , Font.bold
                                         ]
-                                        [ postCreatedLink post here ]
+                                        [ postCreatedLink style post here ]
                                   ]
                                 , notificationsBody settings post
                                 ]
@@ -3632,6 +3829,7 @@ notificationRow settings isToplevel gangedNotification =
 
                     userImage user =
                         styledLink True
+                            style
                             [ titleAttribute user.name ]
                             (userUrl user)
                             (heightImage user.picture_url "" height)
@@ -3649,6 +3847,9 @@ notificationRow settings isToplevel gangedNotification =
 notificationParentRow : Int -> Settings -> Post -> Element Msg
 notificationParentRow cw settings post =
     let
+        style =
+            settings.style
+
         colpad =
             5
 
@@ -3665,13 +3866,13 @@ notificationParentRow cw settings post =
         [ column
             [ colwp
             , paddingEach { zeroes | bottom = 5, left = 5 }
-            , Background.color styleColors.quotedPost
+            , Background.color style.quotedPostBackground
             , Border.width 1
-            , Border.color styleColors.quotedPostBorder
+            , Border.color style.quotedPostBorder
             ]
           <|
             List.concat
-                [ [ postUserRow colwp settings.here post ]
+                [ [ postUserRow style colwp settings.here post ]
                 , notificationsBody settings post
                 ]
         ]
@@ -3684,9 +3885,13 @@ truncatePost body =
 
 notificationsBody : Settings -> Post -> List (Element Msg)
 notificationsBody settings post =
+    let
+        style =
+            settings.style
+    in
     case post.body_html_summary of
         Just html ->
-            htmlBodyElements settings.fontSize html
+            htmlBodyElements style settings.fontSize html
 
         Nothing ->
             let
@@ -3703,7 +3908,7 @@ notificationsBody settings post =
                     else
                         body1 ++ "..."
             in
-            htmlBodyElements settings.fontSize <|
+            htmlBodyElements style settings.fontSize <|
                 newlinesToPs body
 
 
@@ -3730,8 +3935,8 @@ highlightElement color element =
     el attrs element
 
 
-interactionRow : Float -> Attribute Msg -> FeedType -> Post -> Element Msg
-interactionRow baseFontSize colwp feedType post =
+interactionRow : Style -> Float -> Attribute Msg -> FeedType -> Post -> Element Msg
+interactionRow style baseFontSize colwp feedType post =
     let
         fsize =
             round <| baseFontSize * 0.8
@@ -3759,14 +3964,14 @@ interactionRow baseFontSize colwp feedType post =
                             str =
                                 chars.nbsp ++ String.fromInt count ++ chars.nbsp
                         in
-                        el [ Background.color styleColors.postcountBackground ]
+                        el [ Background.color style.postcountBackground ]
                             (text str)
                     ]
                     |> (if msg == Noop then
                             identity
 
                         else
-                            standardButton buttonLabel msg
+                            standardButton style buttonLabel msg
                        )
                 ]
 
@@ -3778,25 +3983,25 @@ interactionRow baseFontSize colwp feedType post =
         , colwp
         , Font.size fsize
         ]
-        [ onecol (heightImage iconUrls.like "upvote" fsize)
+        [ onecol (heightImage (getIconUrl style .like) "upvote" fsize)
             ( post.liked, GreenHighlight )
             ""
             post.like_count
             "upvote"
             (Upvote feedType post)
-        , onecol (heightImage iconUrls.dislike "downvote" fsize)
+        , onecol (heightImage (getIconUrl style .dislike) "downvote" fsize)
             ( post.disliked, RedHighlight )
             ""
             post.dislike_count
             "downvote"
             (Downvote feedType post)
-        , onecol (heightImage iconUrls.comment "comment" fsize)
+        , onecol (heightImage (getIconUrl style .comment) "comment" fsize)
             ( False, NoHighlight )
             ""
             post.reply_count
             ""
             Noop
-        , onecol (heightImage iconUrls.refresh "reposted" fsize)
+        , onecol (heightImage (getIconUrl style .refresh) "reposted" fsize)
             ( post.repost, GreenHighlight )
             ""
             post.repost_count
@@ -3819,8 +4024,8 @@ interactionRow baseFontSize colwp feedType post =
         ]
 
 
-mediaRow : Attribute Msg -> MediaRecord -> Element Msg
-mediaRow colw record =
+mediaRow : Style -> Attribute Msg -> MediaRecord -> Element Msg
+mediaRow style colw record =
     row
         [ paddingEach
             { zeroes
@@ -3828,7 +4033,8 @@ mediaRow colw record =
                 , bottom = 5
             }
         ]
-        [ standardButtonWithDontHover True
+        [ standardButtonWithDontHover style
+            True
             ""
             (ShowImageDialog record.url_full)
           <|
@@ -3902,8 +4108,8 @@ newlinesToPs string =
         |> String.join "<br />"
 
 
-htmlBodyElements : Float -> String -> List (Element Msg)
-htmlBodyElements baseFontSize html =
+htmlBodyElements : Style -> Float -> String -> List (Element Msg)
+htmlBodyElements style baseFontSize html =
     let
         par : List (Element Msg) -> Element Msg
         par elements =
@@ -3915,7 +4121,7 @@ htmlBodyElements baseFontSize html =
     in
     -- may want to convert single <br/ > to row instead of paragraph.
     splitIntoParagraphs html
-        |> List.map Parsers.parseElements
+        |> List.map (Parsers.parseElements style)
         |> List.map par
 
 
@@ -3933,6 +4139,9 @@ splitIntoParagraphs string =
 loginPage : Settings -> Element Msg
 loginPage settings =
     let
+        style =
+            settings.style
+
         baseFontSize =
             settings.fontSize
     in
@@ -3949,42 +4158,45 @@ loginPage settings =
                 ]
                 [ text "GabDecker" ]
             , row [ centerX ]
-                [ simpleLink "./" "GabDecker"
+                [ simpleLink lightStyle "./" "GabDecker"
                 , text " is a "
-                , simpleLink "https://tweetdeck.twitter.com" "TweetDeck"
+                , simpleLink lightStyle "https://tweetdeck.twitter.com" "TweetDeck"
                 , text "-like interface to "
-                , simpleLink "https://gab.com" "Gab.com"
+                , simpleLink lightStyle "https://gab.com" "Gab.com"
                 , text "."
                 ]
             , row [ centerX ]
                 [ text "This is a work in progress." ]
             , row [ centerX ]
-                [ textButton "" Login "Login" ]
+                [ textButton style "" Login "Login" ]
             , row [ centerX ]
                 [ simpleImage "images/gabdecker-background-gahtannd.jpg"
                     "GabDecker Splash Image"
                     ( 768, 432 )
                 ]
             , row [ centerX ]
-                [ simpleLink "news/" "News" ]
+                [ simpleLink lightStyle "news/" "News" ]
             , row [ centerX ]
-                [ simpleLink "api/" "Gab API Explorer" ]
+                [ simpleLink lightStyle "api/" "Gab API Explorer" ]
             , row [ centerX ]
                 [ column [ centerX, spacing 6, fontSize baseFontSize 1 ]
                     [ row [ centerX ]
                         [ text "Icons by "
-                        , simpleLink "https://www.flaticon.com/authors/gregor-cresnar"
+                        , simpleLink lightStyle
+                            "https://www.flaticon.com/authors/gregor-cresnar"
                             "Gregor Cresnar"
                         ]
                     , row [ centerX ]
                         [ text "Splash screen and favicon by "
-                        , simpleLink "https://gab.com/gahtannd"
+                        , simpleLink lightStyle
+                            "https://gab.com/gahtannd"
                             "Gabriel Tannd"
                         ]
                     , row [ centerX ]
                         [ text <| chars.copyright ++ " 2018 Bill St. Clair" ]
                     , row [ centerX ]
-                        [ simpleLink "https://github.com/melon-love/gabdecker"
+                        [ simpleLink lightStyle
+                            "https://github.com/melon-love/gabdecker"
                             "GitHub"
                         ]
                     ]
@@ -3993,23 +4205,23 @@ loginPage settings =
         ]
 
 
-standardButton : String -> Msg -> Element Msg -> Element Msg
-standardButton =
-    standardButtonWithDontHover False
+standardButton : Style -> String -> Msg -> Element Msg -> Element Msg
+standardButton style =
+    standardButtonWithDontHover style False
 
 
-standardButtonWithDontHover : Bool -> String -> Msg -> Element Msg -> Element Msg
-standardButtonWithDontHover dontHover title msg label =
+standardButtonWithDontHover : Style -> Bool -> String -> Msg -> Element Msg -> Element Msg
+standardButtonWithDontHover style dontHover title msg label =
     button
         (List.concat
-            [ [ Font.color styleColors.link
+            [ [ Font.color style.link
               , titleAttribute title
               ]
             , if dontHover then
                 []
 
               else
-                [ Element.mouseOver [ Background.color styleColors.linkHover ] ]
+                [ Element.mouseOver [ Background.color style.linkHover ] ]
             ]
         )
         { onPress = Just msg
@@ -4017,9 +4229,9 @@ standardButtonWithDontHover dontHover title msg label =
         }
 
 
-textButton : String -> Msg -> String -> Element Msg
-textButton title msg label =
-    standardButton title msg (text label)
+textButton : Style -> String -> Msg -> String -> Element Msg
+textButton style title msg label =
+    standardButton style title msg (text label)
 
 
 iso8601ToString : Zone -> String -> String
@@ -4073,6 +4285,7 @@ storageKeys =
     { token = "token"
     , feeds = "feeds"
     , icons = "icons"
+    , style = "style"
     }
 
 
@@ -4086,26 +4299,6 @@ chars =
 keycodes =
     { enter = 13
     , escape = 27
-    }
-
-
-iconUrls =
-    { close = "icon/cancel.svg"
-    , comment = "icon/chat-2.svg"
-    , dislike = "icon/dislike.svg"
-    , home = "icon/house.svg"
-    , like = "icon/like.svg"
-    , logout = "icon/logout.svg"
-    , next = "icon/next-1.svg"
-    , notification = "icon/hand.svg"
-    , notifications = "icon/glasses.svg"
-    , popular = "icon/star.svg"
-    , previous = "icon/back.svg"
-    , refresh = "icon/refresh-arrow.svg"
-    , reload = "icon/reload.svg"
-    , save = "icon/folder.svg"
-    , settings = "icon/settings.svg"
-    , user = "icon/avatar.svg"
     }
 
 

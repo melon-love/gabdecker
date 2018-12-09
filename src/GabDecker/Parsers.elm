@@ -36,6 +36,7 @@ import GabDecker.Elements
         , simpleImage
         , simpleLink
         )
+import GabDecker.Types exposing (Style)
 import Parser as P exposing ((|.), (|=), Parser, Step(..))
 import Set exposing (Set)
 
@@ -54,9 +55,9 @@ type alias OneParser a =
 The others are exported for testing in `elm repl`.
 
 -}
-parseElements : String -> List (Element msg)
-parseElements string =
-    fullyParse text allOneParsers string
+parseElements : Style -> String -> List (Element msg)
+parseElements style string =
+    fullyParse text (allOneParsers style) string
 
 
 fullyParse : (String -> a) -> List (OneParser a) -> String -> List a
@@ -167,8 +168,8 @@ parseOneHelp parser _ =
         ]
 
 
-atUserParser : Parser (Element msg)
-atUserParser =
+atUserParser : Style -> Parser (Element msg)
+atUserParser style =
     P.variable
         { start = (==) '@'
         , inner = \c -> c == '_' || Char.isAlphaNum c
@@ -177,18 +178,19 @@ atUserParser =
         |> P.andThen
             (\s ->
                 P.succeed <|
-                    newTabLink ("https://gab.com/" ++ String.dropLeft 1 s)
+                    newTabLink style
+                        ("https://gab.com/" ++ String.dropLeft 1 s)
                         s
             )
 
 
-atUserOneParser : OneParser (Element msg)
-atUserOneParser =
-    parseOne atUserParser
+atUserOneParser : Style -> OneParser (Element msg)
+atUserOneParser style =
+    parseOne (atUserParser style)
 
 
-sharpParser : Parser (Element msg)
-sharpParser =
+sharpParser : Style -> Parser (Element msg)
+sharpParser style =
     P.variable
         { start = (==) '#'
         , inner = \c -> c == '_' || Char.isAlphaNum c
@@ -197,20 +199,21 @@ sharpParser =
         |> P.andThen
             (\s ->
                 P.succeed <|
-                    newTabLink ("https://gab.com/hash/" ++ String.dropLeft 1 s)
+                    newTabLink style
+                        ("https://gab.com/hash/" ++ String.dropLeft 1 s)
                         s
             )
 
 
-sharpOneParser : OneParser (Element msg)
-sharpOneParser =
-    parseOne sharpParser
+sharpOneParser : Style -> OneParser (Element msg)
+sharpOneParser style =
+    parseOne (sharpParser style)
 
 
-htmlParser : Parser (Element msg)
-htmlParser =
+htmlParser : Style -> Parser (Element msg)
+htmlParser style =
     htmlStringParser
-        |> P.andThen (\s -> P.succeed <| newTabLink s s)
+        |> P.andThen (\s -> P.succeed <| newTabLink style s s)
 
 
 htmlStringParser : Parser String
@@ -225,9 +228,9 @@ htmlStringParser =
         |= P.getSource
 
 
-htmlOneParser : OneParser (Element msg)
-htmlOneParser =
-    parseOne htmlParser
+htmlOneParser : Style -> OneParser (Element msg)
+htmlOneParser style =
+    parseOne (htmlParser style)
 
 
 ctrlR : Char
@@ -235,9 +238,9 @@ ctrlR =
     Char.fromCode 0x0D
 
 
-allOneParsers : List (OneParser (Element msg))
-allOneParsers =
-    [ htmlOneParser, atUserOneParser, sharpOneParser ]
+allOneParsers : Style -> List (OneParser (Element msg))
+allOneParsers style =
+    [ htmlOneParser style, atUserOneParser style, sharpOneParser style ]
 
 
 nonWhitespace : Parser ()

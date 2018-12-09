@@ -7,13 +7,16 @@ module GabDecker.Types exposing
     , FeedTagger
     , FeedType(..)
     , GangedNotification
+    , IconUrls
     , Icons
     , LogList
+    , Style
+    , Styles
     , emptyIcons
     )
 
 import Dict exposing (Dict)
-import Element exposing (Element)
+import Element exposing (Color, Element)
 import Gab.Types
     exposing
         ( ActivityLog
@@ -92,3 +95,46 @@ type alias Icons =
 emptyIcons : Icons
 emptyIcons =
     Icons Dict.empty Dict.empty Dict.empty
+
+
+type alias Style =
+    { name : String
+    , icondir : String
+    , background : Color
+    , dialogBackground : Color
+    , text : Color
+    , link : Color
+    , linkHover : Color
+    , border : Color
+    , headerBackground : Color
+    , quotedPostBackground : Color
+    , quotedPostBorder : Color
+    , postcountBackground : Color
+    , loadingFeed : Color
+    }
+
+
+type alias Styles =
+    { selected : String
+    , styles : List Style
+    }
+
+
+type alias IconUrls =
+    { close : String
+    , comment : String
+    , dislike : String
+    , home : String
+    , like : String
+    , logout : String
+    , next : String
+    , notification : String
+    , notifications : String
+    , popular : String
+    , previous : String
+    , refresh : String
+    , reload : String
+    , save : String
+    , settings : String
+    , user : String
+    }
