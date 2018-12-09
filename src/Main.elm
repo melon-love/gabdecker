@@ -78,7 +78,8 @@ import GabDecker.Api as Api exposing (Backend(..))
 import GabDecker.Authorization as Auth
 import GabDecker.Elements
     exposing
-        ( colors
+        ( circularHeightImage
+        , colors
         , darkStyle
         , defaultStyles
         , getIconUrl
@@ -640,7 +641,7 @@ feedTypeDescription style newPosts feedType baseFontSize icons =
             feedRow ("https://gab.com/" ++ user)
                 [ text user
                 , text " "
-                , heightImageWithCount newPosts
+                , circularHeightImageWithCount newPosts
                     (lookupUserIconUrl style user icons)
                     "frob"
                     iconHeight
@@ -2823,38 +2824,38 @@ controlColumn columnWidth settings icons feeds =
             ]
 
 
-feedTypeIconUrl : Style -> FeedType -> Icons -> ( String, String )
+feedTypeIconUrl : Style -> FeedType -> Icons -> ( String, String, Bool )
 feedTypeIconUrl style feedType icons =
     case feedType of
         HomeFeed ->
-            ( getIconUrl style .home, "Home" )
+            ( getIconUrl style .home, "Home", False )
 
         UserFeed username ->
-            ( lookupUserIconUrl style username icons, "User: " ++ username )
+            ( lookupUserIconUrl style username icons, "User: " ++ username, True )
 
         GroupFeed groupid ->
-            ( "", "Group: " ++ groupid )
+            ( "", "Group: " ++ groupid, False )
 
         TopicFeed topicid ->
-            ( "", "Topic: " ++ topicid )
+            ( "", "Topic: " ++ topicid, False )
 
         PopularFeed ->
-            ( getIconUrl style .popular, "Popular" )
+            ( getIconUrl style .popular, "Popular", False )
 
         NotificationsFeed ->
-            ( getIconUrl style .notifications, "Notifications" )
+            ( getIconUrl style .notifications, "Notifications", False )
 
         _ ->
-            ( "", "" )
+            ( "", "", False )
 
 
 feedSelectorButton : Style -> Int -> Icons -> Feed Msg -> Element Msg
 feedSelectorButton style iconHeight icons feed =
     case feedTypeIconUrl style feed.feedType icons of
-        ( "", _ ) ->
+        ( "", _, _ ) ->
             text ""
 
-        ( url, label ) ->
+        ( url, label, isCircular ) ->
             row
                 [ centerX ]
                 [ standardButtonWithDontHover style
@@ -2862,16 +2863,36 @@ feedSelectorButton style iconHeight icons feed =
                     label
                     (ScrollToFeed feed.feedType)
                   <|
-                    heightImageWithCount feed.newPosts url label iconHeight
+                    (if isCircular then
+                        circularHeightImageWithCount
+
+                     else
+                        heightImageWithCount
+                    )
+                        feed.newPosts
+                        url
+                        label
+                        iconHeight
                 ]
+
+
+circularHeightImageWithCount : Int -> String -> String -> Int -> Element msg
+circularHeightImageWithCount count src description h =
+    heightImageWithCountInternal count
+        (circularHeightImage src description h)
+        h
 
 
 heightImageWithCount : Int -> String -> String -> Int -> Element msg
 heightImageWithCount count src description h =
-    let
-        img =
-            heightImage src description h
+    heightImageWithCountInternal count
+        (heightImage src description h)
+        h
 
+
+heightImageWithCountInternal : Int -> Element msg -> Int -> Element msg
+heightImageWithCountInternal count img h =
+    let
         size =
             h // 2
     in
@@ -3480,7 +3501,7 @@ postUserRow style colwp here post =
                     [ titleAttribute user.name ]
                     (userUrl user)
                   <|
-                    heightImage user.picture_url username 40
+                    circularHeightImage user.picture_url username 40
                 ]
             ]
         , column []
@@ -3923,7 +3944,7 @@ notificationRow settings isToplevel gangedNotification =
                             style
                             [ titleAttribute user.name ]
                             (userUrl user)
-                            (heightImage user.picture_url "" height)
+                            (circularHeightImage user.picture_url "" height)
                 in
                 row
                     [ paddingEach { zeroes | bottom = 4 }

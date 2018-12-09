@@ -13,7 +13,8 @@
 
 
 module GabDecker.Elements exposing
-    ( colors
+    ( circularHeightImage
+    , colors
     , darkStyle
     , defaultStyles
     , getIconUrl
@@ -41,6 +42,8 @@ import Element
         )
 import Element.Font as Font
 import GabDecker.Types exposing (IconUrls, Style, Styles)
+import Html
+import Html.Attributes as Attributes
 
 
 simpleLink : Style -> String -> String -> Element msg
@@ -153,6 +156,28 @@ simpleImage src description ( w, h ) =
         { src = src
         , description = description
         }
+
+
+circularRadiusAttribute : Attribute msg
+circularRadiusAttribute =
+    Element.htmlAttribute <|
+        Attributes.style "border-radius" "50%"
+
+
+circularHeightImage : String -> String -> Int -> Element msg
+circularHeightImage src description h =
+    let
+        d =
+            description
+    in
+    Html.img
+        [ Attributes.height h
+        , Attributes.style "border-radius" "50%"
+        , Attributes.src src
+        , Attributes.alt description
+        ]
+        []
+        |> Element.html
 
 
 heightImage : String -> String -> Int -> Element msg
