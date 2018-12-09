@@ -598,6 +598,7 @@ feedTypeToFeed username backend feedType id =
                     PostFeedData []
         , no_more = False
         }
+    , newPosts = 0
     , error = Nothing
     , id = id
     }
@@ -1900,46 +1901,58 @@ canonicalizeFeed newFeed feed =
                 --Debug.log "Canonical" feed.feedType
                 1
         in
-        feed
+        if feed.newPosts == 0 then
+            feed
+
+        else
+            { feed | newPosts = 0 }
 
     else
         let
-            data =
+            ( data, newPosts ) =
                 case feedData of
                     PostFeedData feedList ->
                         case newData of
                             PostFeedData newList ->
-                                PostFeedData <|
-                                    let
-                                        ignore =
-                                            --logDifferences feedList newList
-                                            0
-                                    in
-                                    canonicalizeData .id
-                                        newList
-                                        feedList
+                                let
+                                    ( dat, cnt ) =
+                                        canonicalizeData .id
+                                            newList
+                                            feedList
+                                in
+                                ( PostFeedData dat, cnt )
 
                             _ ->
-                                newData
+                                ( newData, 0 )
 
                     NotificationFeedData feedList ->
                         case newData of
                             NotificationFeedData newList ->
-                                NotificationFeedData <|
-                                    canonicalizeData (.notification >> .id)
-                                        newList
-                                        feedList
+                                let
+                                    ( dat, cnt ) =
+                                        canonicalizeData (.notification >> .id)
+                                            newList
+                                            feedList
+                                in
+                                ( NotificationFeedData dat, cnt )
 
                             _ ->
-                                newData
+                                ( newData, 0 )
 
             feed_feed =
                 feed.feed
+
+            res =
+                { feed
+                    | feed =
+                        { feed_feed | data = data }
+                }
         in
-        { feed
-            | feed =
-                { feed_feed | data = data }
-        }
+        if newPosts == res.newPosts then
+            res
+
+        else
+            { res | newPosts = newPosts }
 
 
 logDifferences : List ActivityLog -> List ActivityLog -> ()
@@ -2002,7 +2015,7 @@ logDifferences feedList newList =
     ()
 
 
-canonicalizeData : (x -> String) -> List x -> List x -> List x
+canonicalizeData : (x -> String) -> List x -> List x -> ( List x, Int )
 canonicalizeData key new old =
     let
         dict =
@@ -2013,19 +2026,25 @@ canonicalizeData key new old =
                 Dict.empty
                 old
 
-        mapper dat =
-            case Dict.get (key dat) dict of
-                Just v ->
-                    if dat == v then
-                        v
+        loop : List x -> Int -> List x -> ( List x, Int )
+        loop rest count result =
+            case rest of
+                [] ->
+                    ( List.reverse result, count )
 
-                    else
-                        dat
+                head :: tail ->
+                    case Dict.get (key head) dict of
+                        Just v ->
+                            if head == v then
+                                loop tail count <| v :: result
 
-                Nothing ->
-                    dat
+                            else
+                                loop tail count <| head :: result
+
+                        Nothing ->
+                            loop tail (count + 1) <| head :: result
     in
-    List.map mapper new
+    loop new 0 []
 
 
 updateFeed : Bool -> FeedResult (LogList FeedData) -> Feed Msg -> Feed Msg
@@ -2797,6 +2816,15 @@ feedTypeIconUrl style feedType icons =
 
 feedSelectorButton : Style -> Int -> Icons -> Feed Msg -> Element Msg
 feedSelectorButton style iconHeight icons feed =
+    let
+        newPosts =
+            case feed.feedType of
+                NotificationsFeed ->
+                    0
+
+                _ ->
+                    feed.newPosts
+    in
     case feedTypeIconUrl style feed.feedType icons of
         ( "", _ ) ->
             text ""
@@ -2809,8 +2837,42 @@ feedSelectorButton style iconHeight icons feed =
                     label
                     (ScrollToFeed feed.feedType)
                   <|
-                    heightImage url label iconHeight
+                    heightImageWithCount newPosts url label iconHeight
                 ]
+
+
+heightImageWithCount : Int -> String -> String -> Int -> Element msg
+heightImageWithCount count src description h =
+    let
+        img =
+            heightImage src description h
+
+        size =
+            h // 2
+    in
+    el
+        [ Element.inFront <|
+            if count == 0 then
+                text ""
+
+            else
+                el
+                    [ width <| px size
+                    , height <| px size
+                    , Element.moveRight <| toFloat size
+                    , Element.moveDown <| toFloat size
+                    , Font.color colors.red
+                    , Background.color colors.white
+                    ]
+                    (el
+                        [ Font.size <| 8 * h // 16
+                        , centerX
+                        , centerY
+                        ]
+                        (text <| String.fromInt count)
+                    )
+        ]
+        img
 
 
 zeroes =

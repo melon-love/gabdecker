@@ -69,6 +69,7 @@ type alias Feed msg =
     { getter : FeedGetter msg
     , feedType : FeedType
     , feed : LogList FeedData
+    , newPosts : Int
     , error : Maybe ApiError
     , id : Int
     }
