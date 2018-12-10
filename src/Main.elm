@@ -218,6 +218,7 @@ type alias Model =
     , feeds : List (Feed Msg)
     , lastFeeds : Dict String (Feed Msg)
     , loadingFeeds : Set String
+    , loadingAll : Bool
     , lastClosedFeed : Maybe (Feed Msg)
     , scrollToFeed : Maybe FeedType
     }
@@ -506,6 +507,7 @@ init flags url key =
             , feeds = feeds
             , lastFeeds = Dict.empty
             , loadingFeeds = Set.empty
+            , loadingAll = False
             , lastClosedFeed = Nothing
             , scrollToFeed = Nothing
             }
@@ -1741,7 +1743,7 @@ loadAll model =
         ( mdl, cmds ) =
             List.foldr getone ( model, [] ) model.feeds
     in
-    mdl |> withCmds cmds
+    { mdl | loadingAll = True } |> withCmds cmds
 
 
 feedBefore : Feed Msg -> String
@@ -1830,11 +1832,37 @@ receiveFeed scrollToTop feedType result model =
 
         ( id, feeds ) =
             updateFeeds (not scrollToTop) feedType result mdl.feeds
+
+        loadingFeeds =
+            Set.remove (feedTypeToString feedType) model.loadingFeeds
+
+        isLoading =
+            not <| Set.isEmpty loadingFeeds
+
+        firstNewFeed =
+            if isLoading || not model.loadingAll then
+                Nothing
+
+            else
+                LE.find (\feed -> feed.newPosts > 0) feeds
     in
     { mdl
         | feeds = feeds
         , loadingFeeds =
-            Set.remove (feedTypeToString feedType) model.loadingFeeds
+            loadingFeeds
+        , loadingAll =
+            if isLoading then
+                model.loadingAll
+
+            else
+                False
+        , scrollToFeed =
+            case firstNewFeed of
+                Nothing ->
+                    model.scrollToFeed
+
+                Just feed ->
+                    Just feed.feedType
     }
         |> withCmds
             [ cmd
@@ -2277,7 +2305,11 @@ mainPage settings icons loadingFeeds feeds =
         ]
         [ column []
             [ row [ height <| px settings.windowHeight ]
-                [ controlColumn ccw settings icons feeds
+                [ controlColumn ccw
+                    (not <| Set.isEmpty loadingFeeds)
+                    settings
+                    icons
+                    feeds
                 ]
             ]
         , column []
@@ -2731,7 +2763,7 @@ okButton =
 
 controlColumnWidth : Float -> Int
 controlColumnWidth baseFontSize =
-    smallUserIconHeight baseFontSize + 2 * columnPadding
+    userIconHeight baseFontSize + 2 * columnPadding
 
 
 controlColumnId : String
@@ -2754,8 +2786,8 @@ feedsStringInputId =
     "feedsStringInput"
 
 
-controlColumn : Int -> Settings -> Icons -> List (Feed Msg) -> Element Msg
-controlColumn columnWidth settings icons feeds =
+controlColumn : Int -> Bool -> Settings -> Icons -> List (Feed Msg) -> Element Msg
+controlColumn columnWidth isLoading settings icons feeds =
     let
         style =
             settings.style
@@ -2789,9 +2821,16 @@ controlColumn columnWidth settings icons feeds =
         List.concat
             [ [ row
                     [ centerX
-                    , paddingEach { zeroes | bottom = iconHeight // 2 }
+                    , Background.color
+                        (if isLoading then
+                            colors.orange
+
+                         else
+                            style.headerBackground
+                        )
                     ]
-                    [ standardButton style
+                    [ standardButtonWithDontHover style
+                        isLoading
                         "Refresh All Feeds"
                         LoadAll
                         (widthImage (getIconUrl style .reload) "Refresh" iconHeight)
@@ -3176,17 +3215,19 @@ renderRowContents settings feed =
                             optimizers.keyedPostRow
                                 []
                             <|
-                                List.map
-                                    (\log ->
+                                List.map2
+                                    (\log idx ->
                                         ( log.id
                                         , optimizers.postRow
                                             settings
                                             feed
                                             True
                                             log
+                                            idx
                                         )
                                     )
                                     activityLogList
+                                    (List.range 1 <| List.length activityLogList)
 
                         NotificationFeedData gangedNotificationList ->
                             optimizers.keyedNotificationRow
@@ -3308,8 +3349,8 @@ nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
 
 
-postRow : Settings -> Feed Msg -> Bool -> ActivityLog -> Element Msg
-postRow settings feed isToplevel log =
+postRow : Settings -> Feed Msg -> Bool -> ActivityLog -> Int -> Element Msg
+postRow settings feed isToplevel log idx =
     let
         style =
             settings.style
@@ -3378,12 +3419,19 @@ postRow settings feed isToplevel log =
                 | left = colpad
                 , right = colpad
             }
-        , Border.widthEach <|
-            if isToplevel then
-                { zeroes | bottom = 2 }
+        , Border.widthEach
+            { zeroes
+                | bottom =
+                    if isToplevel then
+                        if idx == feed.newPosts then
+                            10
 
-            else
-                zeroes
+                        else
+                            2
+
+                    else
+                        0
+            }
         , Border.color style.border
         ]
         [ column []
@@ -3477,6 +3525,7 @@ postRow settings feed isToplevel log =
                                                     }
                                                 , type_ = "post"
                                             }
+                                            -1
                         ]
                     ]
                 ]
@@ -4459,7 +4508,7 @@ optimizers =
             keyedColumn
     , postRow =
         if optimizations.lazyPostRow then
-            Lazy.lazy4 postRow
+            Lazy.lazy5 postRow
 
         else
             postRow

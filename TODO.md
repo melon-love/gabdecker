@@ -3,12 +3,9 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Also mark the boundary between new and old posts with a thicker, black separator.
-  Put the new post count in a circular, not rectangular background:
-  probably with a Background.image of an SVG circle.
-  Put new post count at top of feed, in addition to left column.
-  After updating all feeds, scroll to the first one with new posts.
-* When you click the "refresh all" button, it should turn orange until all done.
+* HTML elements, "`&amp;`" -> "`&`".
+* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`,
+  `<u>foo</u>`.
 * Profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.
@@ -46,9 +43,6 @@ This is a place to collect things left to do for GabDecker.
   Or maybe this should be another choice on click.
 * Verified, pro, and donor identification for users.
 * Link user image to profile page.
-* HTML elements, "`&amp;`" -> "`&`".
-* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`,
-  `<u>foo</u>`.
 * Single `<br />` -> multiple `row`s.
 * A faster way than move-left-or-right clicks to move a column.
   Dragging in the control column would be great, but just typing a number
