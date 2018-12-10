@@ -3,10 +3,7 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* HTML elements, "`&amp;`" -> "`&`".
-* `<strong>foo</strong>`, `<blockquote>foo</blockquote>`, `<em>foo</em>`,
-  `<u>foo</u>`.
-* Profile at top of newly-added user feed.
+* Put user profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.
 * Bug in URL parsing. Sometimes gets cruft at the end.
