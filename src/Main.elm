@@ -3617,7 +3617,12 @@ userNameLink style user =
 
 notificationDescriptionLine : Style -> User -> String -> Maybe Post -> String -> Element Msg
 notificationDescriptionLine style user middle maybePost postName =
-    row []
+    row
+        [ Border.widthEach { zeroes | bottom = 1 }
+        , Border.color style.border
+        , paddingEach { zeroes | bottom = 5 }
+        , fillWidth
+        ]
         [ userNameLink style user
         , text middle
         , case maybePost of
@@ -3937,8 +3942,9 @@ notificationRow settings isToplevel gangedNotification =
         ]
         [ column []
             [ row
-                [ paddingEach { zeroes | top = 5, bottom = 5 }
+                [ paddingEach { zeroes | top = 5, bottom = 0 }
                 , Font.bold
+                , fillWidth
                 ]
                 [ notificationTypeToDescription style
                     notification.type_
@@ -4011,7 +4017,7 @@ notificationRow settings isToplevel gangedNotification =
                             (circularHeightImage user.picture_url "" height)
                 in
                 row
-                    [ paddingEach { zeroes | bottom = 4 }
+                    [ paddingEach { zeroes | top = 5, bottom = 4 }
                     , spacing 4
                     ]
                 <|
