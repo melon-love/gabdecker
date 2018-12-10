@@ -3959,28 +3959,16 @@ notificationRow settings isToplevel gangedNotification =
 
                     Just post ->
                         Element.textColumn
-                            [ paragraphSpacing baseFontSize
-                            , colwp
+                            [ --paragraphSpacing baseFontSize
+                              colwp
                             ]
                         <|
                             List.concat
-                                [ [ let
-                                        spacing =
-                                            negate (paragraphSpacingAmount baseFontSize)
-
-                                        css =
-                                            ".moveup { margin-bottom: "
-                                                ++ String.fromInt spacing
-                                                ++ "px !important;"
-                                    in
-                                    Element.html <| styleNode css
-                                  , row
+                                [ [ el
                                         [ paddingEach { zeroes | top = 4 }
-                                        , Element.htmlAttribute <|
-                                            Attributes.class "moveup"
                                         , Font.bold
                                         ]
-                                        [ postCreatedLink style post here ]
+                                        (postCreatedLink style post here)
                                   ]
                                 , notificationsBody settings post
                                 ]
@@ -4044,7 +4032,7 @@ notificationParentRow cw settings post =
         user =
             post.user
     in
-    row [ paddingEach { zeroes | bottom = 5 } ]
+    row [ paddingEach { zeroes | top = 5 } ]
         [ column
             [ colwp
             , paddingEach { zeroes | bottom = 5, left = 5 }
