@@ -13,7 +13,7 @@
 ----------------------------------------------------------------------
 
 
-module Main exposing (htmlBodyElements, main)
+module Main exposing (emify, htmlBodyElements, main)
 
 import Browser exposing (Document, UrlRequest(..))
 import Browser.Dom as Dom exposing (Viewport)
@@ -4332,13 +4332,16 @@ nodeToElements style baseFontSize theNode =
                     else
                         Parsers.parseElements style string
 
-                HP.Element element attributes nodes ->
+                HP.Element tag attributes nodes ->
                     let
                         mappedNodes =
                             List.map recurse nodes
                                 |> List.concat
                     in
-                    case element of
+                    case tag of
+                        "span" ->
+                            mappedNodes
+
                         "p" ->
                             [ paragraph
                                 [ --paragraphPadding
@@ -4348,8 +4351,7 @@ nodeToElements style baseFontSize theNode =
                             ]
 
                         "br" ->
-                            -- probably wrong
-                            [ row [] mappedNodes ]
+                            [ text "\n" ]
 
                         "blockquote" ->
                             -- Needs a background color
@@ -4361,23 +4363,87 @@ nodeToElements style baseFontSize theNode =
                                 mappedNodes
                             ]
 
-                        "strong" ->
-                            List.map (\n -> el [ Font.bold ] n) mappedNodes
-
-                        "em" ->
-                            List.map (\n -> el [ Font.italic ] n) mappedNodes
-
-                        "u" ->
-                            List.map (\n -> el [ Font.underline ] n) mappedNodes
-
                         _ ->
-                            -- Shouldn't happen
-                            mappedNodes
+                            if
+                                List.member tag emTags
+                                    || String.contains ":" tag
+                            then
+                                List.map (\n -> el (emTagToAttributes tag) n)
+                                    mappedNodes
+
+                            else
+                                -- Shouldn't happen
+                                mappedNodes
 
                 _ ->
                     []
     in
-    recurse theNode
+    recurse <| emify theNode
+
+
+emTagToAttributes : String -> List (Attribute msg)
+emTagToAttributes tag =
+    String.split ":" tag
+        |> List.map emTagToAttribute
+        |> List.concat
+
+
+emTagToAttribute : String -> List (Attribute msg)
+emTagToAttribute tag =
+    case tag of
+        "strong" ->
+            [ Font.bold ]
+
+        "em" ->
+            [ Font.italic ]
+
+        "u" ->
+            [ Font.underline ]
+
+        _ ->
+            []
+
+
+emTags : List String
+emTags =
+    [ "strong", "em", "u" ]
+
+
+emify : HP.Node -> HP.Node
+emify node =
+    case node of
+        HP.Element tag attributes nodes ->
+            if List.member tag emTags then
+                HP.Element "span" [] <| List.map (subEmify tag) nodes
+
+            else
+                HP.Element tag attributes <|
+                    List.map emify nodes
+
+        _ ->
+            node
+
+
+subEmify : String -> HP.Node -> HP.Node
+subEmify tag node =
+    case node of
+        HP.Text string ->
+            HP.Element tag [] [ node ]
+
+        HP.Element nodeTag attributes nodes ->
+            if List.member nodeTag emTags then
+                let
+                    subtag =
+                        tag ++ ":" ++ nodeTag
+                in
+                HP.Element "span" [] <|
+                    List.map (subEmify subtag) nodes
+
+            else
+                HP.Element tag [] [ node ]
+
+        _ ->
+            HP.Text ""
 
 
 oldHtmlBodyElements : Style -> Float -> String -> List (Element Msg)
