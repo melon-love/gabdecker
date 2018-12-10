@@ -13,7 +13,7 @@
 ----------------------------------------------------------------------
 
 
-module Main exposing (main)
+module Main exposing (htmlBodyElements, main)
 
 import Browser exposing (Document, UrlRequest(..))
 import Browser.Dom as Dom exposing (Viewport)
@@ -110,6 +110,7 @@ import GabDecker.Types as Types
 import Html exposing (Html)
 import Html.Attributes as Attributes exposing (class, href, rel)
 import Html.Events exposing (onClick)
+import Html.Parser as HP
 import Http exposing (Error(..))
 import Iso8601
 import Json.Decode as JD exposing (Decoder, Value)
@@ -3472,8 +3473,8 @@ postRow settings feed isToplevel log idx =
             , postUserRow style colwp settings.here post
             , row []
                 [ Element.textColumn
-                    [ paragraphSpacing baseFontSize
-                    , colwp
+                    [ --paragraphSpacing baseFontSize
+                      colwp
                     ]
                   <|
                     case post.body_html of
@@ -4255,11 +4256,6 @@ paragraphPadding =
     paddingEach <| { zeroes | top = 4, bottom = 4 }
 
 
-paragraphPaddingNoTop : Attribute msg
-paragraphPaddingNoTop =
-    paddingEach <| { zeroes | bottom = 4 }
-
-
 paragraphSpacingAmount : Float -> Int
 paragraphSpacingAmount baseFontSize =
     round (0.6 * baseFontSize)
@@ -4278,13 +4274,114 @@ paragraphLineSpacing baseFontSize =
 newlinesToPs : String -> String
 newlinesToPs string =
     String.split "\n\n" string
-        |> String.join "<p>"
-        |> String.split "\n"
-        |> String.join "<br />"
+        |> wrapPs
+
+
+wrapPs : List String -> String
+wrapPs strings =
+    newlinesToBrs <|
+        case strings of
+            [] ->
+                ""
+
+            _ ->
+                "<p>" ++ String.join "</p><p>" strings ++ "</p>"
+
+
+newlinesToBrs : String -> String
+newlinesToBrs string =
+    String.split "\n" string
+        |> String.join "<br/>"
 
 
 htmlBodyElements : Style -> Float -> String -> List (Element Msg)
 htmlBodyElements style baseFontSize html =
+    case HP.run <| fixBareHtml html of
+        Ok res ->
+            List.map (nodeToElements style baseFontSize) res
+                |> List.concat
+
+        Err _ ->
+            oldHtmlBodyElements style baseFontSize (Debug.log "oldHtmlBodyElements" html)
+
+
+{-| The Popular feed currently doesn't really ship Html in body\_html.
+-}
+fixBareHtml : String -> String
+fixBareHtml html =
+    if String.startsWith "<p>" html then
+        html
+
+    else
+        ("<p>" ++ html ++ "</p>")
+            |> String.split "\n"
+            |> String.join "</p>\n<p>"
+            |> Debug.log "fixBareHtml"
+
+
+nodeToElements : Style -> Float -> HP.Node -> List (Element msg)
+nodeToElements style baseFontSize theNode =
+    let
+        recurse node =
+            case node of
+                HP.Text string ->
+                    -- Shouldn't get these from the parser
+                    if string == "\n" then
+                        [ text "" ]
+
+                    else
+                        Parsers.parseElements style string
+
+                HP.Element element attributes nodes ->
+                    let
+                        mappedNodes =
+                            List.map recurse nodes
+                                |> List.concat
+                    in
+                    case element of
+                        "p" ->
+                            [ paragraph
+                                [ --paragraphPadding
+                                  paragraphLineSpacing baseFontSize
+                                ]
+                                mappedNodes
+                            ]
+
+                        "br" ->
+                            -- probably wrong
+                            [ row [] mappedNodes ]
+
+                        "blockquote" ->
+                            -- Needs a background color
+                            [ row
+                                [ paddingEach { zeroes | left = 10, right = 10 }
+                                , Border.width 2
+                                , Border.color colors.black
+                                ]
+                                mappedNodes
+                            ]
+
+                        "strong" ->
+                            List.map (\n -> el [ Font.bold ] n) mappedNodes
+
+                        "em" ->
+                            List.map (\n -> el [ Font.italic ] n) mappedNodes
+
+                        "u" ->
+                            List.map (\n -> el [ Font.underline ] n) mappedNodes
+
+                        _ ->
+                            -- Shouldn't happen
+                            mappedNodes
+
+                _ ->
+                    []
+    in
+    recurse theNode
+
+
+oldHtmlBodyElements : Style -> Float -> String -> List (Element Msg)
+oldHtmlBodyElements style baseFontSize html =
     let
         par : List (Element Msg) -> Element Msg
         par elements =
