@@ -3445,6 +3445,7 @@ postRow settings feed isToplevel log idx =
                 row
                     [ Border.widthEach { zeroes | bottom = 1 }
                     , Border.color style.border
+                    , Font.bold
                     , colwp
                     ]
                     [ row
@@ -3475,6 +3476,7 @@ postRow settings feed isToplevel log idx =
                 [ Element.textColumn
                     [ --paragraphSpacing baseFontSize
                       colwp
+                    , paddingEach { zeroes | top = 5 }
                     ]
                   <|
                     case post.body_html of
@@ -3496,7 +3498,7 @@ postRow settings feed isToplevel log idx =
                 ]
             , row []
                 [ column
-                    [ paddingEach { zeroes | bottom = 5 } ]
+                    [ paddingEach { zeroes | top = 5, bottom = 5 } ]
                     [ row
                         [ paddingEach { zeroes | left = 5 }
                         , Background.color style.quotedPostBackground
@@ -3965,7 +3967,11 @@ notificationRow settings isToplevel gangedNotification =
                         <|
                             List.concat
                                 [ [ el
-                                        [ paddingEach { zeroes | top = 4 }
+                                        [ paddingEach
+                                            { zeroes
+                                                | top = 5
+                                                , bottom = 2
+                                            }
                                         , Font.bold
                                         ]
                                         (postCreatedLink style post here)
