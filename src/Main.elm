@@ -3225,10 +3225,10 @@ renderRowContents settings feed =
                                         ( log.id
                                         , optimizers.postRow
                                             settings
-                                            feed
+                                            feed.feedType
                                             True
                                             log
-                                            idx
+                                            (idx == feed.newPosts)
                                         )
                                     )
                                     activityLogList
@@ -3238,16 +3238,20 @@ renderRowContents settings feed =
                             optimizers.keyedNotificationRow
                                 []
                             <|
-                                List.map
-                                    (\notification ->
+                                List.map2
+                                    (\notification idx ->
                                         ( notification.notification.id
                                         , optimizers.notificationRow
                                             settings
                                             True
                                             notification
+                                            (idx == feed.newPosts)
                                         )
                                     )
                                     gangedNotificationList
+                                    (List.range 1 <|
+                                        List.length gangedNotificationList
+                                    )
             in
             let
                 typeString =
@@ -3354,8 +3358,8 @@ nameBottomPadding =
     paddingEach { zeroes | bottom = 3 }
 
 
-postRow : Settings -> Feed Msg -> Bool -> ActivityLog -> Int -> Element Msg
-postRow settings feed isToplevel log idx =
+postRow : Settings -> FeedType -> Bool -> ActivityLog -> Bool -> Element Msg
+postRow settings feedType isToplevel log isLastNew =
     let
         style =
             settings.style
@@ -3428,7 +3432,7 @@ postRow settings feed isToplevel log idx =
             { zeroes
                 | bottom =
                     if isToplevel then
-                        if idx == feed.newPosts then
+                        if isLastNew then
                             10
 
                         else
@@ -3438,7 +3442,7 @@ postRow settings feed isToplevel log idx =
                         0
             }
         , Border.color <|
-            if isToplevel && idx == feed.newPosts then
+            if isToplevel && isLastNew then
                 colors.red
 
             else
@@ -3521,7 +3525,7 @@ postRow settings feed isToplevel log idx =
                                     Just parentPost ->
                                         postRow
                                             { settings | columnWidth = cwp - 10 }
-                                            feed
+                                            feedType
                                             False
                                             { log
                                                 | post =
@@ -3537,7 +3541,7 @@ postRow settings feed isToplevel log idx =
                                                     }
                                                 , type_ = "post"
                                             }
-                                            -1
+                                            False
                         ]
                     ]
                 ]
@@ -3545,7 +3549,7 @@ postRow settings feed isToplevel log idx =
                 text ""
 
               else
-                interactionRow style baseFontSize colwp feed.feedType post
+                interactionRow style baseFontSize colwp feedType post
             ]
         ]
 
@@ -3875,8 +3879,8 @@ gangNotifications data =
     loop data []
 
 
-notificationRow : Settings -> Bool -> GangedNotification -> Element Msg
-notificationRow settings isToplevel gangedNotification =
+notificationRow : Settings -> Bool -> GangedNotification -> Bool -> Element Msg
+notificationRow settings isToplevel gangedNotification isLastNew =
     let
         style =
             settings.style
@@ -3942,12 +3946,24 @@ notificationRow settings isToplevel gangedNotification =
                 , right = colpad
             }
         , Border.widthEach <|
-            if isToplevel then
-                { zeroes | bottom = 2 }
+            { zeroes
+                | bottom =
+                    if isToplevel then
+                        if isLastNew then
+                            10
+
+                        else
+                            2
+
+                    else
+                        0
+            }
+        , Border.color <|
+            if isToplevel && isLastNew then
+                colors.red
 
             else
-                zeroes
-        , Border.color style.border
+                style.border
         ]
         [ column []
             [ row
@@ -4702,7 +4718,7 @@ optimizers =
             keyedColumn
     , notificationRow =
         if optimizations.lazyPostRow then
-            Lazy.lazy3 notificationRow
+            Lazy.lazy4 notificationRow
 
         else
             notificationRow
