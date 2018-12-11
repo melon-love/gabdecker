@@ -3,6 +3,7 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
 * Put user profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.
@@ -27,7 +28,6 @@ This is a place to collect things left to do for GabDecker.
 * Font size and column width preferences.
   "Show comments in feeds" preference, or maybe per-feed.
 * Encode the preferences as a string, so you can paste them into another browser.
-* Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.
   post.parent was there, and I used it. Check if I really need
@@ -39,31 +39,22 @@ This is a place to collect things left to do for GabDecker.
 * Pop up small profile page on hover over name, just like Gab.com.
   Or maybe this should be another choice on click.
 * Verified, pro, and donor identification for users.
-* Link user image to profile page.
-* Single `<br />` -> multiple `row`s.
 * A faster way than move-left-or-right clicks to move a column.
   Dragging in the control column would be great, but just typing a number
   in a popup would be good enough.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Multiple named pages of feeds, selectable on the left column.
-* Escape to dismiss dialog.
-  Focus first input field in dialog.
-  Enter to execute selected input field in dialog
 * Colored versions of icons instead of rectangular background color highlight.
 * If a comment is reposted it should say:
   "foo reposted bar's comment"
-* If lots of people like a post, line-wrap the icon list in the notification entry.
 * When a post has multiple images, the pop-up viewer should have a way
   to navigate through them.
-* Reduce the size of the JSON for saved feeds.
-  ["notification", {"user: "billstclair"}, {"group": "groupid"}, ...]
 * Help, About
-* One ad per column, unless paid to eliminate them.
+* Premium features.
   Gotta make money off of this somehow.
   Save only Gab username and expiration date.
   Warn on the screen when expiration date approaches.
-* Dark mode
 * Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 
 ## Bugs
