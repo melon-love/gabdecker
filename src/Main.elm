@@ -3496,7 +3496,15 @@ postRow settings feedType isToplevel log isLastNew =
                                 newlinesToPs post.body
 
                         Just html ->
-                            htmlBodyElements style baseFontSize html
+                            let
+                                fixedHtml =
+                                    if feedType == PopularFeed then
+                                        fixBareHtml html
+
+                                    else
+                                        html
+                            in
+                            htmlBodyElements style baseFontSize fixedHtml
                 ]
             , row []
                 [ column [ colwp ] <|
@@ -4328,7 +4336,7 @@ newlinesToBrs string =
 
 htmlBodyElements : Style -> Float -> String -> List (Element Msg)
 htmlBodyElements style baseFontSize html =
-    case HP.run <| fixBareHtml html of
+    case HP.run html of
         Ok res ->
             List.map (nodeToElements style baseFontSize) res
                 |> List.concat
@@ -4348,7 +4356,6 @@ fixBareHtml html =
         ("<p>" ++ html ++ "</p>")
             |> String.split "\n"
             |> String.join "</p>\n<p>"
-            |> Debug.log "fixBareHtml"
 
 
 nodeToElements : Style -> Float -> HP.Node -> List (Element msg)

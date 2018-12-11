@@ -55,6 +55,9 @@ This is a place to collect things left to do for GabDecker.
 * Premium features.
   Gotta make money off of this somehow.
   Save only Gab username and expiration date.
+  1) groups & topics
+  2) multiple accounts
+  3) automatic loading
   Warn on the screen when expiration date approaches.
 * Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 
@@ -63,3 +66,9 @@ This is a place to collect things left to do for GabDecker.
 There is still no API for getting comments or group or topic feeds, and posting still gets an error 429 (too many requests).
 
 (un)Follow and (un)Mute do not work.
+
+## Wanted
+
+Group and Topic Feeds.
+Logout of authentication server (clear cookie), so can have multiple accounts.
+One call to find new feed count for each of a list of feeds.
