@@ -2626,7 +2626,8 @@ saveFeedsDialog model =
                     [ ( keycodes.escape, CloseDialog )
                     , ( keycodes.enter, RestoreFeedTypes )
                     ]
-                , Font.color lightStyle.text
+                , Background.color style.quotedPostBackground
+                , Font.color style.text
                 ]
                 { onChange = DialogInput
                 , text = model.dialogInput
@@ -2679,7 +2680,8 @@ addFeedDialog model =
                         [ ( keycodes.escape, CloseDialog )
                         , ( keycodes.enter, AddNewFeed feedType )
                         ]
-                    , Font.color lightStyle.text
+                    , Background.color style.quotedPostBackground
+                    , Font.color style.text
                     ]
                     { onChange = DialogInput
                     , text = model.dialogInput

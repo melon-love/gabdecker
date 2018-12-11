@@ -79,6 +79,10 @@ colors =
     , red = rgbi 0xFF 0 0
     , orange = rgbi 0xFF 0xA5 0
     , black = rgbi 0 0 0
+    , darkmodegray = rgbi 0x20 0x21 0x25
+    , darkmodeblack = rgbi 0x16 0x17 0x1B
+    , darkmodelightgray = rgbi 0x2B 0x2F 0x32
+    , darkmodetext = rgbi 0xDD 0xDD 0xDD
     }
 
 
@@ -111,16 +115,16 @@ darkStyle : Style
 darkStyle =
     { name = "Dark"
     , icondir = "dark"
-    , background = colors.darkgray
-    , dialogBackground = colors.black
-    , text = colors.white
+    , background = colors.darkmodeblack
+    , dialogBackground = colors.darkmodegray
+    , text = colors.darkmodetext
     , link = colors.lightgray
     , linkHover = colors.lightblue
-    , border = colors.black
-    , headerBackground = colors.black
-    , quotedPostBackground = colors.gray
-    , quotedPostBorder = colors.black
-    , postcountBackground = colors.black
+    , border = colors.darkmodegray
+    , headerBackground = colors.darkmodegray
+    , quotedPostBackground = colors.darkmodelightgray
+    , quotedPostBorder = colors.darkmodegray
+    , postcountBackground = colors.darkmodeblack
     , loadingFeed = colors.orange
     }
 
