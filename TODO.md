@@ -3,7 +3,6 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Handle `body.attachment` of `YoutubeAttachment` and `GiphyAttachment`.
 * Put user profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.
@@ -51,6 +50,7 @@ This is a place to collect things left to do for GabDecker.
 * When a post has multiple images, the pop-up viewer should have a way
   to navigate through them.
 * Persistent feed list should be different for each logged-in username.
+* Dark mode for login page.
 * Help, About
 * Premium features.
   Gotta make money off of this somehow.

@@ -62,6 +62,7 @@ import Gab.Types
         ( ActivityLog
         , ActivityLogList
         , Attachment(..)
+        , Embed
         , MediaRecord
         , Notification
         , NotificationType(..)
@@ -3512,6 +3513,17 @@ postRow settings feedType isToplevel log isLastNew =
                         MediaAttachment records ->
                             List.map (mediaRow style mediaw) records
 
+                        YoutubeAttachment id ->
+                            [ embedYouTube cwp id ]
+
+                        GiphyAttachment useless ->
+                            case giphyIdFromEmbed post.embed of
+                                Nothing ->
+                                    []
+
+                                Just id ->
+                                    [ embedGiphy cwp id ]
+
                         _ ->
                             [ text "" ]
                 ]
@@ -4237,6 +4249,151 @@ interactionRow style baseFontSize colwp feedType post =
             -1
             ""
             Noop
+        ]
+
+
+youTubeEmbedHeight : Int -> Int
+youTubeEmbedHeight width =
+    9 * width // 16
+
+
+youTubeEmbedPrefix : String
+youTubeEmbedPrefix =
+    "https://www.youtube.com/embed/"
+
+
+youTubeEmbedHtml : Int -> String -> Html msg
+youTubeEmbedHtml cwp id =
+    let
+        height =
+            youTubeEmbedHeight cwp
+    in
+    Html.iframe
+        [ Attributes.width cwp
+        , Attributes.height height
+        , Attributes.src <| youTubeEmbedPrefix ++ id
+        , frameborderAttr "1"
+        , allowAttr "accelerometer; encrypted-media; gyroscope; picture-in-picture"
+        , allowfullscreenAttr "1"
+        ]
+        []
+
+
+giphyEmbedHeight : Int -> Int
+giphyEmbedHeight width =
+    360 * width // 480
+
+
+giphyEmbedPrefix : String
+giphyEmbedPrefix =
+    "https://giphy.com/embed/"
+
+
+{-| How Gihpy spells it:
+
+    <iframe src="<https://giphy.com/embed/pUeXcg80cO8I8">
+            width="480"
+            height="360"
+            frameBorder="0"
+            class="giphy-embed"
+            allowFullScreen>
+    </iframe>
+
+-}
+giphyEmbedHtml : Int -> String -> Html msg
+giphyEmbedHtml cwp id =
+    let
+        height =
+            giphyEmbedHeight cwp
+    in
+    Html.iframe
+        [ Attributes.width cwp
+        , Attributes.height height
+        , Attributes.src <| giphyEmbedPrefix ++ id
+        , frameborderAttr "1"
+        , allowfullscreenAttr "1"
+        ]
+        []
+
+
+{-| The Gab API doesn't give us the Giphy ID directly.
+
+It's encoded in Post.embed's html as:
+
+    "<a \n  href=\"https://media3.giphy.com/media/guufsF0Az3Lpu/giphy.gif?cid=e1bb72ff5c0f82c0505147713611b129\" \n  target=\"_blank\" class=\"post__embed__body post__embed__body--photo \n  post__embed__body--gif\"><div class=\"post__embed__body__image\" \n  style=\"background-image: \n  url('https://ipr.gab.ai/d6d4dfcc1b5faa6426608fc1c85b464ec4d4488b/68747470733a2f2f6d65646961332e67697068792e636f6d2f6d656469612f67757566734630417a334c70752f67697068792e6769663f6369643d6531626237326666356330663832633035303531343737313336313162313239/')\"></div></a>"
+
+-}
+giphyIdFromEmbed : Maybe Embed -> Maybe String
+giphyIdFromEmbed maybeEmbed =
+    case maybeEmbed of
+        Nothing ->
+            Nothing
+
+        Just embed ->
+            case HP.run embed.html of
+                Err _ ->
+                    Nothing
+
+                Ok elements ->
+                    case elements of
+                        (HP.Element "a" attrs _) :: _ ->
+                            case attrs of
+                                ( "href", url ) :: _ ->
+                                    let
+                                        id =
+                                            SE.rightOf "media/" url
+                                                |> SE.leftOf "/"
+                                    in
+                                    if id == "" then
+                                        Nothing
+
+                                    else
+                                        Just id
+
+                                _ ->
+                                    Nothing
+
+                        _ ->
+                            Nothing
+
+
+frameborderAttr =
+    Attributes.attribute "frameborder"
+
+
+allowAttr =
+    Attributes.attribute "allow"
+
+
+allowfullscreenAttr =
+    Attributes.attribute "allowfullscreen"
+
+
+embedYouTube : Int -> String -> Element msg
+embedYouTube cwp id =
+    row
+        [ paddingEach
+            { zeroes
+                | top = 5
+                , bottom = 5
+            }
+        ]
+        [ youTubeEmbedHtml cwp id
+            |> Element.html
+        ]
+
+
+embedGiphy : Int -> String -> Element msg
+embedGiphy cwp id =
+    row
+        [ paddingEach
+            { zeroes
+                | top = 5
+                , bottom = 5
+            }
+        ]
+        [ giphyEmbedHtml cwp id
+            |> Element.html
         ]
 
 
