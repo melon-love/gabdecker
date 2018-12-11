@@ -3435,7 +3435,12 @@ postRow settings feed isToplevel log idx =
                     else
                         0
             }
-        , Border.color style.border
+        , Border.color <|
+            if isToplevel && idx == feed.newPosts then
+                colors.red
+
+            else
+                style.border
         ]
         [ column []
             [ if repostString == "" then
@@ -4010,7 +4015,7 @@ notificationRow settings isToplevel gangedNotification =
                             (userUrl user)
                             (circularHeightImage user.picture_url "" height)
                 in
-                row
+                paragraph
                     [ paddingEach { zeroes | top = 5, bottom = 4 }
                     , spacing 4
                     ]
