@@ -4017,14 +4017,23 @@ notificationRow settings isToplevel gangedNotification =
                             (userUrl user)
                             (circularHeightImage user.picture_url "" height)
                 in
-                paragraph
-                    [ paddingEach { zeroes | top = 5, bottom = 4 }
-                    , spacing 4
+                Element.textColumn [ colwp ]
+                    [ paragraph
+                        [ paddingEach { zeroes | top = 5, bottom = 4 }
+                        , spacing 4
+                        ]
+                      <|
+                        (List.map userImage allUsers
+                            |> List.take maxNotificationUserCount
+                        )
                     ]
-                <|
-                    List.map userImage allUsers
             ]
         ]
+
+
+maxNotificationUserCount : Int
+maxNotificationUserCount =
+    50
 
 
 notificationParentRow : Int -> Settings -> Post -> Element Msg
