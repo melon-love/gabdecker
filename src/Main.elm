@@ -2224,24 +2224,10 @@ view model =
         [ Element.layoutWith
             { options = [ focusStyle ] }
             [ Element.inFront <|
-                case model.showDialog of
-                    AddFeedDialog ->
-                        addFeedDialog model
-
-                    ImageDialog url ->
-                        imageDialog url model
-
-                    SaveFeedsDialog ->
-                        saveFeedsDialog model
-
-                    SettingsDialog ->
-                        settingsDialog model
-
-                    OperationErrorDialog err ->
-                        operationErrorDialog style err model
-
-                    _ ->
-                        text ""
+                optimizers.keyedShowDialog [ centerX, centerY ]
+                    ( "dialog"
+                    , optimizers.lazyShowDialog model
+                    )
             , Background.color <| style.background
             , Font.color <| style.text
             ]
@@ -2258,6 +2244,28 @@ view model =
             )
         ]
     }
+
+
+showDialog : Model -> Element Msg
+showDialog model =
+    case model.showDialog of
+        AddFeedDialog ->
+            addFeedDialog model
+
+        ImageDialog url ->
+            imageDialog url model
+
+        SaveFeedsDialog ->
+            saveFeedsDialog model
+
+        SettingsDialog ->
+            settingsDialog model
+
+        OperationErrorDialog err ->
+            operationErrorDialog err model
+
+        _ ->
+            text ""
 
 
 defaultFontSize : Float
@@ -2412,9 +2420,12 @@ dialogAttributes style =
     ]
 
 
-operationErrorDialog : Style -> String -> Model -> Element Msg
-operationErrorDialog style err model =
+operationErrorDialog : String -> Model -> Element Msg
+operationErrorDialog err model =
     let
+        style =
+            model.settings.style
+
         baseFontSize =
             model.settings.fontSize
 
@@ -3267,6 +3278,13 @@ renderRowContents settings feed =
             , moreRow style colw feed
             ]
         ]
+
+
+{-| Same signature as Keyed.el, to allow quick switch between keyed and unkeyed.
+-}
+keyedEl : List (Attribute msg) -> ( String, Element msg ) -> Element msg
+keyedEl attributes pair =
+    el attributes <| Tuple.second pair
 
 
 {-| Same signature as Keyed.column, to allow quick switch between keyed and unkeyed.
@@ -4886,6 +4904,18 @@ optimizers =
 
         else
             notificationRow
+    , keyedShowDialog =
+        if optimizations.keyedShowDialog then
+            Keyed.el
+
+        else
+            keyedEl
+    , lazyShowDialog =
+        if optimizations.lazyShowDialog then
+            Lazy.lazy showDialog
+
+        else
+            showDialog
     }
 
 
@@ -4915,4 +4945,6 @@ optimizations =
     , lazyFeedColumn = False
     , keyedPostRow = True
     , lazyPostRow = False
+    , keyedShowDialog = True
+    , lazyShowDialog = True
     }

@@ -6,6 +6,7 @@ This is a place to collect things left to do for GabDecker.
 * Put user profile at top of newly-added user feed.
   Ability to toggle it off and back on.
   Choice is persistent.
+* Multiple named pages of feeds, selectable on the left column.
 * Bug in URL parsing. Sometimes gets cruft at the end.
   E.g. https://gab.com/billstclair/posts/42716809
   Looked at this in `elm repl`. Couldn't reproduce. Try again.
@@ -26,6 +27,9 @@ This is a place to collect things left to do for GabDecker.
   or performing an action, all five actions displayed in a feed.
 * Font size and column width preferences.
   "Show comments in feeds" preference, or maybe per-feed.
+  "Disable YouTube & Giphy embeds" (they track you).
+  Or use the convenient Gab link to a non-tracking option.
+  And the embed.html for YouTube image.
 * Encode the preferences as a string, so you can paste them into another browser.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.
@@ -43,13 +47,32 @@ This is a place to collect things left to do for GabDecker.
   in a popup would be good enough.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
-* Multiple named pages of feeds, selectable on the left column.
 * Colored versions of icons instead of rectangular background color highlight.
 * If a comment is reposted it should say:
   "foo reposted bar's comment"
 * When a post has multiple images, the pop-up viewer should have a way
   to navigate through them.
+* Display polls:
+  Vote on them once I get that API.
+  Need to add them to a `Post`:
+  ```
+    "poll": {
+      "option_1_title": "Yes",
+      "option_1_votes": 276,
+      "option_2_title": "No",
+      "option_2_votes": 4,
+      "option_3_title": null,
+      "option_3_votes": 0,
+      "option_4_title": null,
+      "option_4_votes": 0,
+      "option_5_title": null,
+      "option_5_votes": 0,
+      "voted_option": 1,
+      "total_votes": 280
+     }
+   ```
 * Persistent feed list should be different for each logged-in username.
+* Restore the "Last Closed" feed to its former position, not the end.
 * Dark mode for login page.
 * Help, About
 * Premium features.
@@ -63,12 +86,13 @@ This is a place to collect things left to do for GabDecker.
 
 ## Bugs
 
-There is still no API for getting comments or group or topic feeds, and posting still gets an error 429 (too many requests).
+* There is still no API for getting comments or group or topic feeds, and posting still gets an error 429 (too many requests).
 
-(un)Follow and (un)Mute do not work.
+* (un)Follow and (un)Mute do not work.
 
 ## Wanted
 
-Group and Topic Feeds.
-Logout of authentication server (clear cookie), so can have multiple accounts.
-One call to find new feed count for each of a list of feeds.
+* Group and Topic Feeds.
+* Logout of authentication server (clear cookie), so can have multiple accounts.
+* One call to find new feed count for each of a list of feeds.
+* Ability to vote on polls.
