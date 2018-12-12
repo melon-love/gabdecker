@@ -1,18 +1,66 @@
 module GabDecker.EncodeDecode exposing
-    ( decodeFeedType
-    , decodeFeedTypes
+    ( decodeFeedProperties
+    , decodeFeedType
+    , decodeFeedsProperties
     , decodeIcons
+    , encodeFeedProperties
     , encodeFeedType
-    , encodeFeedTypes
+    , encodeFeedsProperties
     , encodeIcons
+    , feedPropertiesDecoder
     , feedTypeDecoder
-    , feedTypesDecoder
+    , feedsPropertiesDecoder
     )
 
 import Dict exposing (Dict)
-import GabDecker.Types exposing (FeedType(..), Icons)
+import GabDecker.Types exposing (FeedProperties, FeedType(..), Icons)
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
+
+
+encodeFeedProperties : FeedProperties -> Value
+encodeFeedProperties properties =
+    if not properties.showProfile then
+        encodeFeedType properties.feedType
+
+    else
+        JE.object
+            [ ( "feedType", encodeFeedType properties.feedType )
+            , ( "showProfile", JE.bool True )
+            ]
+
+
+encodeFeedsProperties : List FeedProperties -> Value
+encodeFeedsProperties properties =
+    JE.list encodeFeedProperties properties
+
+
+feedPropertiesDecoder : Decoder FeedProperties
+feedPropertiesDecoder =
+    JD.oneOf
+        [ JD.map (\feedType -> FeedProperties feedType False)
+            feedTypeDecoder
+        , JD.map2 FeedProperties
+            (JD.field "feedType" feedTypeDecoder)
+            (JD.field "showProfile" JD.bool)
+        ]
+
+
+decodeFeedProperties : Value -> Result String FeedProperties
+decodeFeedProperties value =
+    JD.decodeValue feedPropertiesDecoder value
+        |> fixDecodeResult
+
+
+feedsPropertiesDecoder : Decoder (List FeedProperties)
+feedsPropertiesDecoder =
+    JD.list feedPropertiesDecoder
+
+
+decodeFeedsProperties : Value -> Result String (List FeedProperties)
+decodeFeedsProperties value =
+    JD.decodeValue feedsPropertiesDecoder value
+        |> fixDecodeResult
 
 
 encodeFeedType : FeedType -> Value
@@ -38,11 +86,6 @@ encodeFeedType feedType =
 
         _ ->
             JE.string "Unsaveable feed type"
-
-
-encodeFeedTypes : List FeedType -> Value
-encodeFeedTypes feedTypes =
-    JE.list encodeFeedType feedTypes
 
 
 oldFeedTypeDecoder : Decoder FeedType
@@ -123,11 +166,6 @@ feedTypeDecoder =
         ]
 
 
-feedTypesDecoder : Decoder (List FeedType)
-feedTypesDecoder =
-    JD.list feedTypeDecoder
-
-
 fixDecodeResult : Result JD.Error a -> Result String a
 fixDecodeResult result =
     case result of
@@ -141,12 +179,6 @@ fixDecodeResult result =
 decodeFeedType : Value -> Result String FeedType
 decodeFeedType value =
     JD.decodeValue feedTypeDecoder value
-        |> fixDecodeResult
-
-
-decodeFeedTypes : Value -> Result String (List FeedType)
-decodeFeedTypes value =
-    JD.decodeValue feedTypesDecoder value
         |> fixDecodeResult
 
 

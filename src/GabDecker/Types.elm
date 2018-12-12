@@ -3,6 +3,7 @@ module GabDecker.Types exposing
     , Feed
     , FeedData(..)
     , FeedGetter(..)
+    , FeedProperties
     , FeedResult
     , FeedTagger
     , FeedType(..)
@@ -69,9 +70,16 @@ type alias Feed msg =
     { getter : FeedGetter msg
     , feedType : FeedType
     , feed : LogList FeedData
+    , showProfile : Bool
     , newPosts : Int
     , error : Maybe ApiError
     , id : Int
+    }
+
+
+type alias FeedProperties =
+    { feedType : FeedType
+    , showProfile : Bool
     }
 
 
