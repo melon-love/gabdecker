@@ -13,7 +13,7 @@
 ----------------------------------------------------------------------
 
 
-module Main exposing (emify, htmlBodyElements, main)
+module Main exposing (main, newlinesToPs)
 
 import Browser exposing (Document, UrlRequest(..))
 import Browser.Dom as Dom exposing (Viewport)
@@ -2277,7 +2277,7 @@ showDialog model =
             operationErrorDialog err model
 
         _ ->
-            text ""
+            Element.none
 
 
 defaultFontSize : Float
@@ -2584,7 +2584,7 @@ dialogErrorRow : Model -> Element msg
 dialogErrorRow model =
     case model.dialogError of
         Nothing ->
-            text ""
+            Element.none
 
         Just err ->
             row
@@ -2617,7 +2617,7 @@ settingsDialog model =
                 ]
                 { onChange = SetStyle
                 , selected = Just model.styleOption
-                , label = Input.labelLeft [] (text "")
+                , label = Input.labelLeft [] Element.none
                 , options =
                     [ Input.option LightStyle (text "Light")
                     , Input.option DarkStyle (text "Dark")
@@ -2742,24 +2742,24 @@ addFeedDialog model =
                 [ spacing 10, centerX ]
                 { data = data
                 , columns =
-                    [ { header = text ""
+                    [ { header = Element.none
                       , width = Element.shrink
                       , view =
                             \x ->
                                 el [ Font.bold, Element.centerY ]
                                     (text x.label)
                       }
-                    , { header = text ""
+                    , { header = Element.none
                       , width = Element.shrink
                       , view = \x -> x.element
                       }
-                    , { header = text ""
+                    , { header = Element.none
                       , width = Element.shrink
                       , view =
                             \x ->
                                 case x.feedType of
                                     Nothing ->
-                                        text ""
+                                        Element.none
 
                                     Just ft ->
                                         addButton ft
@@ -2921,7 +2921,7 @@ feedSelectorButton : Style -> Int -> Icons -> Feed Msg -> Element Msg
 feedSelectorButton style iconHeight icons feed =
     case feedTypeIconUrl style feed.feedType icons of
         ( "", _, _ ) ->
-            text ""
+            Element.none
 
         ( url, label, isCircular ) ->
             row
@@ -2972,7 +2972,7 @@ heightImageWithCountInternal count img h =
     el
         [ Element.inFront <|
             if count == 0 then
-                text ""
+                Element.none
 
             else
                 el
@@ -3285,7 +3285,7 @@ renderRowContents settings feed =
                 undoneRow style typeString
 
               else
-                text ""
+                Element.none
             , rows
             , moreRow style colw feed
             ]
@@ -3337,7 +3337,7 @@ undoneRow style typeString =
 moreRow : Style -> Attribute Msg -> Feed Msg -> Element Msg
 moreRow style colw feed =
     if feed.feed.no_more then
-        text ""
+        Element.none
 
     else if
         case feed.feed.data of
@@ -3347,7 +3347,7 @@ moreRow style colw feed =
             NotificationFeedData gangedNotificationList ->
                 gangedNotificationList == []
     then
-        text ""
+        Element.none
 
     else
         row
@@ -3481,7 +3481,7 @@ postRow settings feedType isToplevel log isLastNew =
         ]
         [ column []
             [ if repostString == "" then
-                text ""
+                Element.none
 
               else
                 row
@@ -3516,8 +3516,8 @@ postRow settings feedType isToplevel log isLastNew =
             , postUserRow style colwp settings.here post
             , row []
                 [ Element.textColumn
-                    [ --paragraphSpacing baseFontSize
-                      colwp
+                    [ paragraphSpacing baseFontSize
+                    , colwp
                     , paddingEach { zeroes | top = 5 }
                     ]
                   <|
@@ -3555,7 +3555,7 @@ postRow settings feedType isToplevel log isLastNew =
                                     [ embedGiphy cwp id ]
 
                         _ ->
-                            [ text "" ]
+                            [ Element.none ]
                 ]
             , row []
                 [ column
@@ -3570,7 +3570,7 @@ postRow settings feedType isToplevel log isLastNew =
                             RelatedPosts { parent } ->
                                 case parent of
                                     Nothing ->
-                                        text ""
+                                        Element.none
 
                                     Just parentPost ->
                                         postRow
@@ -3596,7 +3596,7 @@ postRow settings feedType isToplevel log isLastNew =
                     ]
                 ]
             , if not isToplevel then
-                text ""
+                Element.none
 
               else
                 interactionRow style baseFontSize colwp feedType post
@@ -3657,7 +3657,7 @@ postUserRow style colwp here post =
                                 [ newTabLink style url <| "Topic: " ++ title ]
 
                         _ ->
-                            text ""
+                            Element.none
             , let
                 url =
                     "https://gab.com/"
@@ -4030,12 +4030,12 @@ notificationRow settings isToplevel gangedNotification isLastNew =
             , row []
                 [ case maybePost of
                     Nothing ->
-                        text ""
+                        Element.none
 
                     Just post ->
                         Element.textColumn
-                            [ --paragraphSpacing baseFontSize
-                              colwp
+                            [ paragraphSpacing baseFontSize
+                            , colwp
                             ]
                         <|
                             List.concat
@@ -4054,7 +4054,7 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                 ]
             , case maybePost of
                 Nothing ->
-                    text ""
+                    Element.none
 
                 Just post ->
                     case maybeParent of
@@ -4064,9 +4064,9 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                                 pp
 
                         Nothing ->
-                            text ""
+                            Element.none
             , if not isToplevel then
-                text ""
+                Element.none
 
               else
                 let
@@ -4209,13 +4209,13 @@ interactionRow style baseFontSize colwp feedType post =
                         image
                     , text " "
                     , if label == "" then
-                        text ""
+                        Element.none
 
                       else
                         text label
                     , text " "
                     , if count < 0 then
-                        text ""
+                        Element.none
 
                       else
                         let
@@ -4506,13 +4506,13 @@ newlinesToPs string =
 
 wrapPs : List String -> String
 wrapPs strings =
-    newlinesToBrs <|
-        case strings of
-            [] ->
-                ""
+    --newlinesToBrs <|
+    case strings of
+        [] ->
+            ""
 
-            _ ->
-                "<p>" ++ String.join "</p><p>" strings ++ "</p>"
+        _ ->
+            "<p>" ++ String.join "</p>\n<p>" strings ++ "</p>"
 
 
 newlinesToBrs : String -> String
@@ -4553,7 +4553,7 @@ nodeToElements style baseFontSize theNode =
                 HP.Text string ->
                     -- Shouldn't get these from the parser
                     if string == "\n" then
-                        [ text "" ]
+                        [ Element.none ]
 
                     else
                         Parsers.parseElements style string
