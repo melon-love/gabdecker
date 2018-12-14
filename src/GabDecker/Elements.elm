@@ -83,6 +83,7 @@ colors =
     , darkmodeblack = rgbi 0x16 0x17 0x1B
     , darkmodelightgray = rgbi 0x2B 0x2F 0x32
     , darkmodetext = rgbi 0xDD 0xDD 0xDD
+    , gabGreen = rgbi 0 0xD1 0x77
     }
 
 
@@ -118,7 +119,7 @@ darkStyle =
     , background = colors.darkmodeblack
     , dialogBackground = colors.darkmodegray
     , text = colors.darkmodetext
-    , link = colors.lightgray
+    , link = colors.gabGreen
     , linkHover = colors.lightblue
     , border = colors.darkmodegray
     , headerBackground = colors.darkmodegray
