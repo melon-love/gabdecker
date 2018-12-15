@@ -3,9 +3,11 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Put user profile at top of newly-added user feed.
-  Ability to toggle it off and back on.
-  Choice is persistent.
+* User profile dialog.
+  Request full profile from API.
+  Handle case where we get no full profile, and also have no partial profile
+    (@username without any other reference to username in feeds).
+  Fill out the body in `userDialog`.
 * Multiple named pages of feeds, selectable on the left column.
 * Bug in URL parsing. Sometimes gets cruft at the end.
   E.g. https://gab.com/billstclair/posts/42716809

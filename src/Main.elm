@@ -635,8 +635,8 @@ feedPropertiesToFeed username backend { feedType, showProfile } id =
     }
 
 
-userButton : Style -> (User -> Element Msg) -> String -> User -> Element Msg
-userButton style renderer title user =
+genericUserButton : Style -> (user -> Element Msg) -> String -> String -> user -> Element Msg
+genericUserButton style renderer title username user =
     standardButton style
         (if title == "" then
             "Show user profile"
@@ -644,8 +644,13 @@ userButton style renderer title user =
          else
             title
         )
-        (ShowUserDialog user.username)
+        (ShowUserDialog username)
         (renderer user)
+
+
+userButton : Style -> (User -> Element Msg) -> String -> User -> Element Msg
+userButton style renderer title user =
+    genericUserButton style renderer title user.username user
 
 
 userNameButton : Style -> String -> User -> Element Msg
@@ -4658,7 +4663,12 @@ fixBareHtml html =
             |> String.join "</p>\n<p>"
 
 
-nodeToElements : Style -> Float -> HP.Node -> List (Element msg)
+atUserRenderer : Style -> String -> String -> Element Msg
+atUserRenderer style username linkText =
+    genericUserButton style text "" username linkText
+
+
+nodeToElements : Style -> Float -> HP.Node -> List (Element Msg)
 nodeToElements style baseFontSize theNode =
     let
         recurse node =
@@ -4669,7 +4679,7 @@ nodeToElements style baseFontSize theNode =
                         [ Element.none ]
 
                     else
-                        Parsers.parseElements style string
+                        Parsers.parseElements style atUserRenderer string
 
                 HP.Element tag attributes nodes ->
                     let
@@ -4799,7 +4809,7 @@ oldHtmlBodyElements style baseFontSize html =
     in
     -- may want to convert single <br/ > to row instead of paragraph.
     splitIntoParagraphs html
-        |> List.map (Parsers.parseElements style)
+        |> List.map (Parsers.parseElements style atUserRenderer)
         |> List.map par
 
 

@@ -55,9 +55,9 @@ type alias OneParser a =
 The others are exported for testing in `elm repl`.
 
 -}
-parseElements : Style -> String -> List (Element msg)
-parseElements style string =
-    fullyParse text (allOneParsers style) string
+parseElements : Style -> (Style -> String -> String -> Element msg) -> String -> List (Element msg)
+parseElements style renderer string =
+    fullyParse text (allOneParsers style renderer) string
 
 
 fullyParse : (String -> a) -> List (OneParser a) -> String -> List a
@@ -168,8 +168,8 @@ parseOneHelp parser _ =
         ]
 
 
-atUserParser : Style -> Parser (Element msg)
-atUserParser style =
+atUserParser : Style -> (Style -> String -> String -> Element msg) -> Parser (Element msg)
+atUserParser style renderer =
     P.variable
         { start = (==) '@'
         , inner = \c -> c == '_' || Char.isAlphaNum c
@@ -178,15 +178,13 @@ atUserParser style =
         |> P.andThen
             (\s ->
                 P.succeed <|
-                    newTabLink style
-                        ("https://gab.com/" ++ String.dropLeft 1 s)
-                        s
+                    renderer style (String.dropLeft 1 s) s
             )
 
 
-atUserOneParser : Style -> OneParser (Element msg)
-atUserOneParser style =
-    parseOne (atUserParser style)
+atUserOneParser : Style -> (Style -> String -> String -> Element msg) -> OneParser (Element msg)
+atUserOneParser style renderer =
+    parseOne (atUserParser style renderer)
 
 
 sharpParser : Style -> Parser (Element msg)
@@ -238,9 +236,9 @@ ctrlR =
     Char.fromCode 0x0D
 
 
-allOneParsers : Style -> List (OneParser (Element msg))
-allOneParsers style =
-    [ htmlOneParser style, atUserOneParser style, sharpOneParser style ]
+allOneParsers : Style -> (Style -> String -> String -> Element msg) -> List (OneParser (Element msg))
+allOneParsers style renderer =
+    [ htmlOneParser style, atUserOneParser style renderer, sharpOneParser style ]
 
 
 nonWhitespace : Parser ()
