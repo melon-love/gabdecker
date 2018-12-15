@@ -11,6 +11,7 @@ module GabDecker.Types exposing
     , IconUrls
     , Icons
     , LogList
+    , Profile(..)
     , Style
     , Styles
     , emptyIcons
@@ -22,8 +23,10 @@ import Gab.Types
     exposing
         ( ActivityLog
         , ActivityLogList
+        , Group
         , Notification
         , NotificationsLog
+        , Topic
         , User
         , UserList
         )
@@ -104,6 +107,13 @@ type alias Icons =
 emptyIcons : Icons
 emptyIcons =
     Icons Dict.empty Dict.empty Dict.empty
+
+
+type Profile
+    = NoProfile
+    | UserProfile User
+    | GroupProfile Group
+    | TopicProfile Topic
 
 
 type alias Style =

@@ -214,6 +214,7 @@ type alias Model =
     , username : String
     , dialogInput : String
     , icons : Icons
+    , users : Dict String User
 
     -- This is only used at startup. It's not accurate after that.
     , feedsProperties : List FeedProperties
@@ -315,8 +316,23 @@ storeStyle option model =
         model
 
 
-updateUserIconUrl : String -> String -> Model -> ( Model, Bool )
-updateUserIconUrl username url model =
+updateUser : User -> Model -> ( Model, Bool )
+updateUser user model =
+    let
+        username =
+            user.username
+
+        url =
+            user.picture_url
+
+        users =
+            model.users
+
+        mdl =
+            { model
+                | users = Dict.insert username user users
+            }
+    in
     case
         LE.find
             (\feedType ->
@@ -331,15 +347,15 @@ updateUserIconUrl username url model =
                     _ ->
                         False
             )
-            (List.map .feedType model.feeds)
+            (List.map .feedType mdl.feeds)
     of
         Nothing ->
-            ( model, False )
+            ( mdl, False )
 
         Just _ ->
             let
                 icons =
-                    model.icons
+                    mdl.icons
 
                 updateUserIcons () =
                     let
@@ -349,7 +365,7 @@ updateUserIconUrl username url model =
                                     Dict.insert username url icons.user
                             }
                     in
-                    ( { model
+                    ( { mdl
                         | icons = newIcons
                       }
                     , True
@@ -358,7 +374,7 @@ updateUserIconUrl username url model =
             case Dict.get username icons.user of
                 Just u ->
                     if u == url then
-                        ( model, False )
+                        ( mdl, False )
 
                     else
                         updateUserIcons ()
@@ -510,6 +526,7 @@ init flags url key =
             , username = "xossbow"
             , dialogInput = ""
             , icons = Types.emptyIcons
+            , users = Dict.empty
             , feedsProperties = initialFeedsProperties
             , nextId = List.length feeds
             , feeds = feeds
@@ -1800,32 +1817,51 @@ loadMore appendResult feed =
 
 updateIcons : LogList FeedData -> Model -> ( Model, Cmd Msg )
 updateIcons logList model =
-    case logList.data of
-        PostFeedData logLists ->
-            let
-                folder log ( mdl, bool ) =
+    let
+        ( model2, needsUpdate ) =
+            case logList.data of
+                PostFeedData logLists ->
                     let
-                        ( m, b ) =
-                            updateUserIconUrl log.actuser.username
-                                log.actuser.picture_url
-                                mdl
+                        foldPosts log ( mdl, bool ) =
+                            let
+                                ( m, b ) =
+                                    updateUser log.actuser mdl
+
+                                ( m2, b2 ) =
+                                    case log.post.related of
+                                        RelatedPosts { parent } ->
+                                            case parent of
+                                                Nothing ->
+                                                    ( m, False )
+
+                                                Just p ->
+                                                    updateUser p.user m
+                            in
+                            ( m2, bool || b || b2 )
                     in
-                    ( m, bool || b )
+                    List.foldl foldPosts ( model, False ) logLists
 
-                ( model2, needsUpdate ) =
-                    List.foldl folder ( model, False ) logLists
-            in
-            model2
-                |> withCmd
-                    (if needsUpdate then
-                        storeIcons model2.icons model
+                NotificationFeedData notifications ->
+                    let
+                        foldNotifications notification ( mdl, bool ) =
+                            let
+                                ( m, b ) =
+                                    updateUser
+                                        notification.notification.actuser
+                                        mdl
+                            in
+                            ( m, bool || b )
+                    in
+                    List.foldl foldNotifications ( model, False ) notifications
+    in
+    model2
+        |> withCmd
+            (if needsUpdate then
+                storeIcons model2.icons model
 
-                     else
-                        Cmd.none
-                    )
-
-        _ ->
-            model |> withNoCmd
+             else
+                Cmd.none
+            )
 
 
 receiveFeed : Bool -> FeedType -> FeedResult (LogList FeedData) -> Model -> ( Model, Cmd Msg )
@@ -4529,7 +4565,7 @@ htmlBodyElements style baseFontSize html =
                 |> List.concat
 
         Err _ ->
-            oldHtmlBodyElements style baseFontSize (Debug.log "oldHtmlBodyElements" html)
+            oldHtmlBodyElements style baseFontSize html
 
 
 {-| The Popular feed currently doesn't really ship Html in body\_html.

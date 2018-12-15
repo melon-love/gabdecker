@@ -29,7 +29,7 @@ This is a place to collect things left to do for GabDecker.
   "Show comments in feeds" preference, or maybe per-feed.
   "Disable YouTube & Giphy embeds" (they track you).
   Or use the convenient Gab link to a non-tracking option.
-  And the embed.html for YouTube image.
+  And the Post.Embed.html for YouTube image.
 * Encode the preferences as a string, so you can paste them into another browser.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.
@@ -84,15 +84,18 @@ This is a place to collect things left to do for GabDecker.
   Warn on the screen when expiration date approaches.
 * Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 
-## Bugs
+## Gab API Bugs
 
-* There is still no API for getting comments or group or topic feeds, and posting still gets an error 429 (too many requests).
-
+* Posting still gets an error 429 (too many requests).
 * (un)Follow and (un)Mute do not work.
+* The Popular Users feed (GET https://api.gab.com/v1.0/popular/users)
+  always returns nothing.
 
-## Wanted
+## Gap API Features Wanted
 
+* Fetch the comments for a post.
 * Group and Topic Feeds.
+* Comments in user feeds.
 * Logout of authentication server (clear cookie), so can have multiple accounts.
 * One call to find new feed count for each of a list of feeds.
 * Ability to vote on polls.
