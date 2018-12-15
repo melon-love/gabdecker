@@ -160,6 +160,7 @@ type DialogType
     = NoDialog
     | AddFeedDialog
     | ImageDialog String
+    | UserDialog User
     | SaveFeedsDialog
     | SettingsDialog
     | OperationErrorDialog String
@@ -253,6 +254,7 @@ type Msg
     | MoveFeedLeft FeedType
     | MoveFeedRight FeedType
     | ShowImageDialog String
+    | ShowUserDialog String
     | ScrollToFeed FeedType
     | ScrollToNewFeed FeedType
     | ScrollToViewport String (Result Dom.Error Dom.Element)
@@ -633,6 +635,32 @@ feedPropertiesToFeed username backend { feedType, showProfile } id =
     }
 
 
+userButton : Style -> (User -> Element Msg) -> String -> User -> Element Msg
+userButton style renderer title user =
+    standardButton style
+        (if title == "" then
+            "Show user profile"
+
+         else
+            title
+        )
+        (ShowUserDialog user.username)
+        (renderer user)
+
+
+userNameButton : Style -> String -> User -> Element Msg
+userNameButton style title user =
+    userButton style (\u -> text u.name) title user
+
+
+userIconButton : Style -> Int -> String -> User -> Element Msg
+userIconButton style height title user =
+    userButton style
+        (\u -> circularHeightImage u.picture_url "" height)
+        title
+        user
+
+
 userUrl : User -> String
 userUrl user =
     "https://gab.com/" ++ user.username
@@ -665,15 +693,19 @@ feedTypeDescription style newPosts feedType baseFontSize icons =
                     iconHeight
                 ]
 
-        UserFeed user ->
-            feedRow ("https://gab.com/" ++ user)
-                [ text user
-                , text " "
-                , circularHeightImageWithCount newPosts
-                    (lookupUserIconUrl style user icons)
-                    "frob"
-                    (adjustUserIconHeight iconHeight)
-                ]
+        UserFeed username ->
+            standardButton style
+                "Show user profile"
+                (ShowUserDialog username)
+            <|
+                row []
+                    [ text username
+                    , text " "
+                    , circularHeightImageWithCount newPosts
+                        (lookupUserIconUrl style username icons)
+                        ("User: " ++ username)
+                        (adjustUserIconHeight iconHeight)
+                    ]
 
         -- Need to look up group name
         GroupFeed groupid ->
@@ -1084,6 +1116,19 @@ update msg model =
 
         ShowImageDialog url ->
             { model | showDialog = ImageDialog url } |> withNoCmd
+
+        ShowUserDialog username ->
+            { model
+                | showDialog =
+                    case Dict.get username model.users of
+                        Just user ->
+                            UserDialog user
+
+                        Nothing ->
+                            OperationErrorDialog
+                                "This is not the user you're looking for"
+            }
+                |> withNoCmd
 
         MoveFeedRight feedType ->
             moveFeedRight feedType model
@@ -1818,6 +1863,23 @@ loadMore appendResult feed =
 updateIcons : LogList FeedData -> Model -> ( Model, Cmd Msg )
 updateIcons logList model =
     let
+        doPost post m =
+            let
+                ( m2, b2 ) =
+                    updateUser post.user m
+
+                ( m3, b3 ) =
+                    case post.related of
+                        RelatedPosts { parent } ->
+                            case parent of
+                                Nothing ->
+                                    ( m, False )
+
+                                Just p ->
+                                    updateUser p.user m2
+            in
+            ( m3, b2 || b3 )
+
         ( model2, needsUpdate ) =
             case logList.data of
                 PostFeedData logLists ->
@@ -1828,14 +1890,7 @@ updateIcons logList model =
                                     updateUser log.actuser mdl
 
                                 ( m2, b2 ) =
-                                    case log.post.related of
-                                        RelatedPosts { parent } ->
-                                            case parent of
-                                                Nothing ->
-                                                    ( m, False )
-
-                                                Just p ->
-                                                    updateUser p.user m
+                                    doPost log.post m
                             in
                             ( m2, bool || b || b2 )
                     in
@@ -1849,8 +1904,16 @@ updateIcons logList model =
                                     updateUser
                                         notification.notification.actuser
                                         mdl
+
+                                ( m2, b2 ) =
+                                    case notification.notification.post of
+                                        Nothing ->
+                                            ( m, b )
+
+                                        Just p ->
+                                            doPost p m
                             in
-                            ( m, bool || b )
+                            ( m2, bool || b || b2 )
                     in
                     List.foldl foldNotifications ( model, False ) notifications
     in
@@ -2303,6 +2366,9 @@ showDialog model =
         ImageDialog url ->
             imageDialog url model
 
+        UserDialog username ->
+            userDialog username model
+
         SaveFeedsDialog ->
             saveFeedsDialog model
 
@@ -2507,6 +2573,27 @@ styleAttribute name value =
         |> Element.htmlAttribute
 
 
+userDialog : User -> Model -> Element Msg
+userDialog user model =
+    let
+        style =
+            model.settings.style
+
+        baseFontSize =
+            model.settings.fontSize
+
+        iconHeight =
+            userIconHeight (2 * baseFontSize)
+    in
+    column (dialogAttributes style)
+        [ dialogTitleBar style baseFontSize <| user.name
+        , row []
+            [ el [ paddingEach { zeroes | right = 5 } ]
+                (newTabLink style (userUrl user) "Open profile at Gab.com")
+            ]
+        ]
+
+
 {-| Should probably put a transparent layer over the main view,
 so clicks intended to close the dialog don't hit mouse-sensitive regions there.
 
@@ -2603,14 +2690,17 @@ dialogTitleBar style baseFontSize title =
         closeIcon =
             heightImage (getIconUrl style .close) "Close" iconHeight
     in
-    row [ width Element.fill ]
+    row
+        [ width Element.fill
+        , paddingEach { zeroes | bottom = 10 }
+        ]
         [ row
             [ centerX
             , centerY
             , Font.bold
             , fontSize baseFontSize 1.5
             ]
-            [ text title ]
+            [ text <| title ++ " " ]
         , el [ alignRight ]
             (standardButton style "Close Dialog" CloseDialog closeIcon)
         ]
@@ -2643,9 +2733,9 @@ settingsDialog model =
             userIconHeight (2 * baseFontSize)
     in
     column (dialogAttributes style)
-        [ dialogTitleBar style baseFontSize "Settings "
+        [ dialogTitleBar style baseFontSize "Settings"
         , dialogErrorRow model
-        , row [ paddingEach { zeroes | top = 10 } ]
+        , row []
             [ el [ paddingEach { zeroes | right = 5 } ]
                 (text "Style: ")
             , Input.radioRow
@@ -2676,9 +2766,9 @@ saveFeedsDialog model =
             userIconHeight (2 * baseFontSize)
     in
     column (dialogAttributes style)
-        [ dialogTitleBar style baseFontSize "Save/Restore Feeds "
+        [ dialogTitleBar style baseFontSize "Save/Restore Feeds"
         , dialogErrorRow model
-        , row [ paddingEach { zeroes | top = 10 } ]
+        , row []
             [ Input.text
                 [ width <| px 400
                 , idAttribute feedsStringInputId
@@ -3471,9 +3561,6 @@ postRow settings feedType isToplevel log isLastNew =
         actuser =
             log.actuser
 
-        actusername =
-            actuser.username
-
         ( repostString, iconUrl ) =
             if log.type_ == "repost" then
                 if post.is_quote then
@@ -3544,9 +3631,10 @@ postRow settings feedType isToplevel log isLastNew =
 
                           else
                             heightImage iconUrl "refresh" 10
-                        , newTabLink style
-                            ("https://gab.com/" ++ actusername)
-                            (" " ++ actuser.name ++ " " ++ repostString)
+                        , userButton style
+                            (\u -> text <| " " ++ u.name ++ " " ++ repostString)
+                            ""
+                            actuser
                         ]
                     ]
             , postUserRow style colwp settings.here post
@@ -3659,25 +3747,21 @@ postUserRow style colwp here post =
                 { zeroes | right = 5 }
             ]
             [ row []
-                [ styledLink True
-                    style
-                    [ titleAttribute user.name ]
-                    (userUrl user)
-                  <|
-                    circularHeightImage user.picture_url username 40
-                ]
+                [ userIconButton style 40 "" user ]
             ]
         , column []
             [ row [ nameBottomPadding ]
-                [ newTabLink style (userUrl user) <|
-                    embiggen user.name
+                [ userButton style
+                    (\u -> text <| embiggen u.name)
+                    ""
+                    user
                 , text <| " (" ++ username ++ ")"
                 ]
             , case post.group of
                 Just { id, title } ->
                     let
                         url =
-                            "http://gab.com/groups/" ++ id
+                            "https://gab.com/groups/" ++ id
                     in
                     row [ nameBottomPadding ]
                         [ newTabLink style url <| "Group: " ++ title ]
@@ -3687,7 +3771,7 @@ postUserRow style colwp here post =
                         Just { id, title } ->
                             let
                                 url =
-                                    "http://gab.com/topic/" ++ id
+                                    "https://gab.com/topic/" ++ id
                             in
                             row [ nameBottomPadding ]
                                 [ newTabLink style url <| "Topic: " ++ title ]
@@ -3709,9 +3793,9 @@ postUserRow style colwp here post =
         ]
 
 
-userNameLink : Style -> User -> Element el
+userNameLink : Style -> User -> Element Msg
 userNameLink style user =
-    newTabLink style (userUrl user) user.name
+    userNameButton style "" user
 
 
 notificationDescriptionLine : Style -> User -> String -> Maybe Post -> String -> Element Msg
@@ -4011,9 +4095,6 @@ notificationRow settings isToplevel gangedNotification isLastNew =
         actuser =
             notification.actuser
 
-        actusername =
-            actuser.username
-
         maybeParent =
             case maybePost of
                 Just post ->
@@ -4113,11 +4194,7 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                         30
 
                     userImage user =
-                        styledLink True
-                            style
-                            [ titleAttribute user.name ]
-                            (userUrl user)
-                            (circularHeightImage user.picture_url "" height)
+                        userIconButton style height user.name user
                 in
                 Element.textColumn [ colwp ]
                     [ paragraph
