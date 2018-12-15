@@ -15,6 +15,9 @@ module GabDecker.Types exposing
     , Style
     , Styles
     , emptyIcons
+    , emptyUser
+    , isEmptyUser
+    , isUserProfile
     )
 
 import Dict exposing (Dict)
@@ -107,6 +110,73 @@ type alias Icons =
 emptyIcons : Icons
 emptyIcons =
     Icons Dict.empty Dict.empty Dict.empty
+
+
+isEmptyUser : User -> Bool
+isEmptyUser user =
+    user.id == 0
+
+
+isUserProfile : User -> Bool
+isUserProfile user =
+    -- Need to verify this for a private account
+    user.post_count /= Nothing
+
+
+emptyUser : String -> User
+emptyUser username =
+    { id = 0
+    , name = "@" ++ username
+    , username = username
+    , picture_url = ""
+    , verified = False
+    , is_pro = False
+    , is_donor = False
+    , is_investor = False
+    , is_premium = False
+    , is_private = False
+    , is_tippable = False
+    , is_accessible = False
+    , created_at_month_label = Nothing
+    , follower_count = Nothing
+    , following_count = Nothing
+    , post_count = Nothing
+    , picture_url_full = Nothing
+    , following = False
+    , followed = False
+    , premium_price = Nothing
+    , follow_pending = False
+    , unread_notification_count = Nothing
+    , stream = False
+    , bio = Nothing
+    , cover_url = Nothing
+    , show_replies = False
+    , sound_alerts = False
+    , email = Nothing
+    , notify_followers = False
+    , notify_mentions = False
+    , notify_likes = False
+    , notify_reposts = False
+    , broadcast_channel = Nothing
+    , exclusive_features = False
+    , social_facebook = False
+    , social_twitter = False
+    , is_pro_overdue = False
+    , pro_expires_at = Nothing
+    , has_chat = False
+    , has_chat_unread = False
+    , germany_law = False
+    , language = Nothing
+    , pinned_post_id = Nothing
+    , nsfw_filter = False
+    , hide_premium_content = False
+    , score = Nothing
+    , video_count = Nothing
+    , is_favorited = False
+    , subscribing = False
+    , is_muted = False
+    , can_downvote = False
+    }
 
 
 type Profile

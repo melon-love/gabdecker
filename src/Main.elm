@@ -160,7 +160,7 @@ type DialogType
     = NoDialog
     | AddFeedDialog
     | ImageDialog String
-    | UserDialog User
+    | UserDialog User Bool
     | SaveFeedsDialog
     | SettingsDialog
     | OperationErrorDialog String
@@ -273,6 +273,7 @@ type Msg
     | ReceiveOperation Operation (FeedResult Success)
     | ReceivePostFeed Bool FeedType (FeedResult ActivityLogList)
     | ReceiveNotificationsFeed Bool FeedType (FeedResult NotificationsLog)
+    | ReceiveUser (FeedResult User)
 
 
 type Operation
@@ -1127,13 +1128,20 @@ update msg model =
                 | showDialog =
                     case Dict.get username model.users of
                         Just user ->
-                            UserDialog user
+                            UserDialog user True
 
                         Nothing ->
-                            OperationErrorDialog
-                                "This is not the user you're looking for"
+                            UserDialog (Types.emptyUser username) True
+                , dialogError = Just "Loading..."
             }
-                |> withNoCmd
+                |> withCmd
+                    (case model.backend of
+                        Nothing ->
+                            Cmd.none
+
+                        Just be ->
+                            Api.userProfile be ReceiveUser username
+                    )
 
         MoveFeedRight feedType ->
             moveFeedRight feedType model
@@ -1340,6 +1348,9 @@ update msg model =
                 feedType
                 (boxNotificationsLogResult result)
                 model
+
+        ReceiveUser result ->
+            receiveUser result model
 
 
 scrollToFeed : FeedType -> Model -> ( Model, Cmd Msg )
@@ -1932,6 +1943,33 @@ updateIcons logList model =
             )
 
 
+receiveUser : FeedResult User -> Model -> ( Model, Cmd Msg )
+receiveUser result model =
+    case result of
+        Err _ ->
+            ( case model.showDialog of
+                UserDialog _ _ ->
+                    { model | dialogError = Just "Error getting user profile." }
+
+                _ ->
+                    model
+            , Cmd.none
+            )
+
+        Ok user ->
+            ( case model.showDialog of
+                UserDialog _ _ ->
+                    { model
+                        | showDialog = UserDialog user False
+                        , dialogError = Nothing
+                    }
+
+                _ ->
+                    model
+            , Cmd.none
+            )
+
+
 receiveFeed : Bool -> FeedType -> FeedResult (LogList FeedData) -> Model -> ( Model, Cmd Msg )
 receiveFeed scrollToTop feedType result model =
     let
@@ -2371,8 +2409,8 @@ showDialog model =
         ImageDialog url ->
             imageDialog url model
 
-        UserDialog username ->
-            userDialog username model
+        UserDialog username isLoading ->
+            userDialog username isLoading model
 
         SaveFeedsDialog ->
             saveFeedsDialog model
@@ -2578,8 +2616,8 @@ styleAttribute name value =
         |> Element.htmlAttribute
 
 
-userDialog : User -> Model -> Element Msg
-userDialog user model =
+userDialog : User -> Bool -> Model -> Element Msg
+userDialog user isLoading model =
     let
         style =
             model.settings.style
@@ -2592,6 +2630,7 @@ userDialog user model =
     in
     column (dialogAttributes style)
         [ dialogTitleBar style baseFontSize <| user.name
+        , dialogErrorRow model
         , row []
             [ el [ paddingEach { zeroes | right = 5 } ]
                 (newTabLink style (userUrl user) "Open profile at Gab.com")
@@ -2719,7 +2758,7 @@ dialogErrorRow model =
 
         Just err ->
             row
-                [ paddingEach { zeroes | top = 10 }
+                [ paddingEach { zeroes | bottom = 10 }
                 , Font.color colors.red
                 ]
                 [ text err ]
