@@ -226,4 +226,5 @@ type alias IconUrls =
     , save : String
     , settings : String
     , user : String
+    , checkmark : String
     }

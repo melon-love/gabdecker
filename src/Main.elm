@@ -80,6 +80,7 @@ import GabDecker.Authorization as Auth
 import GabDecker.Elements
     exposing
         ( circularHeightImage
+        , circularHeightImageWithAttributes
         , colors
         , darkStyle
         , defaultStyles
@@ -526,7 +527,7 @@ init flags url key =
             , scopes = scopes
             , receivedScopes = scopes
             , tokenAuthorization = authorization
-            , username = "xossbow"
+            , username = ""
             , dialogInput = ""
             , icons = Types.emptyIcons
             , users = Dict.empty
@@ -2569,11 +2570,19 @@ addFeedChoices model =
 
 dialogAttributes : Style -> List (Attribute msg)
 dialogAttributes style =
+    List.concat
+        [ dialogAttributesNoPadding style
+        , [ paddingEach { top = 10, bottom = 20, left = 20, right = 20 } ]
+        ]
+
+
+dialogAttributesNoPadding : Style -> List (Attribute msg)
+dialogAttributesNoPadding style =
     [ Border.width 5
+    , spacing 10
     , centerX
     , centerY
     , Background.color style.dialogBackground
-    , paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
     ]
 
 
@@ -2616,6 +2625,177 @@ styleAttribute name value =
         |> Element.htmlAttribute
 
 
+verifiedBadge : Style -> User -> List (Attribute msg)
+verifiedBadge style user =
+    if not user.verified then
+        []
+
+    else
+        [ Element.inFront <|
+            el
+                [ paddingEach { zeroes | top = 80, left = 80 }
+                ]
+                (circularHeightImageWithAttributes
+                    [ Attributes.style "background-color" "#607CF5"
+                    , Attributes.style "border" "1px solid black"
+                    ]
+                    (getIconUrl style .checkmark)
+                    "Verified"
+                    20
+                )
+        ]
+
+
+userIconAndInfoOverlay : Style -> User -> Element msg
+userIconAndInfoOverlay style user =
+    row [ paddingEach { zeroes | left = 50 } ]
+        [ column [ paddingEach { zeroes | top = 315 - 80 } ]
+            [ el (verifiedBadge style user) <|
+                circularHeightImageWithAttributes
+                    [ Attributes.style
+                        "border"
+                        "4px solid #fbfbfb"
+                    ]
+                    user.picture_url
+                    "picture"
+                    100
+            ]
+        , column
+            [ paddingEach
+                { zeroes
+                    | left = 15
+                    , top = 315 - 105
+                }
+            , spacing 5
+            , Font.color colors.white
+            ]
+          <|
+            userProfileDescriptionRows user
+        ]
+
+
+userProfileDescriptionRows : User -> List (Element msg)
+userProfileDescriptionRows user =
+    let
+        userRow =
+            [ row []
+                [ text user.name
+                , text " · @"
+                , text user.username
+                ]
+            ]
+
+        prostrs =
+            [ if user.is_pro then
+                "PRO"
+
+              else
+                ""
+            , if user.is_premium then
+                "*PREMIUM"
+
+              else
+                ""
+            , if user.is_private then
+                "PRIVATE"
+
+              else
+                ""
+            , if user.is_donor then
+                "DONOR"
+
+              else
+                ""
+            , if user.is_investor then
+                "INVESTOR"
+
+              else
+                ""
+            ]
+
+        proline =
+            List.filter (\x -> x /= "") prostrs
+                |> String.join " "
+
+        prorow =
+            if proline == "" then
+                []
+
+            else
+                [ row []
+                    [ text "PRO *PREMIUM" ]
+                ]
+
+        followStr =
+            if user.following then
+                if user.followed then
+                    "You follow each other"
+
+                else
+                    "Follows you"
+
+            else if user.followed then
+                "You Follow"
+
+            else
+                ""
+
+        followsRow =
+            if followStr == "" then
+                []
+
+            else
+                [ row []
+                    [ text followStr ]
+                ]
+
+        rows =
+            List.concat [ userRow, prorow, followsRow ]
+
+        rowcnt =
+            List.length rows
+    in
+    List.concat
+        [ List.repeat (3 - rowcnt) <| row [] [ text " " ]
+        , rows
+        ]
+
+
+formatInt : Int -> String
+formatInt int =
+    let
+        commify substr res =
+            if substr == "" then
+                String.join "," res
+
+            else
+                let
+                    len =
+                        String.length substr
+                in
+                if len <= 3 then
+                    commify "" <| substr :: res
+
+                else
+                    commify (String.dropRight 3 substr)
+                        (String.right 3 substr :: res)
+    in
+    commify (String.fromInt int) []
+
+
+userCountColumn : Attribute msg -> String -> Maybe Int -> Element msg
+userCountColumn smallFont label value =
+    case value of
+        Nothing ->
+            Element.none
+
+        Just val ->
+            column []
+                [ row [ centerX ] [ text <| formatInt val ]
+                , row [ centerX, smallFont ] [ text label ]
+                ]
+
+
 userDialog : User -> Bool -> Model -> Element Msg
 userDialog user isLoading model =
     let
@@ -2628,14 +2808,104 @@ userDialog user isLoading model =
         iconHeight =
             userIconHeight (2 * baseFontSize)
     in
-    column (dialogAttributes style)
-        [ dialogTitleBar style baseFontSize <| user.name
-        , dialogErrorRow model
-        , row []
-            [ el [ paddingEach { zeroes | right = 5 } ]
-                (newTabLink style (userUrl user) "Open profile at Gab.com")
+    if isLoading then
+        column (dialogAttributes style) <|
+            [ dialogTitleBar style baseFontSize <| user.name
+            , dialogErrorRow model
             ]
-        ]
+
+    else
+        column
+            (dialogAttributesNoPadding style)
+            [ case user.cover_url of
+                Nothing ->
+                    Element.none
+
+                Just url ->
+                    row
+                        [ centerX
+                        , Element.inFront
+                            (standardButtonWithDontHover style
+                                True
+                                ""
+                                CloseDialog
+                             <|
+                                userIconAndInfoOverlay style user
+                            )
+                        ]
+                        [ standardButton style "" CloseDialog <|
+                            image
+                                [ width <| px 850
+                                , height <| px 315
+                                ]
+                                { src = url
+                                , description = "Cover image."
+                                }
+                        ]
+            , row
+                [ paddingEach
+                    { zeroes
+                        | left = 10
+                        , right = 10
+                        , bottom = 10
+                    }
+                , centerX
+                ]
+                [ column [ spacing 5 ]
+                    [ let
+                        smallFont =
+                            fontSize baseFontSize 0.9
+                      in
+                      row
+                        [ paddingEach { zeroes | left = 100 }
+                        , spacing 20
+                        ]
+                        [ userCountColumn smallFont "Score" user.score
+                        , userCountColumn smallFont "Posts" user.post_count
+                        , userCountColumn smallFont "Followers" user.follower_count
+                        , userCountColumn smallFont "Following" user.following_count
+                        ]
+                    , row
+                        [ centerX
+                        , paddingEach { zeroes | top = 5 }
+                        ]
+                        [ newTabLink style
+                            (userUrl user)
+                            "Open profile at Gab.com"
+                        ]
+                    , let
+                        feed =
+                            UserFeed user.username
+                      in
+                      case findFeed feed model of
+                        Just _ ->
+                            Element.none
+
+                        Nothing ->
+                            row [ centerX ]
+                                [ textButton style
+                                    ""
+                                    (AddNewFeed feed)
+                                    "Add feed for user"
+                                ]
+                    , case user.bio of
+                        Nothing ->
+                            Element.none
+
+                        Just bio ->
+                            row [ paddingEach { zeroes | top = 5 } ]
+                                [ column
+                                    [ width <| px 700
+                                    , paragraphSpacing baseFontSize
+                                    ]
+                                    (htmlBodyElements style baseFontSize <|
+                                        Debug.log "bio" <|
+                                            newlinesToPs bio
+                                    )
+                                ]
+                    ]
+                ]
+            ]
 
 
 {-| Should probably put a transparent layer over the main view,
@@ -4655,9 +4925,21 @@ paragraphLineSpacing baseFontSize =
     spacing <| round (0.25 * baseFontSize)
 
 
+psep : String
+psep =
+    "</p></p>"
+
+
+crlf : String
+crlf =
+    codestr 0x0D ++ "\n"
+
+
 newlinesToPs : String -> String
 newlinesToPs string =
     String.split "\n\n" string
+        |> String.join psep
+        |> String.split (crlf ++ crlf)
         |> wrapPs
 
 
@@ -4669,12 +4951,14 @@ wrapPs strings =
             ""
 
         _ ->
-            "<p>" ++ String.join "</p>\n<p>" strings ++ "</p>"
+            "<p>" ++ String.join "</p><p>" strings ++ "</p>"
 
 
 newlinesToBrs : String -> String
 newlinesToBrs string =
-    String.split "\n" string
+    String.split crlf string
+        |> String.join "<br/>"
+        |> String.split "\n"
         |> String.join "<br/>"
 
 

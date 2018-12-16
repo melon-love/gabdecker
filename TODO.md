@@ -32,6 +32,13 @@ This is a place to collect things left to do for GabDecker.
   "Disable YouTube & Giphy embeds" (they track you).
   Or use the convenient Gab link to a non-tracking option.
   And the Post.Embed.html for YouTube image.
+  YouTube may be replaceable with https://invidio.us/
+  <iframe id='ivplayer'
+          type='text/html'
+          width='640' height='360'
+          src='https://invidio.us/embed/_eLddzLagsg?'
+          frameborder='0'>
+  </iframe>
 * Encode the preferences as a string, so you can paste them into another browser.
 * if `post.is_reply`, display `post.parent` & `post.conversation_parent`
   Those fields need to be added to `Gab.Types.Post`.

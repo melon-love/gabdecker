@@ -14,6 +14,7 @@
 
 module GabDecker.Elements exposing
     ( circularHeightImage
+    , circularHeightImageWithAttributes
     , colors
     , darkStyle
     , defaultStyles
@@ -84,6 +85,7 @@ colors =
     , darkmodelightgray = rgbi 0x2B 0x2F 0x32
     , darkmodetext = rgbi 0xDD 0xDD 0xDD
     , gabGreen = rgbi 0 0xD1 0x77
+    , verifiedBlue = rgbi 0x60 0x7C 0xF5
     }
 
 
@@ -170,17 +172,26 @@ circularRadiusAttribute =
 
 
 circularHeightImage : String -> String -> Int -> Element msg
-circularHeightImage src description h =
+circularHeightImage =
+    circularHeightImageWithAttributes []
+
+
+circularHeightImageWithAttributes : List (Html.Attribute msg) -> String -> String -> Int -> Element msg
+circularHeightImageWithAttributes attributes src description h =
     let
         d =
             description
     in
     Html.img
-        [ Attributes.height h
-        , Attributes.style "border-radius" "50%"
-        , Attributes.src src
-        , Attributes.alt description
-        ]
+        (List.concat
+            [ [ Attributes.height h
+              , Attributes.style "border-radius" "50%"
+              , Attributes.src src
+              , Attributes.alt description
+              ]
+            , attributes
+            ]
+        )
         []
         |> Element.html
 
@@ -223,6 +234,7 @@ iconUrls =
     , save = "folder.svg"
     , settings = "settings.svg"
     , user = "avatar.svg"
+    , checkmark = "checkmark.svg"
     }
 
 
