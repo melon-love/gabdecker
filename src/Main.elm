@@ -2627,15 +2627,15 @@ styleAttribute name value =
         |> Element.htmlAttribute
 
 
-verifiedBadge : Style -> User -> List (Attribute msg)
-verifiedBadge style user =
+verifiedBadge : Style -> Int -> Int -> User -> List (Attribute msg)
+verifiedBadge style offset size user =
     if not user.verified then
         []
 
     else
         [ Element.inFront <|
             el
-                [ paddingEach { zeroes | top = 80, left = 80 }
+                [ paddingEach { zeroes | top = offset, left = offset }
                 ]
                 (circularHeightImageWithAttributes
                     [ Attributes.style "background-color" "#607CF5"
@@ -2643,16 +2643,16 @@ verifiedBadge style user =
                     ]
                     (getIconUrl style .checkmark)
                     "Verified"
-                    20
+                    size
                 )
         ]
 
 
-userIconAndInfoOverlay : Style -> Attribute msg -> User -> Element msg
-userIconAndInfoOverlay style smallfont user =
+userIconAndInfoOverlay : Style -> Attribute Msg -> User -> Element Msg
+userIconAndInfoOverlay style smallFont user =
     row [ paddingEach { zeroes | left = 20 } ]
         [ column [ paddingEach { zeroes | top = 315 - 80 } ]
-            [ el (verifiedBadge style user) <|
+            [ el (verifiedBadge style 80 20 user) <|
                 circularHeightImageWithAttributes
                     [ Attributes.style
                         "border"
@@ -2664,7 +2664,7 @@ userIconAndInfoOverlay style smallfont user =
             ]
         , let
             descriptionRows =
-                userProfileDescriptionRows smallfont user
+                userProfileDescriptionRows smallFont user
 
             delta =
                 if List.length descriptionRows == 2 then
@@ -2686,7 +2686,7 @@ userIconAndInfoOverlay style smallfont user =
         ]
 
 
-userProfileDescriptionRows : Attribute msg -> User -> List (Element msg)
+userProfileDescriptionRows : Attribute Msg -> User -> List (Element Msg)
 userProfileDescriptionRows smallFont user =
     let
         userRow =
@@ -2790,7 +2790,7 @@ formatInt int =
     commify (String.fromInt int) []
 
 
-userCountColumn : Attribute msg -> String -> Maybe Int -> Element msg
+userCountColumn : Attribute Msg -> String -> Maybe Int -> Element Msg
 userCountColumn smallFont label value =
     case value of
         Nothing ->
@@ -2839,14 +2839,16 @@ userDialog user isLoading model =
                 Just url ->
                     row
                         [ centerX
-                        , Element.inFront
-                            (standardButtonWithDontHover style
+                        , Element.inFront <|
+                            standardButtonWithDontHover style
                                 True
                                 ""
                                 CloseDialog
-                             <|
-                                userIconAndInfoOverlay style smallFont user
-                            )
+                            <|
+                                userIconAndInfoOverlay
+                                    style
+                                    smallFont
+                                    user
                         ]
                         [ standardButton style "" CloseDialog <|
                             image
@@ -4072,7 +4074,7 @@ postUserRow style colwp here post =
             [ paddingEach
                 { zeroes | right = 5 }
             ]
-            [ row []
+            [ row (verifiedBadge style 25 15 user)
                 [ userIconButton style 40 "" user ]
             ]
         , column []
@@ -4528,9 +4530,8 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                         [ paddingEach { zeroes | top = 5, bottom = 4 }
                         , spacing 4
                         ]
-                      <|
-                        (List.map userImage allUsers
-                            |> List.take maxNotificationUserCount
+                        (List.take maxNotificationUserCount allUsers
+                            |> List.map userImage
                         )
                     ]
             ]
