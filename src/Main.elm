@@ -2627,32 +2627,46 @@ styleAttribute name value =
         |> Element.htmlAttribute
 
 
-verifiedBadge : Style -> Int -> Int -> User -> List (Attribute msg)
-verifiedBadge style offset size user =
+verifiedBadge : Style -> Int -> Int -> Bool -> User -> List (Attribute Msg)
+verifiedBadge style offset size isButton user =
     if not user.verified then
         []
 
     else
-        [ Element.inFront <|
-            el
-                [ paddingEach { zeroes | top = offset, left = offset }
-                ]
-                (circularHeightImageWithAttributes
-                    [ Attributes.style "background-color" "#607CF5"
-                    , Attributes.style "border" "1px solid black"
-                    ]
-                    (getIconUrl style .checkmark)
-                    "Verified"
-                    size
-                )
-        ]
+        let
+            element =
+                el [ paddingEach { zeroes | top = offset, left = offset } ]
+                    (circularHeightImageWithAttributes
+                        [ Attributes.style "background-color" "#607CF5"
+                        , Attributes.style "border" "1px solid black"
+                        ]
+                        (getIconUrl style .checkmark)
+                        "Verified"
+                        size
+                    )
+
+            button =
+                if isButton then
+                    -- I don't know why I have to do this, but I do.
+                    -- Otherwise, user icons with verified badges are
+                    -- not clickable.
+                    standardButtonWithDontHover style
+                        True
+                        "Show user profile"
+                        (ShowUserDialog user.username)
+                        element
+
+                else
+                    element
+        in
+        [ Element.inFront button ]
 
 
 userIconAndInfoOverlay : Style -> Attribute Msg -> User -> Element Msg
 userIconAndInfoOverlay style smallFont user =
     row [ paddingEach { zeroes | left = 20 } ]
         [ column [ paddingEach { zeroes | top = 315 - 80 } ]
-            [ el (verifiedBadge style 80 20 user) <|
+            [ el (verifiedBadge style 80 20 False user) <|
                 circularHeightImageWithAttributes
                     [ Attributes.style
                         "border"
@@ -4074,7 +4088,7 @@ postUserRow style colwp here post =
             [ paddingEach
                 { zeroes | right = 5 }
             ]
-            [ row (verifiedBadge style 25 15 user)
+            [ row (verifiedBadge style 25 15 True user)
                 [ userIconButton style 40 "" user ]
             ]
         , column []
