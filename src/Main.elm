@@ -2646,9 +2646,9 @@ verifiedBadge style user =
         ]
 
 
-userIconAndInfoOverlay : Style -> User -> Element msg
-userIconAndInfoOverlay style user =
-    row [ paddingEach { zeroes | left = 50 } ]
+userIconAndInfoOverlay : Style -> Attribute msg -> User -> Element msg
+userIconAndInfoOverlay style smallfont user =
+    row [ paddingEach { zeroes | left = 20 } ]
         [ column [ paddingEach { zeroes | top = 315 - 80 } ]
             [ el (verifiedBadge style user) <|
                 circularHeightImageWithAttributes
@@ -2660,22 +2660,32 @@ userIconAndInfoOverlay style user =
                     "picture"
                     100
             ]
-        , column
+        , let
+            descriptionRows =
+                userProfileDescriptionRows smallfont user
+
+            delta =
+                if List.length descriptionRows == 2 then
+                    80
+
+                else
+                    60
+          in
+          column
             [ paddingEach
                 { zeroes
                     | left = 15
-                    , top = 315 - 105
+                    , top = 315 - delta
                 }
             , spacing 5
             , Font.color colors.white
             ]
-          <|
-            userProfileDescriptionRows user
+            descriptionRows
         ]
 
 
-userProfileDescriptionRows : User -> List (Element msg)
-userProfileDescriptionRows user =
+userProfileDescriptionRows : Attribute msg -> User -> List (Element msg)
+userProfileDescriptionRows smallFont user =
     let
         userRow =
             [ row []
@@ -2717,48 +2727,43 @@ userProfileDescriptionRows user =
             List.filter (\x -> x /= "") prostrs
                 |> String.join " "
 
-        prorow =
-            if proline == "" then
-                []
-
-            else
-                [ row []
-                    [ text "PRO *PREMIUM" ]
-                ]
-
         followStr =
             if user.following then
                 if user.followed then
                     "You follow each other"
 
                 else
-                    "Follows you"
+                    "Followed"
 
             else if user.followed then
-                "You Follow"
+                "Follows you"
 
             else
                 ""
 
-        followsRow =
-            if followStr == "" then
+        profollow =
+            [ if proline == "" then
+                []
+
+              else
+                [ proline ]
+            , if followStr == "" then
+                []
+
+              else
+                [ followStr ]
+            ]
+                |> List.concat
+                |> String.join " · "
+
+        prorow =
+            if profollow == "" then
                 []
 
             else
-                [ row []
-                    [ text followStr ]
-                ]
-
-        rows =
-            List.concat [ userRow, prorow, followsRow ]
-
-        rowcnt =
-            List.length rows
+                [ row [ smallFont ] [ text profollow ] ]
     in
-    List.concat
-        [ List.repeat (3 - rowcnt) <| row [] [ text " " ]
-        , rows
-        ]
+    List.concat [ userRow, prorow ]
 
 
 formatInt : Int -> String
@@ -2805,6 +2810,9 @@ userDialog user isLoading model =
         baseFontSize =
             model.settings.fontSize
 
+        smallFont =
+            fontSize baseFontSize 0.9
+
         iconHeight =
             userIconHeight (2 * baseFontSize)
     in
@@ -2830,7 +2838,7 @@ userDialog user isLoading model =
                                 ""
                                 CloseDialog
                              <|
-                                userIconAndInfoOverlay style user
+                                userIconAndInfoOverlay style smallFont user
                             )
                         ]
                         [ standardButton style "" CloseDialog <|
@@ -2852,12 +2860,8 @@ userDialog user isLoading model =
                 , centerX
                 ]
                 [ column [ spacing 5 ]
-                    [ let
-                        smallFont =
-                            fontSize baseFontSize 0.9
-                      in
-                      row
-                        [ paddingEach { zeroes | left = 100 }
+                    [ row
+                        [ paddingEach { zeroes | left = 70 }
                         , spacing 20
                         ]
                         [ userCountColumn smallFont "Score" user.score

@@ -4,10 +4,9 @@ This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
 * User profile dialog.
-  Request full profile from API.
-  Handle case where we get no full profile, and also have no partial profile
-    (@username without any other reference to username in feeds).
-  Fill out the body in `userDialog`.
+  Need to resize if screen too narrow for full 850 pixel cover image width.
+  Put a little black box below the cover image, like Gab does,
+  So text won't collide with image.
 * Multiple named pages of feeds, selectable on the left column.
 * Bug in URL parsing. Sometimes gets cruft at the end.
   E.g. https://gab.com/billstclair/posts/42716809
