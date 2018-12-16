@@ -637,9 +637,10 @@ feedPropertiesToFeed username backend { feedType, showProfile } id =
     }
 
 
-genericUserButton : Style -> (user -> Element Msg) -> String -> String -> user -> Element Msg
-genericUserButton style renderer title username user =
-    standardButton style
+genericUserButton : Style -> Bool -> (user -> Element Msg) -> String -> String -> user -> Element Msg
+genericUserButton style dontHover renderer title username user =
+    standardButtonWithDontHover style
+        dontHover
         (if title == "" then
             "Show user profile"
 
@@ -650,19 +651,20 @@ genericUserButton style renderer title username user =
         (renderer user)
 
 
-userButton : Style -> (User -> Element Msg) -> String -> User -> Element Msg
-userButton style renderer title user =
-    genericUserButton style renderer title user.username user
+userButton : Style -> Bool -> (User -> Element Msg) -> String -> User -> Element Msg
+userButton style dontHover renderer title user =
+    genericUserButton style dontHover renderer title user.username user
 
 
 userNameButton : Style -> String -> User -> Element Msg
 userNameButton style title user =
-    userButton style (\u -> text u.name) title user
+    userButton style False (\u -> text u.name) title user
 
 
 userIconButton : Style -> Int -> String -> User -> Element Msg
 userIconButton style height title user =
     userButton style
+        True
         (\u -> circularHeightImage u.picture_url "" height)
         title
         user
@@ -3955,6 +3957,7 @@ postRow settings feedType isToplevel log isLastNew =
                           else
                             heightImage iconUrl "refresh" 10
                         , userButton style
+                            False
                             (\u -> text <| " " ++ u.name ++ " " ++ repostString)
                             ""
                             actuser
@@ -4075,6 +4078,7 @@ postUserRow style colwp here post =
         , column []
             [ row [ nameBottomPadding ]
                 [ userButton style
+                    False
                     (\u -> text <| embiggen u.name)
                     ""
                     user
@@ -4997,7 +5001,7 @@ fixBareHtml html =
 
 atUserRenderer : Style -> String -> String -> Element Msg
 atUserRenderer style username linkText =
-    genericUserButton style text "" username linkText
+    genericUserButton style False text "" username linkText
 
 
 nodeToElements : Style -> Float -> HP.Node -> List (Element Msg)
