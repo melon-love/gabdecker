@@ -2820,6 +2820,11 @@ userDialog user isLoading model =
         column (dialogAttributes style) <|
             [ dialogTitleBar style baseFontSize <| user.name
             , dialogErrorRow model
+            , row []
+                [ newTabLink style
+                    (userUrl user)
+                    "Open profile at Gab.com"
+                ]
             ]
 
     else
