@@ -3,11 +3,6 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* User profile dialog.
-  Need to resize if screen too narrow for full 850 pixel cover image width.
-  Put a little black box below the cover image, like Gab does,
-  So text won't collide with image.
-  Clicking on "Folowers" or "Following" count should show icons somewhere.
 * Multiple named pages of feeds, selectable on the left column.
 * Bug in URL parsing. Sometimes gets cruft at the end.
   E.g. https://gab.com/billstclair/posts/42716809
@@ -20,7 +15,7 @@ This is a place to collect things left to do for GabDecker.
   Likewise for the parent post. If it has no body, but does have an attachment,
   show the attachment (usually an image).
 * It looks like the notification API doesn't return comments on comments.
-  Looks like it doesn't return commenst either, unless they get liked.
+  Looks like it doesn't return comments either, unless they get liked.
   It should. Verify this, then report it.
 * Clicking on a name should give option of adding feed or opening profile.
   Same with group and topic, once those feeds are in the API.
@@ -48,9 +43,6 @@ This is a place to collect things left to do for GabDecker.
   feed portion and scroll that, ensuring that the "+" to add a feed, and
   the settings and whatever else at the bottom are always visible.
 * Incremental search. Show only posts containing the string the user types.
-* Pop up small profile page on hover over name, just like Gab.com.
-  Or maybe this should be another choice on click.
-* Verified, pro, and donor identification for users.
 * A faster way than move-left-or-right clicks to move a column.
   Dragging in the control column would be great, but just typing a number
   in a popup would be good enough.
@@ -83,6 +75,11 @@ This is a place to collect things left to do for GabDecker.
 * Persistent feed list should be different for each logged-in username.
 * Restore the "Last Closed" feed to its former position, not the end.
 * Dark mode for login page.
+* User profile dialog.
+  Need to resize if screen too narrow for full 850 pixel cover image width.
+  Put a little black box below the cover image, like Gab does,
+  So text won't collide with image.
+  Clicking on "Followers" or "Following" count should show icons somewhere.
 * Help, About
 * Premium features.
   Gotta make money off of this somehow.
@@ -105,6 +102,6 @@ This is a place to collect things left to do for GabDecker.
 * Fetch the comments for a post.
 * Group and Topic Feeds.
 * Comments in user feeds.
-* Logout of authentication server (clear cookie), so can have multiple accounts.
 * One call to find new feed count for each of a list of feeds.
+* Logout of authentication server (clear cookie), so can have multiple accounts.
 * Ability to vote on polls.
