@@ -102,6 +102,6 @@ This is a place to collect things left to do for GabDecker.
 * Fetch the comments for a post.
 * Group and Topic Feeds.
 * Comments in user feeds.
-* One call to find new feed count for each of a list of feeds.
+* One call to find new post count for each of a list of feeds.
 * Logout of authentication server (clear cookie), so can have multiple accounts.
 * Ability to vote on polls.
