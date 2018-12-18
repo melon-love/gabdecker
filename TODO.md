@@ -3,6 +3,8 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* Still not handling single newlines correctly.
+  https://gab.com/billstclair/posts/43778169
 * Multiple named pages of feeds, selectable on the left column.
 * Bug in URL parsing. Sometimes gets cruft at the end.
   E.g. https://gab.com/billstclair/posts/42716809

@@ -5019,13 +5019,66 @@ atUserRenderer style username linkText =
     genericUserButton style False text "" username linkText
 
 
+{-| Like String.split for lists
+-}
+splitList : a -> List a -> List (List a)
+splitList a list =
+    let
+        loop : List a -> List a -> List (List a) -> List (List a)
+        loop rest accum res =
+            case rest of
+                [] ->
+                    if accum == [] then
+                        List.reverse res
+
+                    else
+                        List.reverse (List.reverse accum :: res)
+
+                head :: tail ->
+                    if head == a then
+                        loop tail [] (List.reverse accum :: res)
+
+                    else
+                        loop tail (head :: accum) res
+    in
+    loop list [] []
+
+
 nodeToElements : Style -> Float -> HP.Node -> List (Element Msg)
 nodeToElements style baseFontSize theNode =
     let
+        lineSpacing =
+            paragraphLineSpacing baseFontSize
+
+        brElement =
+            HP.Element "br" [] []
+
+        wrapParagraph : List HP.Node -> Element Msg
+        wrapParagraph elements =
+            paragraph [ lineSpacing ] <|
+                mappedNodes elements
+
+        handleParagraphBrs : List HP.Node -> List (Element Msg)
+        handleParagraphBrs nodes =
+            if LE.notMember brElement nodes then
+                mappedNodes nodes
+
+            else
+                [ column [ lineSpacing ]
+                    (splitList brElement nodes
+                        |> List.map wrapParagraph
+                    )
+                ]
+
+        mappedNodes nodes =
+            List.map recurse nodes
+                |> List.concat
+
+        recurse : HP.Node -> List (Element Msg)
         recurse node =
             case node of
                 HP.Text string ->
-                    -- Shouldn't get these from the parser
+                    -- Gab gives us "</p>\n<p>" between paragraphs.
                     if string == "\n" then
                         [ Element.none ]
 
@@ -5033,24 +5086,19 @@ nodeToElements style baseFontSize theNode =
                         Parsers.parseElements style atUserRenderer string
 
                 HP.Element tag attributes nodes ->
-                    let
-                        mappedNodes =
-                            List.map recurse nodes
-                                |> List.concat
-                    in
                     case tag of
                         "span" ->
-                            mappedNodes
+                            mappedNodes nodes
 
                         "p" ->
                             [ paragraph
-                                [ --paragraphPadding
-                                  paragraphLineSpacing baseFontSize
-                                ]
-                                mappedNodes
+                                [ lineSpacing ]
+                              <|
+                                handleParagraphBrs nodes
                             ]
 
                         "br" ->
+                            -- These should all be dealt with by handleParagraphBrs
                             [ text "\n" ]
 
                         "blockquote" ->
@@ -5061,7 +5109,8 @@ nodeToElements style baseFontSize theNode =
                                 , Border.color colors.black
                                 , Background.color style.quotedPostBackground
                                 ]
-                                mappedNodes
+                              <|
+                                mappedNodes nodes
                             ]
 
                         _ ->
@@ -5069,12 +5118,12 @@ nodeToElements style baseFontSize theNode =
                                 List.member tag emTags
                                     || String.contains ":" tag
                             then
-                                List.map (\n -> el (emTagToAttributes tag) n)
-                                    mappedNodes
+                                List.map (\n -> el (emTagToAttributes tag) n) <|
+                                    mappedNodes nodes
 
                             else
                                 -- Shouldn't happen
-                                mappedNodes
+                                mappedNodes nodes
 
                 _ ->
                     []
