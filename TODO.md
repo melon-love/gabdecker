@@ -3,12 +3,8 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Still not handling single newlines correctly.
-  https://gab.com/billstclair/posts/43778169
+* Font size and column width preferences.
 * Multiple named pages of feeds, selectable on the left column.
-* Bug in URL parsing. Sometimes gets cruft at the end.
-  E.g. https://gab.com/billstclair/posts/42716809
-  Looked at this in `elm repl`. Couldn't reproduce. Try again.
 * When somebody "mentioned you in a comment", include an interaction row.
 * Figure out the proper way to compute `repostString`. It's wrong now.
   repost, repost a comment, quote, quote a comment, comment, comment on a comment.
@@ -24,8 +20,7 @@ This is a place to collect things left to do for GabDecker.
   Should also be able to mute/unmute user.
 * Clicking on a post time should give the option of opening in Gab
   or performing an action, all five actions displayed in a feed.
-* Font size and column width preferences.
-  "Show comments in feeds" preference, or maybe per-feed.
+* "Show comments in feeds" preference, or maybe per-feed.
   "Disable YouTube & Giphy embeds" (they track you).
   Or use the convenient Gab link to a non-tracking option.
   And the Post.Embed.html for YouTube image.

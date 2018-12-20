@@ -208,32 +208,58 @@ sharpOneParser style =
     parseOne (sharpParser style)
 
 
-htmlParser : Style -> Parser (Element msg)
+htmlOneParser : Style -> Parser ( String, Maybe (Element msg), String )
+htmlOneParser style =
+    P.loop () (htmlOneHelp style)
+
+
+htmlOneHelp : Style -> () -> Parser (Step () ( String, Maybe (Element msg), String ))
+htmlOneHelp style _ =
+    P.oneOf
+        [ P.succeed
+            (\start ( a, tail ) end whole ->
+                P.Done
+                    ( String.slice 0 start whole
+                    , Just a
+                    , tail ++ String.slice end (String.length whole) whole
+                    )
+            )
+            |= P.getOffset
+            |= htmlParser style
+            |= P.getOffset
+            |= P.getSource
+        , P.chompIf (\_ -> True)
+            |> P.andThen (\_ -> P.succeed <| P.Loop ())
+        , P.succeed
+            (\source -> P.Done ( source, Nothing, "" ))
+            |= P.getSource
+        ]
+
+
+htmlParser : Style -> Parser ( Element msg, String )
 htmlParser style =
     htmlStringParser
-        |> P.andThen (\s -> P.succeed <| newTabLink style s s)
+        |> P.andThen
+            (\( url, tail ) ->
+                P.succeed ( newTabLink style url url, tail )
+            )
 
 
-htmlStringParser : Parser String
+htmlStringParser : Parser ( String, String )
 htmlStringParser =
-    P.succeed String.slice
+    P.succeed
+        (\start end whole ( body, tail ) ->
+            ( String.slice start end whole ++ body
+            , tail
+            )
+        )
         |= P.getOffset
         |. P.symbol "http"
         |. P.oneOf [ P.chompIf ((==) 's'), P.succeed () ]
         |. P.symbol "://"
-        |. nonWhitespace
         |= P.getOffset
         |= P.getSource
-
-
-htmlOneParser : Style -> OneParser (Element msg)
-htmlOneParser style =
-    parseOne (htmlParser style)
-
-
-ctrlR : Char
-ctrlR =
-    Char.fromCode 0x0D
+        |= htmlCharacters
 
 
 allOneParsers : Style -> (Style -> String -> String -> Element msg) -> List (OneParser (Element msg))
@@ -241,6 +267,113 @@ allOneParsers style renderer =
     [ htmlOneParser style, atUserOneParser style renderer, sharpOneParser style ]
 
 
-nonWhitespace : Parser ()
-nonWhitespace =
-    P.chompWhile (\c -> not <| List.member c [ ' ', '\t', '\n', ctrlR ])
+ctrlR : Char
+ctrlR =
+    Char.fromCode 0x0D
+
+
+nbsp : Char
+nbsp =
+    Char.fromCode 0xA0
+
+
+whitespaceChars : List Char
+whitespaceChars =
+    [ ' '
+    , '\t'
+    , '\n'
+    , ctrlR
+    , nbsp
+    , ','
+    ]
+
+
+isWhitespaceChar : Char -> Bool
+isWhitespaceChar c =
+    List.member c whitespaceChars
+
+
+isNonWhitespaceChar : Char -> Bool
+isNonWhitespaceChar c =
+    not <| isWhitespaceChar c
+
+
+htmlEndingChars : List Char
+htmlEndingChars =
+    [ '!'
+    , '.'
+    , '?'
+    ]
+
+
+isHtmlEndingChar : Char -> Bool
+isHtmlEndingChar c =
+    List.member c htmlEndingChars
+
+
+htmlEndingStrings : List String
+htmlEndingStrings =
+    List.map String.fromChar htmlEndingChars
+
+
+isHtmlEndingString : String -> Bool
+isHtmlEndingString s =
+    List.member s htmlEndingStrings
+
+
+htmlEndingString : Parser String
+htmlEndingString =
+    P.succeed String.slice
+        |= P.getOffset
+        |. P.chompWhile isHtmlEndingChar
+        |= P.getOffset
+        |= P.getSource
+
+
+htmlEnding : Parser String
+htmlEnding =
+    P.succeed identity
+        |= htmlEndingString
+        |. P.oneOf
+            [ P.end
+            , P.getChompedString (P.chompWhile isNonWhitespaceChar)
+                |> P.andThen
+                    (\s ->
+                        if s == "" then
+                            P.succeed ()
+
+                        else
+                            P.problem "Non-whitespace after ending chars."
+                    )
+            ]
+
+
+{-| Need to make this stop at a `nonEndingHtmlChars` followed only
+by more of them until a `nonHtmlChars`.
+-}
+htmlCharacters : Parser ( String, String )
+htmlCharacters =
+    P.getChompedString
+        (P.succeed ()
+            |. P.chompWhile isNonWhitespaceChar
+        )
+        |> P.andThen
+            (\str ->
+                let
+                    loop s end =
+                        if s == "" then
+                            P.problem "No body to URL."
+
+                        else
+                            let
+                                ch =
+                                    String.right 1 s
+                            in
+                            if isHtmlEndingString ch then
+                                loop (String.dropRight 1 s) <| ch ++ end
+
+                            else
+                                P.succeed ( s, end )
+                in
+                loop str ""
+            )

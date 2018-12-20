@@ -5102,15 +5102,19 @@ nodeToElements style baseFontSize theNode =
                             [ text "\n" ]
 
                         "blockquote" ->
-                            -- Needs a background color
                             [ row
                                 [ padding 5
                                 , Border.width 2
                                 , Border.color colors.black
                                 , Background.color style.quotedPostBackground
                                 ]
-                              <|
-                                mappedNodes nodes
+                                [ Element.textColumn
+                                    [ fillWidth
+                                    , paragraphSpacing baseFontSize
+                                    ]
+                                  <|
+                                    mappedNodes nodes
+                                ]
                             ]
 
                         _ ->
