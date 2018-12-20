@@ -215,6 +215,8 @@ type alias Model =
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
     , dialogInput : String
+    , fontSizeInput : String
+    , columnWidthInput : String
     , icons : Icons
     , users : Dict String User
 
@@ -267,6 +269,10 @@ type Msg
     | SetStyle StyleOption
     | RestoreFeedsProperties
     | DialogInput String
+    | FontSizeInput String
+    | SetFontSize
+    | ColumnWidthInput String
+    | SetColumnWidth
     | AddNewFeed FeedType
     | Upvote FeedType Post
     | Downvote FeedType Post
@@ -529,6 +535,8 @@ init flags url key =
             , tokenAuthorization = authorization
             , username = ""
             , dialogInput = ""
+            , fontSizeInput = String.fromFloat defaultFontSize
+            , columnWidthInput = String.fromInt defaultColumnWidth
             , icons = Types.emptyIcons
             , users = Dict.empty
             , feedsProperties = initialFeedsProperties
@@ -1324,6 +1332,51 @@ update msg model =
 
         DialogInput username ->
             { model | dialogInput = username } |> withNoCmd
+
+        -- TODO
+        FontSizeInput fontSizeInput ->
+            { model | fontSizeInput = fontSizeInput } |> withNoCmd
+
+        SetFontSize ->
+            case String.toFloat model.fontSizeInput of
+                Nothing ->
+                    { model | dialogError = Just "Not a number." }
+                        |> withNoCmd
+
+                Just size ->
+                    let
+                        settings =
+                            model.settings
+                    in
+                    { model
+                        | settings =
+                            { settings | fontSize = size }
+                        , dialogError = Nothing
+                    }
+                        -- Need to make it persistent
+                        |> withNoCmd
+
+        ColumnWidthInput columnWidth ->
+            { model | columnWidthInput = columnWidth } |> withNoCmd
+
+        SetColumnWidth ->
+            case String.toInt model.columnWidthInput of
+                Nothing ->
+                    { model | dialogError = Just "Not an integer." }
+                        |> withNoCmd
+
+                Just width ->
+                    let
+                        settings =
+                            model.settings
+                    in
+                    { model
+                        | settings =
+                            { settings | columnWidth = width }
+                        , dialogError = Nothing
+                    }
+                        -- Need to make it persistent
+                        |> withNoCmd
 
         AddNewFeed feedType ->
             addNewFeed feedType model.settings.fontSize model
@@ -2433,9 +2486,14 @@ defaultFontSize =
     15
 
 
+scaleFontSize : Float -> Float -> Int
+scaleFontSize baseFontSize scale =
+    round (scale * baseFontSize)
+
+
 fontSize : Float -> Float -> Element.Attr decorative msg
 fontSize baseFontSize scale =
-    Font.size <| round (scale * baseFontSize)
+    Font.size <| scaleFontSize baseFontSize scale
 
 
 fillWidth : Attribute msg
@@ -3079,8 +3137,7 @@ settingsDialog model =
         [ dialogTitleBar style baseFontSize "Settings"
         , dialogErrorRow model
         , row []
-            [ el [ paddingEach { zeroes | right = 5 } ]
-                (text "Style: ")
+            [ inputLabel "Style: "
             , Input.radioRow
                 [ spacing 10
                 ]
@@ -3093,7 +3150,94 @@ settingsDialog model =
                     ]
                 }
             ]
+        , textInputRow
+            style
+            baseFontSize
+            { label = "Font Size (px):"
+            , text = model.fontSizeInput
+            , scale = 4
+            , hasId = True
+            , buttonTitle = "Set Font Size"
+            , doit = SetFontSize
+            , saveit = FontSizeInput
+            , placeholder = Nothing
+            }
+        , textInputRow
+            style
+            baseFontSize
+            { label = "Column Width:"
+            , text = model.columnWidthInput
+            , scale = 4
+            , hasId = True
+            , buttonTitle = "Set ColumnWidth"
+            , doit = SetColumnWidth
+            , saveit = ColumnWidthInput
+            , placeholder = Nothing
+            }
         ]
+
+
+type alias InputRowParameters =
+    { label : String
+    , text : String
+    , scale : Float
+    , hasId : Bool
+    , buttonTitle : String
+    , doit : Msg
+    , saveit : String -> Msg
+    , placeholder : Maybe String
+    }
+
+
+textInputRow : Style -> Float -> InputRowParameters -> Element Msg
+textInputRow style baseFontSize params =
+    let
+        iconHeight =
+            userIconHeight (1.5 * baseFontSize)
+
+        placeholder =
+            case params.placeholder of
+                Nothing ->
+                    Nothing
+
+                Just p ->
+                    Just <| Input.placeholder [] (text p)
+    in
+    row []
+        [ inputLabel params.label
+        , Input.text
+            [ width (px <| scaleFontSize baseFontSize params.scale)
+            , idAttribute feedsStringInputId
+            , onKeysDownAttribute
+                [ ( keycodes.escape, CloseDialog )
+                , ( keycodes.enter, params.doit )
+                ]
+            , Background.color style.quotedPostBackground
+            , Font.color style.text
+            ]
+            { onChange = params.saveit
+            , text = params.text
+            , placeholder = placeholder
+            , label = Input.labelHidden params.label
+            }
+        , el
+            [ paddingEach { zeroes | left = 10 }
+            , spacing 5
+            ]
+            (standardButton style params.buttonTitle params.doit <|
+                heightImage (getIconUrl style .save)
+                    params.buttonTitle
+                    iconHeight
+            )
+        ]
+
+
+inputLabel string =
+    el
+        [ paddingEach { zeroes | right = 5 }
+        , Font.bold
+        ]
+        (text string)
 
 
 saveFeedsDialog : Model -> Element Msg
@@ -3111,32 +3255,18 @@ saveFeedsDialog model =
     column (dialogAttributes style)
         [ dialogTitleBar style baseFontSize "Save/Restore Feeds"
         , dialogErrorRow model
-        , row []
-            [ Input.text
-                [ width <| px 400
-                , idAttribute feedsStringInputId
-                , onKeysDownAttribute
-                    [ ( keycodes.escape, CloseDialog )
-                    , ( keycodes.enter, RestoreFeedsProperties )
-                    ]
-                , Background.color style.quotedPostBackground
-                , Font.color style.text
-                ]
-                { onChange = DialogInput
-                , text = model.dialogInput
-                , placeholder =
-                    Just <|
-                        Input.placeholder [] (text "username")
-                , label = Input.labelHidden "User Feed Name"
-                }
-            , el
-                [ paddingEach { zeroes | left = 10 }
-                , spacing 5
-                ]
-                (standardButton style "Restore" RestoreFeedsProperties <|
-                    heightImage (getIconUrl style .save) "Restore" iconHeight
-                )
-            ]
+        , textInputRow
+            style
+            baseFontSize
+            { label = ""
+            , text = model.dialogInput
+            , scale = 27
+            , hasId = True
+            , buttonTitle = "Use Feeds"
+            , doit = RestoreFeedsProperties
+            , saveit = DialogInput
+            , placeholder = Just "username"
+            }
         ]
 
 
