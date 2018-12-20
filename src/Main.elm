@@ -2484,8 +2484,10 @@ mainPage settings icons loadingFeeds feeds =
             ]
         , column []
             [ optimizers.keyedFeedColumn
-                [ height <| px settings.windowHeight
-                , Element.scrollbarX
+                [ --, Element.scrollbarX
+                  styleAttribute "overflow-x" "scroll"
+                , styleAttribute "-webkit-overflow-scrolling" "touch"
+                , height <| px settings.windowHeight
                 , width <| px (min (settings.windowWidth - ccw) contentWidth)
                 , idAttribute contentId
                 ]
