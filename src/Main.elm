@@ -2485,8 +2485,8 @@ mainPage settings icons loadingFeeds feeds =
         , column []
             [ optimizers.keyedFeedColumn
                 [ height <| px settings.windowHeight
-                , Element.scrollbarY
-                , width <| px contentWidth
+                , Element.scrollbarX
+                , width <| px (min (settings.windowWidth - ccw) contentWidth)
                 , idAttribute contentId
                 ]
                 (List.map
@@ -3693,7 +3693,7 @@ renderRowContents settings feed =
                         - (2 * columnPadding + 10)
                     )
             , columnIdAttribute feed.id
-            , Element.scrollbarX
+            , Element.scrollbarY
             , Element.clipX
             ]
           <|
