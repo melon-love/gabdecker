@@ -2486,7 +2486,7 @@ mainPage settings icons loadingFeeds feeds =
             [ optimizers.keyedFeedColumn
                 [ height <| px settings.windowHeight
                 , Element.scrollbarY
-                , width <| px (min (settings.windowWidth - ccw) contentWidth)
+                , width <| px contentWidth
                 , idAttribute contentId
                 ]
                 (List.map
@@ -4960,7 +4960,7 @@ psep =
 
 crlf : String
 crlf =
-    codestr 0x0D ++ "\n"
+    "\u{000D}\n"
 
 
 newlinesToPs : String -> String
