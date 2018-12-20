@@ -273,6 +273,7 @@ type Msg
     | SetFontSize
     | ColumnWidthInput String
     | SetColumnWidth
+    | RestoreDefaultSettings
     | AddNewFeed FeedType
     | Upvote FeedType Post
     | Downvote FeedType Post
@@ -695,7 +696,7 @@ feedTypeDescription : Style -> Int -> FeedType -> Float -> Icons -> Element Msg
 feedTypeDescription style newPosts feedType baseFontSize icons =
     let
         iconHeight =
-            smallUserIconHeight baseFontSize
+            bigUserIconHeight baseFontSize
 
         feedRow url elements =
             styledLink True style [] url (row [] elements)
@@ -1291,6 +1292,8 @@ update msg model =
             { model
                 | showDialog = SettingsDialog
                 , dialogError = Nothing
+                , fontSizeInput = String.fromFloat model.settings.fontSize
+                , columnWidthInput = String.fromInt model.settings.columnWidth
             }
                 |> withNoCmd
 
@@ -1350,10 +1353,10 @@ update msg model =
                     in
                     { model
                         | settings =
-                            { settings | fontSize = size }
+                            { settings | fontSize = max size 10 }
                         , dialogError = Nothing
                     }
-                        -- Need to make it persistent
+                        -- TODO: make persistent
                         |> withNoCmd
 
         ColumnWidthInput columnWidth ->
@@ -1372,11 +1375,29 @@ update msg model =
                     in
                     { model
                         | settings =
-                            { settings | columnWidth = width }
+                            { settings | columnWidth = max width 100 }
                         , dialogError = Nothing
                     }
-                        -- Need to make it persistent
+                        -- TODO: make persistent
                         |> withNoCmd
+
+        -- TODO
+        RestoreDefaultSettings ->
+            let
+                settings =
+                    model.settings
+            in
+            { model
+                | settings =
+                    { settings
+                        | fontSize = defaultFontSize
+                        , columnWidth = defaultColumnWidth
+                    }
+                , fontSizeInput = String.fromFloat defaultFontSize
+                , columnWidthInput = String.fromInt defaultColumnWidth
+            }
+                -- TODO: make persistent
+                |> withNoCmd
 
         AddNewFeed feedType ->
             addNewFeed feedType model.settings.fontSize model
@@ -2630,21 +2651,27 @@ addFeedChoices model =
         ]
 
 
-dialogAttributes : Style -> List (Attribute msg)
-dialogAttributes style =
+dialogAttributes : Style -> Float -> List (Attribute msg)
+dialogAttributes style baseFontSize =
     List.concat
-        [ dialogAttributesNoPadding style
+        [ dialogAttributesNoPadding style baseFontSize
         , [ paddingEach { top = 10, bottom = 20, left = 20, right = 20 } ]
         ]
 
 
-dialogAttributesNoPadding : Style -> List (Attribute msg)
-dialogAttributesNoPadding style =
+dialogFontScale : Float
+dialogFontScale =
+    1.2
+
+
+dialogAttributesNoPadding : Style -> Float -> List (Attribute msg)
+dialogAttributesNoPadding style baseFontSize =
     [ Border.width 5
     , spacing 10
     , centerX
     , centerY
     , Background.color style.dialogBackground
+    , fontSize baseFontSize dialogFontScale
     ]
 
 
@@ -2660,7 +2687,7 @@ operationErrorDialog err model =
         iconHeight =
             userIconHeight baseFontSize
     in
-    column (dialogAttributes style)
+    column (dialogAttributes style baseFontSize)
         [ let
             closeIcon =
                 heightImage (getIconUrl style .close) "Close" iconHeight
@@ -2722,8 +2749,10 @@ verifiedBadge style offset size isButton user =
         [ Element.inFront button ]
 
 
-userIconAndInfoOverlay : Style -> Attribute Msg -> User -> Element Msg
-userIconAndInfoOverlay style smallFont user =
+{-| TODO: scale to baseFontSize
+-}
+userIconAndInfoOverlay : Style -> Float -> Attribute Msg -> User -> Element Msg
+userIconAndInfoOverlay style baseFontSize smallFont user =
     row [ paddingEach { zeroes | left = 20 } ]
         [ column [ paddingEach { zeroes | top = 315 - 80 } ]
             [ el (verifiedBadge style 80 20 False user) <|
@@ -2893,7 +2922,7 @@ userDialog user isLoading model =
             userIconHeight (2 * baseFontSize)
     in
     if isLoading then
-        column (dialogAttributes style) <|
+        column (dialogAttributes style baseFontSize) <|
             [ dialogTitleBar style baseFontSize <| user.name
             , dialogErrorRow model
             , row []
@@ -2905,7 +2934,7 @@ userDialog user isLoading model =
 
     else
         column
-            (dialogAttributesNoPadding style)
+            (dialogAttributesNoPadding style baseFontSize)
             [ case user.cover_url of
                 Nothing ->
                     Element.none
@@ -2921,6 +2950,7 @@ userDialog user isLoading model =
                             <|
                                 userIconAndInfoOverlay
                                     style
+                                    baseFontSize
                                     smallFont
                                     user
                         ]
@@ -3133,7 +3163,7 @@ settingsDialog model =
         iconHeight =
             userIconHeight (2 * baseFontSize)
     in
-    column (dialogAttributes style)
+    column (dialogAttributes style baseFontSize)
         [ dialogTitleBar style baseFontSize "Settings"
         , dialogErrorRow model
         , row []
@@ -3174,6 +3204,12 @@ settingsDialog model =
             , saveit = ColumnWidthInput
             , placeholder = Nothing
             }
+        , row [ Font.bold ]
+            [ textButton style
+                "Restore font size & column width defaults"
+                RestoreDefaultSettings
+                "Restore Defaults"
+            ]
         ]
 
 
@@ -3206,7 +3242,11 @@ textInputRow style baseFontSize params =
     row []
         [ inputLabel params.label
         , Input.text
-            [ width (px <| scaleFontSize baseFontSize params.scale)
+            [ width
+                (px <|
+                    scaleFontSize baseFontSize
+                        (params.scale * dialogFontScale)
+                )
             , idAttribute feedsStringInputId
             , onKeysDownAttribute
                 [ ( keycodes.escape, CloseDialog )
@@ -3252,7 +3292,7 @@ saveFeedsDialog model =
         iconHeight =
             userIconHeight (2 * baseFontSize)
     in
-    column (dialogAttributes style)
+    column (dialogAttributes style baseFontSize)
         [ dialogTitleBar style baseFontSize "Save/Restore Feeds"
         , dialogErrorRow model
         , textInputRow
@@ -3333,7 +3373,7 @@ addFeedDialog model =
         data =
             addUserFeedRow :: List.map makeRow choices
     in
-    column (dialogAttributes style)
+    column (dialogAttributes style baseFontSize)
         [ dialogTitleBar style baseFontSize "Add Feed"
         , dialogErrorRow model
         , row []
@@ -3391,7 +3431,7 @@ okButton =
 
 controlColumnWidth : Float -> Int
 controlColumnWidth baseFontSize =
-    userIconHeight baseFontSize + 2 * columnPadding
+    bigUserIconHeight baseFontSize + 2 * columnPadding
 
 
 controlColumnId : String
@@ -3424,7 +3464,7 @@ controlColumn columnWidth isLoading settings icons feeds =
             width <| px columnWidth
 
         iconHeight =
-            smallUserIconHeight settings.fontSize
+            bigUserIconHeight settings.fontSize
     in
     column
         (List.concat
@@ -3656,8 +3696,8 @@ userIconHeight baseFontSize =
     round (4 * baseFontSize / 3)
 
 
-smallUserIconHeight : Float -> Int
-smallUserIconHeight baseFontSize =
+bigUserIconHeight : Float -> Int
+bigUserIconHeight baseFontSize =
     round (3 * baseFontSize / 2)
 
 
@@ -4111,7 +4151,7 @@ postRow settings feedType isToplevel log isLastNew =
                             actuser
                         ]
                     ]
-            , postUserRow style colwp settings.here post
+            , postUserRow style baseFontSize colwp settings.here post
             , row []
                 [ Element.textColumn
                     [ paragraphSpacing baseFontSize
@@ -4202,14 +4242,23 @@ postRow settings feedType isToplevel log isLastNew =
         ]
 
 
-postUserRow : Style -> Attribute Msg -> Zone -> Post -> Element Msg
-postUserRow style colwp here post =
+postUserRow : Style -> Float -> Attribute Msg -> Zone -> Post -> Element Msg
+postUserRow style baseFontSize colwp here post =
     let
         user =
             post.user
 
         username =
             user.username
+
+        badgeSize =
+            scaleFontSize baseFontSize (25 / 15)
+
+        badgeOffset =
+            scaleFontSize baseFontSize 1
+
+        iconSize =
+            scaleFontSize baseFontSize (40 / 15)
     in
     row
         [ Font.bold
@@ -4220,8 +4269,8 @@ postUserRow style colwp here post =
             [ paddingEach
                 { zeroes | right = 5 }
             ]
-            [ row (verifiedBadge style 25 15 True user)
-                [ userIconButton style 40 "" user ]
+            [ row (verifiedBadge style badgeSize badgeOffset True user)
+                [ userIconButton style iconSize "" user ]
             ]
         , column []
             [ row [ nameBottomPadding ]
@@ -4653,6 +4702,7 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                         Just pp ->
                             notificationParentRow (cw - colpad)
                                 settings
+                                baseFontSize
                                 pp
 
                         Nothing ->
@@ -4689,8 +4739,8 @@ maxNotificationUserCount =
     50
 
 
-notificationParentRow : Int -> Settings -> Post -> Element Msg
-notificationParentRow cw settings post =
+notificationParentRow : Int -> Settings -> Float -> Post -> Element Msg
+notificationParentRow cw settings baseFontSize post =
     let
         style =
             settings.style
@@ -4717,7 +4767,7 @@ notificationParentRow cw settings post =
             ]
           <|
             List.concat
-                [ [ postUserRow style colwp settings.here post ]
+                [ [ postUserRow style baseFontSize colwp settings.here post ]
                 , notificationsBody settings post
                 ]
         ]
