@@ -3,6 +3,9 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* The Settings dialog should have an auto-size function,
+  which sets the font size and column width automatically.
+  Mostly useful for mobile.
 * Non-html paragraph breaks are broken.
   E.g. https://gab.com/billstclair/posts/44029457
 * Magic numbers for scrolling horizontally depend on font size.

@@ -4756,7 +4756,7 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                         notification.actuser :: otherUsers
 
                     height =
-                        30
+                        scaleFontSize baseFontSize (30 / 15)
 
                     userImage user =
                         userIconButton style height user.name user
