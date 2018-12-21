@@ -73,6 +73,9 @@ This is a place to collect things left to do for GabDecker.
    ```
 * Persistent feed list should be different for each logged-in username.
 * Restore the "Last Closed" feed to its former position, not the end.
+* Open new feed right next to the one you clicked on to get the user profile.
+  On closing a feed, scroll the one to its left into view.
+* Mute lists. Easily sharable. Encodable in a post, so you can request to execute.
 * Dark mode for login page.
 * User profile dialog.
   Need to resize if screen too narrow for full 850 pixel cover image width.
