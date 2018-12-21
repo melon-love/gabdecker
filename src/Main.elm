@@ -249,9 +249,8 @@ type Msg
     | RestoreFeedsProperties
     | DialogInput String
     | FontSizeInput String
-    | SetFontSize
     | ColumnWidthInput String
-    | SetColumnWidth
+    | SaveSettings
     | RestoreDefaultSettings
     | AddNewFeed FeedType
     | Upvote FeedType Post
@@ -1221,8 +1220,7 @@ update msg model =
                 , dialogError = Nothing
                 , dialogInput = ""
             }
-                |> withCmd
-                    (Task.attempt (\_ -> Noop) <| Dom.focus userFeedInputId)
+                |> withCmd (focusId addFeedInputId)
 
         SaveFeedsProperties ->
             let
@@ -1236,8 +1234,7 @@ update msg model =
                 , dialogError = Nothing
                 , dialogInput = typesString
             }
-                |> withCmd
-                    (Task.attempt (\_ -> Noop) <| Dom.focus feedsStringInputId)
+                |> withCmd (focusId saveFeedInputId)
 
         ShowSettings ->
             { model
@@ -1246,7 +1243,7 @@ update msg model =
                 , fontSizeInput = String.fromFloat model.settings.fontSize
                 , columnWidthInput = String.fromInt model.settings.columnWidth
             }
-                |> withNoCmd
+                |> withCmd (focusId settingsInputId)
 
         SetStyle option ->
             let
@@ -1295,50 +1292,11 @@ update msg model =
         FontSizeInput fontSizeInput ->
             { model | fontSizeInput = fontSizeInput } |> withNoCmd
 
-        SetFontSize ->
-            case String.toFloat model.fontSizeInput of
-                Nothing ->
-                    { model | dialogError = Just "Not a number." }
-                        |> withNoCmd
-
-                Just size ->
-                    let
-                        settings =
-                            model.settings
-
-                        newSettings =
-                            { settings | fontSize = max 10 (min 50 size) }
-                    in
-                    { model
-                        | settings = newSettings
-                        , fontSizeInput = String.fromFloat newSettings.fontSize
-                        , dialogError = Nothing
-                    }
-                        |> withCmd (storeSettings newSettings model)
+        SaveSettings ->
+            saveSettings model
 
         ColumnWidthInput columnWidth ->
             { model | columnWidthInput = columnWidth } |> withNoCmd
-
-        SetColumnWidth ->
-            case String.toInt model.columnWidthInput of
-                Nothing ->
-                    { model | dialogError = Just "Not an integer." }
-                        |> withNoCmd
-
-                Just width ->
-                    let
-                        settings =
-                            model.settings
-
-                        newSettings =
-                            { settings | columnWidth = max 100 (min 1000 width) }
-                    in
-                    { model
-                        | settings = newSettings
-                        , columnWidthInput = String.fromInt newSettings.columnWidth
-                        , dialogError = Nothing
-                    }
-                        |> withCmd (storeSettings newSettings model)
 
         RestoreDefaultSettings ->
             let
@@ -1387,6 +1345,54 @@ update msg model =
 
         ReceiveUser result ->
             receiveUser result model
+
+
+focusId : String -> Cmd Msg
+focusId id =
+    Task.attempt (\_ -> Noop) <| Dom.focus id
+
+
+saveSettings : Model -> ( Model, Cmd Msg )
+saveSettings model =
+    case String.toFloat model.fontSizeInput of
+        Nothing ->
+            { model | dialogError = Just "Font Size is not a number." }
+                |> withNoCmd
+
+        Just size ->
+            case String.toInt model.columnWidthInput of
+                Nothing ->
+                    { model | dialogError = Just "Column Width is not a number." }
+                        |> withNoCmd
+
+                Just width ->
+                    let
+                        settings =
+                            model.settings
+                    in
+                    if
+                        (size == settings.fontSize)
+                            && (width == settings.columnWidth)
+                    then
+                        model |> withNoCmd
+
+                    else
+                        let
+                            newSettings =
+                                { settings
+                                    | fontSize = max 10 (min 50 size)
+                                    , columnWidth = max 100 (min 1000 width)
+                                }
+                        in
+                        { model
+                            | settings = newSettings
+                            , fontSizeInput =
+                                String.fromFloat newSettings.fontSize
+                            , columnWidthInput =
+                                String.fromInt newSettings.columnWidth
+                            , dialogError = Nothing
+                        }
+                            |> withCmd (storeSettings newSettings model)
 
 
 scrollToFeed : FeedType -> Model -> ( Model, Cmd Msg )
@@ -3115,7 +3121,7 @@ settingsDialog model =
             model.settings.fontSize
 
         iconHeight =
-            userIconHeight (2 * baseFontSize)
+            userIconHeight (1.5 * baseFontSize)
     in
     column (dialogAttributes style baseFontSize)
         [ dialogTitleBar style baseFontSize "Settings"
@@ -3134,30 +3140,73 @@ settingsDialog model =
                     ]
                 }
             ]
-        , textInputRow
-            style
-            baseFontSize
-            { label = "Font Size (px):"
-            , text = model.fontSizeInput
-            , scale = 4
-            , hasId = True
-            , buttonTitle = "Set Font Size"
-            , doit = SetFontSize
-            , saveit = FontSizeInput
-            , placeholder = Nothing
-            }
-        , textInputRow
-            style
-            baseFontSize
-            { label = "Column Width:"
-            , text = model.columnWidthInput
-            , scale = 4
-            , hasId = True
-            , buttonTitle = "Set ColumnWidth"
-            , doit = SetColumnWidth
-            , saveit = ColumnWidthInput
-            , placeholder = Nothing
-            }
+        , let
+            fontSizeRow =
+                { label = "Font Size:"
+                , element =
+                    textInput style
+                        baseFontSize
+                        { label = ""
+                        , text = model.fontSizeInput
+                        , scale = 4
+                        , id = settingsInputId
+                        , buttonTitle = ""
+                        , doit = SaveSettings
+                        , saveit = FontSizeInput
+                        , placeholder = Nothing
+                        }
+                }
+
+            columnWidthRow =
+                { label = "Column Width:"
+                , element =
+                    textInput style
+                        baseFontSize
+                        { label = ""
+                        , text = model.columnWidthInput
+                        , scale = 4
+                        , id = ""
+                        , buttonTitle = ""
+                        , doit = SaveSettings
+                        , saveit = ColumnWidthInput
+                        , placeholder = Nothing
+                        }
+                }
+          in
+          row []
+            [ column []
+                [ Element.table
+                    [ spacing 10 ]
+                    { data = [ fontSizeRow, columnWidthRow ]
+                    , columns =
+                        [ { header = Element.none
+                          , width = Element.shrink
+                          , view =
+                                \x ->
+                                    el
+                                        [ Font.bold
+                                        , Element.centerY
+                                        , Element.alignRight
+                                        ]
+                                        (text x.label)
+                          }
+                        , { header = Element.none
+                          , width = Element.shrink
+                          , view = .element
+                          }
+                        ]
+                    }
+                ]
+            , column
+                [ paddingEach { zeroes | left = 10 }
+                , centerY
+                ]
+                [ standardButton style "Save" SaveSettings <|
+                    heightImage (getIconUrl style .save)
+                        "save"
+                        iconHeight
+                ]
+            ]
         , row [ Font.bold ]
             [ textButton style
                 "Restore font size & column width defaults"
@@ -3171,7 +3220,7 @@ type alias InputRowParameters =
     { label : String
     , text : String
     , scale : Float
-    , hasId : Bool
+    , id : String
     , buttonTitle : String
     , doit : Msg
     , saveit : String -> Msg
@@ -3184,7 +3233,30 @@ textInputRow style baseFontSize params =
     let
         iconHeight =
             userIconHeight (1.5 * baseFontSize)
+    in
+    row []
+        [ inputLabel params.label
+        , textInput style baseFontSize params
+        , case params.buttonTitle of
+            "" ->
+                Element.none
 
+            title ->
+                el
+                    [ paddingEach { zeroes | left = 10 }
+                    , spacing 5
+                    ]
+                    (standardButton style params.buttonTitle params.doit <|
+                        heightImage (getIconUrl style .save)
+                            params.buttonTitle
+                            iconHeight
+                    )
+        ]
+
+
+textInput : Style -> Float -> InputRowParameters -> Element Msg
+textInput style baseFontSize params =
+    let
         placeholder =
             case params.placeholder of
                 Nothing ->
@@ -3193,37 +3265,25 @@ textInputRow style baseFontSize params =
                 Just p ->
                     Just <| Input.placeholder [] (text p)
     in
-    row []
-        [ inputLabel params.label
-        , Input.text
-            [ width
-                (px <|
-                    scaleFontSize baseFontSize
-                        (params.scale * dialogFontScale)
-                )
-            , idAttribute feedsStringInputId
-            , onKeysDownAttribute
-                [ ( keycodes.escape, CloseDialog )
-                , ( keycodes.enter, params.doit )
-                ]
-            , Background.color style.quotedPostBackground
-            , Font.color style.text
-            ]
-            { onChange = params.saveit
-            , text = params.text
-            , placeholder = placeholder
-            , label = Input.labelHidden params.label
-            }
-        , el
-            [ paddingEach { zeroes | left = 10 }
-            , spacing 5
-            ]
-            (standardButton style params.buttonTitle params.doit <|
-                heightImage (getIconUrl style .save)
-                    params.buttonTitle
-                    iconHeight
+    Input.text
+        [ width
+            (px <|
+                scaleFontSize baseFontSize
+                    (params.scale * dialogFontScale)
             )
+        , idAttribute params.id
+        , onKeysDownAttribute
+            [ ( keycodes.escape, CloseDialog )
+            , ( keycodes.enter, params.doit )
+            ]
+        , Background.color style.quotedPostBackground
+        , Font.color style.text
         ]
+        { onChange = params.saveit
+        , text = params.text
+        , placeholder = placeholder
+        , label = Input.labelHidden params.label
+        }
 
 
 inputLabel string =
@@ -3255,7 +3315,7 @@ saveFeedsDialog model =
             { label = ""
             , text = model.dialogInput
             , scale = 27
-            , hasId = True
+            , id = saveFeedInputId
             , buttonTitle = "Use Feeds"
             , doit = RestoreFeedsProperties
             , saveit = DialogInput
@@ -3292,7 +3352,7 @@ addFeedDialog model =
             , element =
                 Input.text
                     [ width <| px 200
-                    , idAttribute userFeedInputId
+                    , idAttribute addFeedInputId
                     , onKeysDownAttribute
                         [ ( keycodes.escape, CloseDialog )
                         , ( keycodes.enter, AddNewFeed feedType )
@@ -3398,14 +3458,19 @@ contentId =
     "contentColumn"
 
 
-userFeedInputId : String
-userFeedInputId =
-    "userFeedInput"
+addFeedInputId : String
+addFeedInputId =
+    "addFeedInput"
 
 
-feedsStringInputId : String
-feedsStringInputId =
+saveFeedInputId : String
+saveFeedInputId =
     "feedsStringInput"
+
+
+settingsInputId : String
+settingsInputId =
+    "settingsInput"
 
 
 controlColumn : Int -> Bool -> Settings -> Icons -> List (Feed Msg) -> Element Msg
