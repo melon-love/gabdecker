@@ -2152,9 +2152,7 @@ canonicalizeFeed newFeed feed =
                             PostFeedData newList ->
                                 let
                                     ( dat, cnt ) =
-                                        canonicalizeData .id
-                                            newList
-                                            feedList
+                                        canonicalizeData .id newList feedList
                                 in
                                 ( PostFeedData dat, cnt )
 
@@ -2611,11 +2609,14 @@ addFeedChoices model =
         ]
 
 
-dialogAttributes : Style -> Float -> List (Attribute msg)
-dialogAttributes style baseFontSize =
+dialogAttributes : Settings -> List (Attribute msg)
+dialogAttributes settings =
     List.concat
-        [ dialogAttributesNoPadding style baseFontSize
-        , [ paddingEach { top = 10, bottom = 20, left = 20, right = 20 } ]
+        [ dialogAttributesNoPadding settings
+        , [ paddingEach { top = 10, bottom = 20, left = 20, right = 20 }
+          , width <| Element.maximum settings.windowWidth Element.shrink
+          , Element.scrollbarX
+          ]
         ]
 
 
@@ -2624,30 +2625,33 @@ dialogFontScale =
     1.2
 
 
-dialogAttributesNoPadding : Style -> Float -> List (Attribute msg)
-dialogAttributesNoPadding style baseFontSize =
+dialogAttributesNoPadding : Settings -> List (Attribute msg)
+dialogAttributesNoPadding settings =
     [ Border.width 5
     , spacing 10
     , centerX
     , centerY
-    , Background.color style.dialogBackground
-    , fontSize baseFontSize dialogFontScale
+    , Background.color settings.style.dialogBackground
+    , fontSize settings.fontSize dialogFontScale
     ]
 
 
 operationErrorDialog : String -> Model -> Element Msg
 operationErrorDialog err model =
     let
+        settings =
+            model.settings
+
         style =
-            model.settings.style
+            settings.style
 
         baseFontSize =
-            model.settings.fontSize
+            settings.fontSize
 
         iconHeight =
             userIconHeight baseFontSize
     in
-    column (dialogAttributes style baseFontSize)
+    column (dialogAttributes settings)
         [ let
             closeIcon =
                 heightImage (getIconUrl style .close) "Close" iconHeight
@@ -2869,11 +2873,14 @@ userCountColumn smallFont label value =
 userDialog : User -> Bool -> Model -> Element Msg
 userDialog user isLoading model =
     let
+        settings =
+            model.settings
+
         style =
-            model.settings.style
+            settings.style
 
         baseFontSize =
-            model.settings.fontSize
+            settings.fontSize
 
         smallFont =
             fontSize baseFontSize 0.9
@@ -2882,7 +2889,7 @@ userDialog user isLoading model =
             userIconHeight (2 * baseFontSize)
     in
     if isLoading then
-        column (dialogAttributes style baseFontSize) <|
+        column (dialogAttributes settings) <|
             [ dialogTitleBar style baseFontSize <| user.name
             , dialogErrorRow model
             , row []
@@ -2894,7 +2901,7 @@ userDialog user isLoading model =
 
     else
         column
-            (dialogAttributesNoPadding style baseFontSize)
+            (dialogAttributesNoPadding settings)
             [ case user.cover_url of
                 Nothing ->
                     Element.none
@@ -3114,16 +3121,19 @@ dialogErrorRow model =
 settingsDialog : Model -> Element Msg
 settingsDialog model =
     let
+        settings =
+            model.settings
+
         style =
-            model.settings.style
+            settings.style
 
         baseFontSize =
-            model.settings.fontSize
+            settings.fontSize
 
         iconHeight =
             userIconHeight (1.5 * baseFontSize)
     in
-    column (dialogAttributes style baseFontSize)
+    column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Settings"
         , dialogErrorRow model
         , row []
@@ -3298,16 +3308,19 @@ inputLabel string =
 saveFeedsDialog : Model -> Element Msg
 saveFeedsDialog model =
     let
+        settings =
+            model.settings
+
         style =
-            model.settings.style
+            settings.style
 
         baseFontSize =
-            model.settings.fontSize
+            settings.fontSize
 
         iconHeight =
             userIconHeight (2 * baseFontSize)
     in
-    column (dialogAttributes style baseFontSize)
+    column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Save/Restore Feeds"
         , dialogErrorRow model
         , textInputRow
@@ -3328,11 +3341,14 @@ saveFeedsDialog model =
 addFeedDialog : Model -> Element Msg
 addFeedDialog model =
     let
+        settings =
+            model.settings
+
         style =
-            model.settings.style
+            settings.style
 
         baseFontSize =
-            model.settings.fontSize
+            settings.fontSize
 
         iconHeight =
             userIconHeight baseFontSize
@@ -3352,7 +3368,11 @@ addFeedDialog model =
             { label = "User: "
             , element =
                 Input.text
-                    [ width <| px 200
+                    [ width
+                        (px <|
+                            scaleFontSize baseFontSize
+                                (200 / defaultFontSize)
+                        )
                     , idAttribute addFeedInputId
                     , onKeysDownAttribute
                         [ ( keycodes.escape, CloseDialog )
@@ -3388,7 +3408,7 @@ addFeedDialog model =
         data =
             addUserFeedRow :: List.map makeRow choices
     in
-    column (dialogAttributes style baseFontSize)
+    column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Add Feed"
         , dialogErrorRow model
         , row []
