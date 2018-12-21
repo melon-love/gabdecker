@@ -3,17 +3,34 @@ module GabDecker.EncodeDecode exposing
     , decodeFeedType
     , decodeFeedsProperties
     , decodeIcons
+    , decodeSettings
     , encodeFeedProperties
     , encodeFeedType
     , encodeFeedsProperties
     , encodeIcons
+    , encodeSettings
     , feedPropertiesDecoder
     , feedTypeDecoder
     , feedsPropertiesDecoder
+    , settingsDecoder
     )
 
 import Dict exposing (Dict)
-import GabDecker.Types exposing (FeedProperties, FeedType(..), Icons)
+import GabDecker.Elements
+    exposing
+        ( darkStyle
+        , defaultSettings
+        , lightStyle
+        )
+import GabDecker.Types
+    exposing
+        ( FeedProperties
+        , FeedType(..)
+        , Icons
+        , Settings
+        , Style
+        , StyleOption(..)
+        )
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
 
@@ -203,3 +220,88 @@ iconsDecoder =
         (JD.field "user" <| JD.dict JD.string)
         (JD.field "group" <| JD.dict JD.string)
         (JD.field "topic" <| JD.dict JD.string)
+
+
+encodeStyleOption : StyleOption -> Value
+encodeStyleOption option =
+    case option of
+        LightStyle ->
+            JE.string "light"
+
+        DarkStyle ->
+            JE.string "dark"
+
+
+decodeStyleOption : Value -> Result String StyleOption
+decodeStyleOption value =
+    JD.decodeValue styleOptionDecoder value
+        |> fixDecodeResult
+
+
+styleOptionDecoder : Decoder StyleOption
+styleOptionDecoder =
+    JD.string
+        |> JD.andThen
+            (\s ->
+                case s of
+                    "light" ->
+                        JD.succeed LightStyle
+
+                    "dark" ->
+                        JD.succeed DarkStyle
+
+                    _ ->
+                        JD.fail <| "Not a style option name: " ++ s
+            )
+
+
+encodeSettings : Settings -> Value
+encodeSettings settings =
+    JE.object
+        [ ( "columnWidth", JE.int settings.columnWidth )
+        , ( "fontSize", JE.float settings.fontSize )
+        , ( "style", encodeStyleOption settings.styleOption )
+        ]
+
+
+decodeSettings : Value -> Result String Settings
+decodeSettings value =
+    JD.decodeValue settingsDecoder value
+        |> fixDecodeResult
+
+
+optionToStyle : StyleOption -> Style
+optionToStyle option =
+    case option of
+        LightStyle ->
+            lightStyle
+
+        DarkStyle ->
+            darkStyle
+
+
+settingsDecoder : Decoder Settings
+settingsDecoder =
+    JD.oneOf
+        [ -- Backward compatibilty
+          JD.map
+            (\option ->
+                { defaultSettings
+                    | styleOption = option
+                    , style = optionToStyle option
+                }
+            )
+            styleOptionDecoder
+        , JD.map3
+            (\columnWidth fontSize option ->
+                { defaultSettings
+                    | columnWidth = columnWidth
+                    , fontSize = fontSize
+                    , styleOption = option
+                    , style = optionToStyle option
+                }
+            )
+            (JD.field "columnWidth" JD.int)
+            (JD.field "fontSize" JD.float)
+            (JD.field "style" styleOptionDecoder)
+        ]

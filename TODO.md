@@ -3,6 +3,8 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* Non-html paragraph breaks are broken.
+  E.g. https://gab.com/billstclair/posts/44029457
 * Font size and column width preferences.
 * Multiple named pages of feeds, selectable on the left column.
 * When somebody "mentioned you in a comment", include an interaction row.

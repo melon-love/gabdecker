@@ -17,6 +17,9 @@ module GabDecker.Elements exposing
     , circularHeightImageWithAttributes
     , colors
     , darkStyle
+    , defaultColumnWidth
+    , defaultFontSize
+    , defaultSettings
     , defaultStyles
     , getIconUrl
     , heightImage
@@ -42,9 +45,17 @@ import Element
         , width
         )
 import Element.Font as Font
-import GabDecker.Types exposing (IconUrls, Style, Styles)
+import GabDecker.Types
+    exposing
+        ( IconUrls
+        , Settings
+        , Style
+        , StyleOption(..)
+        , Styles
+        )
 import Html
 import Html.Attributes as Attributes
+import Time
 
 
 simpleLink : Style -> String -> String -> Element msg
@@ -129,6 +140,28 @@ darkStyle =
     , quotedPostBorder = colors.darkmodegray
     , postcountBackground = colors.darkmodeblack
     , loadingFeed = colors.orange
+    }
+
+
+defaultFontSize : Float
+defaultFontSize =
+    15
+
+
+defaultColumnWidth : Int
+defaultColumnWidth =
+    350
+
+
+defaultSettings : Settings
+defaultSettings =
+    { columnWidth = defaultColumnWidth
+    , fontSize = defaultFontSize
+    , here = Time.utc
+    , windowWidth = 1260
+    , windowHeight = 1024
+    , styleOption = LightStyle
+    , style = lightStyle
     }
 
 

@@ -12,7 +12,9 @@ module GabDecker.Types exposing
     , Icons
     , LogList
     , Profile(..)
+    , Settings
     , Style
+    , StyleOption(..)
     , Styles
     , emptyIcons
     , emptyUser
@@ -34,6 +36,7 @@ import Gab.Types
         , UserList
         )
 import Http
+import Time exposing (Zone)
 
 
 type alias ApiError =
@@ -227,4 +230,20 @@ type alias IconUrls =
     , settings : String
     , user : String
     , checkmark : String
+    }
+
+
+type StyleOption
+    = LightStyle
+    | DarkStyle
+
+
+type alias Settings =
+    { columnWidth : Int
+    , fontSize : Float
+    , here : Zone
+    , windowWidth : Int
+    , windowHeight : Int
+    , styleOption : StyleOption
+    , style : Style
     }

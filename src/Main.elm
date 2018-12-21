@@ -83,6 +83,9 @@ import GabDecker.Elements
         , circularHeightImageWithAttributes
         , colors
         , darkStyle
+        , defaultColumnWidth
+        , defaultFontSize
+        , defaultSettings
         , defaultStyles
         , getIconUrl
         , heightImage
@@ -108,7 +111,9 @@ import GabDecker.Types as Types
         , IconUrls
         , Icons
         , LogList
+        , Settings
         , Style
+        , StyleOption(..)
         )
 import Html exposing (Html)
 import Html.Attributes as Attributes exposing (class, href, rel)
@@ -165,32 +170,6 @@ type DialogType
     | SaveFeedsDialog
     | SettingsDialog
     | OperationErrorDialog String
-
-
-type alias Settings =
-    { columnWidth : Int
-    , fontSize : Float
-    , here : Zone
-    , windowWidth : Int
-    , windowHeight : Int
-    , style : Style
-    }
-
-
-defaultSettings : Settings
-defaultSettings =
-    { columnWidth = defaultColumnWidth
-    , fontSize = defaultFontSize
-    , here = Time.utc
-    , windowWidth = 1260
-    , windowHeight = 1024
-    , style = lightStyle
-    }
-
-
-type StyleOption
-    = LightStyle
-    | DarkStyle
 
 
 type alias Model =
@@ -309,20 +288,11 @@ storeIcons icons model =
         model
 
 
-storeStyle : StyleOption -> Model -> Cmd Msg
-storeStyle option model =
-    let
-        string =
-            case option of
-                DarkStyle ->
-                    "dark"
-
-                LightStyle ->
-                    "light"
-    in
+storeSettings : Settings -> Model -> Cmd Msg
+storeSettings settings model =
     localStorageSend
         (LocalStorage.put storageKeys.style
-            (Just <| JE.string string)
+            (Just <| ED.encodeSettings settings)
         )
         model
 
@@ -607,11 +577,6 @@ feedsPropertiesToFeeds username maybeBackend feedsProperties startId =
                 List.range startId (startId + List.length feedsProperties - 1)
 
 
-defaultColumnWidth : Int
-defaultColumnWidth =
-    350
-
-
 feedPropertiesToFeed : Maybe String -> Backend -> FeedProperties -> Int -> Feed Msg
 feedPropertiesToFeed username backend { feedType, showProfile } id =
     let
@@ -883,37 +848,23 @@ receiveStyle value model =
             model |> withNoCmd
 
         Just v ->
-            case JD.decodeValue JD.string v of
+            case ED.decodeSettings v of
                 Err _ ->
                     model |> withNoCmd
 
-                Ok style ->
+                Ok set ->
                     let
-                        option =
-                            case style of
-                                "light" ->
-                                    LightStyle
-
-                                "dark" ->
-                                    DarkStyle
-
-                                _ ->
-                                    model.styleOption
-
                         settings =
                             model.settings
-
-                        newStyle =
-                            case option of
-                                LightStyle ->
-                                    lightStyle
-
-                                DarkStyle ->
-                                    darkStyle
                     in
                     { model
-                        | settings = { settings | style = newStyle }
-                        , styleOption = option
+                        | settings =
+                            { settings
+                                | columnWidth = set.columnWidth
+                                , fontSize = set.fontSize
+                                , styleOption = set.styleOption
+                                , style = set.style
+                            }
                     }
                         |> withNoCmd
 
@@ -1309,13 +1260,18 @@ update msg model =
 
                 settings =
                     model.settings
+
+                newSettings =
+                    { settings
+                        | styleOption = option
+                        , style = style
+                    }
             in
             { model
-                | settings =
-                    { settings | style = style }
+                | settings = newSettings
                 , styleOption = option
             }
-                |> withCmd (storeStyle option model)
+                |> withCmd (storeSettings newSettings model)
 
         RestoreFeedsProperties ->
             case JD.decodeString ED.feedsPropertiesDecoder model.dialogInput of
@@ -1336,7 +1292,6 @@ update msg model =
         DialogInput username ->
             { model | dialogInput = username } |> withNoCmd
 
-        -- TODO
         FontSizeInput fontSizeInput ->
             { model | fontSizeInput = fontSizeInput } |> withNoCmd
 
@@ -1350,14 +1305,16 @@ update msg model =
                     let
                         settings =
                             model.settings
+
+                        newSettings =
+                            { settings | fontSize = max 10 (min 50 size) }
                     in
                     { model
-                        | settings =
-                            { settings | fontSize = max size 10 }
+                        | settings = newSettings
+                        , fontSizeInput = String.fromFloat newSettings.fontSize
                         , dialogError = Nothing
                     }
-                        -- TODO: make persistent
-                        |> withNoCmd
+                        |> withCmd (storeSettings newSettings model)
 
         ColumnWidthInput columnWidth ->
             { model | columnWidthInput = columnWidth } |> withNoCmd
@@ -1372,32 +1329,34 @@ update msg model =
                     let
                         settings =
                             model.settings
+
+                        newSettings =
+                            { settings | columnWidth = max 100 (min 1000 width) }
                     in
                     { model
-                        | settings =
-                            { settings | columnWidth = max width 100 }
+                        | settings = newSettings
+                        , columnWidthInput = String.fromInt newSettings.columnWidth
                         , dialogError = Nothing
                     }
-                        -- TODO: make persistent
-                        |> withNoCmd
+                        |> withCmd (storeSettings newSettings model)
 
-        -- TODO
         RestoreDefaultSettings ->
             let
                 settings =
                     model.settings
-            in
-            { model
-                | settings =
+
+                newSettings =
                     { settings
                         | fontSize = defaultFontSize
                         , columnWidth = defaultColumnWidth
                     }
+            in
+            { model
+                | settings = newSettings
                 , fontSizeInput = String.fromFloat defaultFontSize
                 , columnWidthInput = String.fromInt defaultColumnWidth
             }
-                -- TODO: make persistent
-                |> withNoCmd
+                |> withCmd (storeSettings newSettings model)
 
         AddNewFeed feedType ->
             addNewFeed feedType model.settings.fontSize model
@@ -2502,11 +2461,6 @@ showDialog model =
             Element.none
 
 
-defaultFontSize : Float
-defaultFontSize =
-    15
-
-
 scaleFontSize : Float -> Float -> Int
 scaleFontSize baseFontSize scale =
     round (scale * baseFontSize)
@@ -3172,7 +3126,7 @@ settingsDialog model =
                 [ spacing 10
                 ]
                 { onChange = SetStyle
-                , selected = Just model.styleOption
+                , selected = Just model.settings.styleOption
                 , label = Input.labelLeft [] Element.none
                 , options =
                     [ Input.option LightStyle (text "Light")
