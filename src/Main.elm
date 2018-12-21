@@ -3183,12 +3183,13 @@ settingsDialog model =
                           , width = Element.shrink
                           , view =
                                 \x ->
-                                    el
+                                    row
                                         [ Font.bold
                                         , Element.centerY
-                                        , Element.alignRight
                                         ]
-                                        (text x.label)
+                                        [ column [ Element.alignRight ]
+                                            [ text x.label ]
+                                        ]
                           }
                         , { header = Element.none
                           , width = Element.shrink
