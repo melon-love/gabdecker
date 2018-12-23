@@ -6,6 +6,7 @@ This is a place to collect things left to do for GabDecker.
 * The Settings dialog should have an auto-size function,
   which sets the font size and column width automatically.
   Mostly useful for mobile.
+  It also needs small/medium/large choices, in addition to the pairs of numbers.
 * Non-html paragraph breaks are broken.
   E.g. https://gab.com/billstclair/posts/44029457
 * Magic numbers for scrolling horizontally depend on font size.

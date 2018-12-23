@@ -21,7 +21,7 @@
         "created_at": "2018-10-28T09:43:54+00:00",
         "revised_at": null,
         "edited": false,
-        "body": "Valerie  @Papillon_Life ",
+        "body": "This i a test post with some line breaks to check the rendering code\n\nThis should be a separate paragraph.\nSecond line in second paragraph\nThird line in second paragraph.\n\nThird paragraph starts here.",
         "body_html": null,
         "body_html_summary": null,
         "body_html_summary_truncated": false,

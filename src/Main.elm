@@ -535,12 +535,15 @@ init flags url key =
             , Task.perform Here Time.here
             , case savedToken of
                 Nothing ->
-                    Cmd.none
+                    if model.useSimulator then
+                        loadAllCmd
+
+                    else
+                        Cmd.none
 
                 Just st ->
                     Http.send ReceiveLoggedInUser <|
                         Gab.me st.token
-            , loadAllCmd
             ]
 
 
@@ -760,7 +763,6 @@ receiveToken mv model =
                               else
                                 Http.send ReceiveLoggedInUser <|
                                     Gab.me savedToken.token
-                            , loadAllCmd
                             ]
 
 
@@ -963,20 +965,22 @@ update msg model =
             model |> withNoCmd
 
         ReceiveLoggedInUser result ->
-            case result of
+            case Debug.log "ReceiveLoggedInUser" result of
                 Err err ->
-                    let
-                        ( mdl, cmd ) =
-                            processReceivedError err model
-                    in
-                    { mdl
-                        | msg = Just "Error getting logged-in user name."
+                    { model
+                        | backend = Nothing
+                        , feeds = []
+                        , msg = Just "Error getting logged-in user name."
                     }
-                        |> withCmd cmd
+                        |> withCmd
+                            (localStorageSend
+                                (LocalStorage.put storageKeys.token Nothing)
+                                model
+                            )
 
                 Ok user ->
                     { model | loggedInUser = Just user.username }
-                        |> withNoCmd
+                        |> withCmd loadAllCmd
 
         PersistResponseToken token time ->
             let
@@ -2020,7 +2024,7 @@ receiveFeed scrollToTop feedType result model =
                 Err err ->
                     case err.httpError of
                         Just httpError ->
-                            processReceivedError httpError model
+                            processReceiveFeedError feedType httpError model
 
                         _ ->
                             model |> withNoCmd
@@ -2074,23 +2078,42 @@ receiveFeed scrollToTop feedType result model =
 
 processReceivedError : Http.Error -> Model -> ( Model, Cmd Msg )
 processReceivedError err model =
-    case err of
-        -- I don't know why we get BadPayload for a bad token, but we do.
-        -- Currently, this remove the saved token and forces a new login.
-        BadPayload _ _ ->
-            let
-                mdl =
-                    { model | backend = Nothing }
-            in
-            mdl
-                |> withCmd
-                    (localStorageSend
-                        (LocalStorage.put storageKeys.token Nothing)
-                        mdl
-                    )
+    let
+        message =
+            "HTTP error: "
+                ++ (Debug.toString err |> String.left 100)
+    in
+    { model
+        | showDialog =
+            case model.showDialog of
+                NoDialog ->
+                    OperationErrorDialog message
 
-        _ ->
-            model |> withNoCmd
+                dialog ->
+                    dialog
+    }
+        |> withNoCmd
+
+
+processReceiveFeedError : FeedType -> Http.Error -> Model -> ( Model, Cmd Msg )
+processReceiveFeedError feedType err model =
+    let
+        message =
+            "Error getting feed <"
+                ++ feedTypeToString feedType
+                ++ ">: "
+                ++ (Debug.toString err |> String.left 100)
+    in
+    { model
+        | showDialog =
+            case model.showDialog of
+                NoDialog ->
+                    OperationErrorDialog message
+
+                dialog ->
+                    dialog
+    }
+        |> withNoCmd
 
 
 updateFeeds : Bool -> FeedType -> FeedResult (LogList FeedData) -> List (Feed Msg) -> ( String, List (Feed Msg) )
@@ -5177,7 +5200,7 @@ paragraphLineSpacing baseFontSize =
 
 psep : String
 psep =
-    "</p></p>"
+    "</p><p>"
 
 
 crlf : String
@@ -5185,31 +5208,34 @@ crlf =
     "\u{000D}\n"
 
 
+replace : String -> String -> String -> String
+replace old new string =
+    String.split old string
+        |> String.join new
+
+
+brsep : String
+brsep =
+    "<br />"
+
+
 newlinesToPs : String -> String
 newlinesToPs string =
-    String.split "\n\n" string
-        |> String.join psep
-        |> String.split (crlf ++ crlf)
-        |> wrapPs
+    replace "\n\n" psep string
+        |> replace (crlf ++ crlf) psep
+        |> replace "\n" brsep
+        |> replace crlf brsep
+        |> wrapWithP
 
 
-wrapPs : List String -> String
-wrapPs strings =
-    --newlinesToBrs <|
-    case strings of
-        [] ->
+wrapWithP : String -> String
+wrapWithP string =
+    case string of
+        "" ->
             ""
 
         _ ->
-            "<p>" ++ String.join "</p><p>" strings ++ "</p>"
-
-
-newlinesToBrs : String -> String
-newlinesToBrs string =
-    String.split crlf string
-        |> String.join "<br/>"
-        |> String.split "\n"
-        |> String.join "<br/>"
+            "<p>" ++ string ++ "</p>"
 
 
 htmlBodyElements : Style -> Float -> String -> List (Element Msg)
@@ -5231,9 +5257,9 @@ fixBareHtml html =
         html
 
     else
-        ("<p>" ++ html ++ "</p>")
-            |> String.split "\n"
-            |> String.join "</p>\n<p>"
+        replace "\n" psep html
+            |> replace crlf psep
+            |> wrapWithP
 
 
 atUserRenderer : Style -> String -> String -> Element Msg
