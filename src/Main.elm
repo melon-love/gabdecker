@@ -199,6 +199,7 @@ type alias Model =
     , columnWidthInput : String
     , fontSizeOption : Maybe SizeOption
     , columnWidthOption : Maybe SizeOption
+    , autoSizeColumns : Int
     , icons : Icons
     , users : Dict String User
 
@@ -255,6 +256,8 @@ type Msg
     | ColumnWidthInput String
     | FontSizeOption SizeOption
     | ColumnWidthOption SizeOption
+    | SetAutoSizeColumns Int
+    | AutoSize
     | SaveSettings
     | RestoreDefaultSettings
     | AddNewFeed FeedType
@@ -514,6 +517,7 @@ init flags url key =
             , columnWidthInput = String.fromInt defaultColumnWidth
             , fontSizeOption = Just MediumSize
             , columnWidthOption = Just MediumSize
+            , autoSizeColumns = 1
             , icons = Types.emptyIcons
             , users = Dict.empty
             , feedsProperties = initialFeedsProperties
@@ -1333,6 +1337,13 @@ update msg model =
                             , columnWidthInput = String.fromInt size
                         }
 
+        SetAutoSizeColumns columns ->
+            { model | autoSizeColumns = columns }
+                |> withNoCmd
+
+        AutoSize ->
+            autoSize model
+
         RestoreDefaultSettings ->
             let
                 settings =
@@ -1380,6 +1391,37 @@ update msg model =
 
         ReceiveUser result ->
             receiveUser result model
+
+
+autoSize : Model -> ( Model, Cmd Msg )
+autoSize model =
+    let
+        settings =
+            model.settings
+
+        baseFontSize =
+            settings.fontSize
+
+        ccw =
+            controlColumnWidth baseFontSize
+
+        columnWidth =
+            (settings.windowWidth - ccw - 5) // model.autoSizeColumns
+
+        newFontSize =
+            toFloat (round <| toFloat columnWidth / 22.5)
+
+        realCcw =
+            controlColumnWidth newFontSize
+
+        realCw =
+            (settings.windowWidth - realCcw - 5) // model.autoSizeColumns
+    in
+    { model
+        | fontSizeInput = String.fromFloat newFontSize
+        , columnWidthInput = String.fromInt realCw
+    }
+        |> saveSettings
 
 
 fontSizeOptions : List ( Float, SizeOption )
@@ -1445,8 +1487,8 @@ saveSettings model =
                         let
                             newSettings =
                                 { settings
-                                    | fontSize = max 10 (min 50 size)
-                                    , columnWidth = max 100 (min 1000 width)
+                                    | fontSize = max 10 size
+                                    , columnWidth = max 100 width
                                 }
                         in
                         { model
@@ -3248,9 +3290,9 @@ settingsDialog model =
                             , selected = model.fontSizeOption
                             , label = Input.labelLeft [] Element.none
                             , options =
-                                [ Input.option SmallSize (text "Small")
-                                , Input.option MediumSize (text "Medium")
-                                , Input.option LargeSize (text "Large")
+                                [ Input.option SmallSize (text "S")
+                                , Input.option MediumSize (text "M")
+                                , Input.option LargeSize (text "L")
                                 ]
                             }
                         , el [ paddingEach { zeroes | left = 10 } ] Element.none
@@ -3279,9 +3321,9 @@ settingsDialog model =
                             , selected = model.columnWidthOption
                             , label = Input.labelLeft [] Element.none
                             , options =
-                                [ Input.option SmallSize (text "Small")
-                                , Input.option MediumSize (text "Medium")
-                                , Input.option LargeSize (text "Large")
+                                [ Input.option SmallSize (text "S")
+                                , Input.option MediumSize (text "M")
+                                , Input.option LargeSize (text "L")
                                 ]
                             }
                         , el [ paddingEach { zeroes | left = 10 } ] Element.none
@@ -3299,8 +3341,13 @@ settingsDialog model =
                         ]
                 }
           in
-          row []
-            [ column []
+          row
+            [ Border.color style.border
+            , Border.width 1
+            , padding 10
+            ]
+            [ column
+                []
                 [ Element.table
                     [ spacing 10 ]
                     { data = [ styleRow, fontSizeRow, columnWidthRow ]
@@ -3333,6 +3380,33 @@ settingsDialog model =
                         "Save Numbers"
                         iconHeight
                 ]
+            ]
+        , row
+            [ Border.color style.border
+            , Border.width 1
+            , padding 10
+            ]
+            [ el
+                [ Font.bold
+                , paddingEach { zeroes | right = 10 }
+                ]
+                (text "Auto-size columns:")
+            , Input.radioRow
+                [ spacing 10
+                , paddingEach { zeroes | right = 10 }
+                ]
+                { onChange = SetAutoSizeColumns
+                , selected = Just model.autoSizeColumns
+                , label = Input.labelLeft [] Element.none
+                , options =
+                    [ Input.option 1 (text "one")
+                    , Input.option 2 (text "two")
+                    ]
+                }
+            , standardButton style "Auto Size" AutoSize <|
+                heightImage (getIconUrl style .save)
+                    "Auto Size"
+                    iconHeight
             ]
         , row [ Font.bold ]
             [ textButton style
