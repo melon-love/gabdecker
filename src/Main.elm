@@ -112,6 +112,7 @@ import GabDecker.Types as Types
         , Icons
         , LogList
         , Settings
+        , SizeOption(..)
         , Style
         , StyleOption(..)
         )
@@ -196,6 +197,8 @@ type alias Model =
     , dialogInput : String
     , fontSizeInput : String
     , columnWidthInput : String
+    , fontSizeOption : Maybe SizeOption
+    , columnWidthOption : Maybe SizeOption
     , icons : Icons
     , users : Dict String User
 
@@ -250,6 +253,8 @@ type Msg
     | DialogInput String
     | FontSizeInput String
     | ColumnWidthInput String
+    | FontSizeOption SizeOption
+    | ColumnWidthOption SizeOption
     | SaveSettings
     | RestoreDefaultSettings
     | AddNewFeed FeedType
@@ -507,6 +512,8 @@ init flags url key =
             , dialogInput = ""
             , fontSizeInput = String.fromFloat defaultFontSize
             , columnWidthInput = String.fromInt defaultColumnWidth
+            , fontSizeOption = Just MediumSize
+            , columnWidthOption = Just MediumSize
             , icons = Types.emptyIcons
             , users = Dict.empty
             , feedsProperties = initialFeedsProperties
@@ -1302,6 +1309,30 @@ update msg model =
         ColumnWidthInput columnWidth ->
             { model | columnWidthInput = columnWidth } |> withNoCmd
 
+        FontSizeOption option ->
+            case LE.find (\( _, o ) -> option == o) fontSizeOptions of
+                Nothing ->
+                    model |> withNoCmd
+
+                Just ( size, _ ) ->
+                    saveSettings
+                        { model
+                            | fontSizeOption = Just option
+                            , fontSizeInput = String.fromFloat size
+                        }
+
+        ColumnWidthOption option ->
+            case LE.find (\( _, o ) -> option == o) columnWidthOptions of
+                Nothing ->
+                    model |> withNoCmd
+
+                Just ( size, _ ) ->
+                    saveSettings
+                        { model
+                            | columnWidthOption = Just option
+                            , columnWidthInput = String.fromInt size
+                        }
+
         RestoreDefaultSettings ->
             let
                 settings =
@@ -1349,6 +1380,36 @@ update msg model =
 
         ReceiveUser result ->
             receiveUser result model
+
+
+fontSizeOptions : List ( Float, SizeOption )
+fontSizeOptions =
+    [ ( 10, SmallSize ), ( 15, MediumSize ), ( 20, LargeSize ) ]
+
+
+fontSizeOption : Float -> Maybe SizeOption
+fontSizeOption size =
+    case LE.find (\( s, _ ) -> size == s) fontSizeOptions of
+        Just ( _, option ) ->
+            Just option
+
+        Nothing ->
+            Nothing
+
+
+columnWidthOptions : List ( Int, SizeOption )
+columnWidthOptions =
+    [ ( 250, SmallSize ), ( 350, MediumSize ), ( 450, LargeSize ) ]
+
+
+columnWidthOption : Int -> Maybe SizeOption
+columnWidthOption size =
+    case LE.find (\( s, _ ) -> size == s) columnWidthOptions of
+        Just ( _, option ) ->
+            Just option
+
+        Nothing ->
+            Nothing
 
 
 focusId : String -> Cmd Msg
@@ -3159,58 +3220,90 @@ settingsDialog model =
     column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Settings"
         , dialogErrorRow model
-        , row []
-            [ inputLabel "Style: "
-            , Input.radioRow
-                [ spacing 10
-                ]
-                { onChange = SetStyle
-                , selected = Just model.settings.styleOption
-                , label = Input.labelLeft [] Element.none
-                , options =
-                    [ Input.option LightStyle (text "Light")
-                    , Input.option DarkStyle (text "Dark")
-                    ]
-                }
-            ]
         , let
+            styleRow =
+                { label = "Style:"
+                , element =
+                    Input.radioRow
+                        [ spacing 10
+                        ]
+                        { onChange = SetStyle
+                        , selected = Just model.settings.styleOption
+                        , label = Input.labelLeft [] Element.none
+                        , options =
+                            [ Input.option LightStyle (text "Light")
+                            , Input.option DarkStyle (text "Dark")
+                            ]
+                        }
+                }
+
             fontSizeRow =
                 { label = "Font Size:"
                 , element =
-                    textInput style
-                        baseFontSize
-                        { label = ""
-                        , text = model.fontSizeInput
-                        , scale = 4
-                        , id = settingsInputId
-                        , buttonTitle = ""
-                        , doit = SaveSettings
-                        , saveit = FontSizeInput
-                        , placeholder = Nothing
-                        }
+                    row []
+                        [ Input.radioRow
+                            [ spacing 10
+                            ]
+                            { onChange = FontSizeOption
+                            , selected = model.fontSizeOption
+                            , label = Input.labelLeft [] Element.none
+                            , options =
+                                [ Input.option SmallSize (text "Small")
+                                , Input.option MediumSize (text "Medium")
+                                , Input.option LargeSize (text "Large")
+                                ]
+                            }
+                        , el [ paddingEach { zeroes | left = 10 } ] Element.none
+                        , textInput style
+                            baseFontSize
+                            { label = ""
+                            , text = model.fontSizeInput
+                            , scale = 4
+                            , id = settingsInputId
+                            , buttonTitle = ""
+                            , doit = SaveSettings
+                            , saveit = FontSizeInput
+                            , placeholder = Nothing
+                            }
+                        ]
                 }
 
             columnWidthRow =
                 { label = "Column Width:"
                 , element =
-                    textInput style
-                        baseFontSize
-                        { label = ""
-                        , text = model.columnWidthInput
-                        , scale = 4
-                        , id = ""
-                        , buttonTitle = ""
-                        , doit = SaveSettings
-                        , saveit = ColumnWidthInput
-                        , placeholder = Nothing
-                        }
+                    row []
+                        [ Input.radioRow
+                            [ spacing 10
+                            ]
+                            { onChange = ColumnWidthOption
+                            , selected = model.columnWidthOption
+                            , label = Input.labelLeft [] Element.none
+                            , options =
+                                [ Input.option SmallSize (text "Small")
+                                , Input.option MediumSize (text "Medium")
+                                , Input.option LargeSize (text "Large")
+                                ]
+                            }
+                        , el [ paddingEach { zeroes | left = 10 } ] Element.none
+                        , textInput style
+                            baseFontSize
+                            { label = ""
+                            , text = model.columnWidthInput
+                            , scale = 4
+                            , id = ""
+                            , buttonTitle = ""
+                            , doit = SaveSettings
+                            , saveit = ColumnWidthInput
+                            , placeholder = Nothing
+                            }
+                        ]
                 }
           in
           row []
             [ column []
                 [ Element.table
                     [ spacing 10 ]
-                    { data = [ fontSizeRow, columnWidthRow ]
+                    { data = [ styleRow, fontSizeRow, columnWidthRow ]
                     , columns =
                         [ { header = Element.none
                           , width = Element.shrink
@@ -3232,12 +3325,12 @@ settingsDialog model =
                     }
                 ]
             , column
-                [ paddingEach { zeroes | left = 10 }
+                [ paddingEach { zeroes | left = 10, top = 10 }
                 , centerY
                 ]
-                [ standardButton style "Save" SaveSettings <|
+                [ standardButton style "Save Numbers" SaveSettings <|
                     heightImage (getIconUrl style .save)
-                        "save"
+                        "Save Numbers"
                         iconHeight
                 ]
             ]

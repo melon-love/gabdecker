@@ -13,6 +13,7 @@ module GabDecker.Types exposing
     , LogList
     , Profile(..)
     , Settings
+    , SizeOption(..)
     , Style
     , StyleOption(..)
     , Styles
@@ -236,6 +237,12 @@ type alias IconUrls =
 type StyleOption
     = LightStyle
     | DarkStyle
+
+
+type SizeOption
+    = SmallSize
+    | MediumSize
+    | LargeSize
 
 
 type alias Settings =

@@ -3,14 +3,16 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* Multiple named pages of feeds, selectable on the left column.
 * The Settings dialog should have an auto-size function,
   which sets the font size and column width automatically.
   Mostly useful for mobile.
-  It also needs small/medium/large choices, in addition to the pairs of numbers.
-* Non-html paragraph breaks are broken.
-  E.g. https://gab.com/billstclair/posts/44029457
 * Magic numbers for scrolling horizontally depend on font size.
-* Multiple named pages of feeds, selectable on the left column.
+* URLs:
+  /feed/<feed> opens and scrolls to feed.
+  /feed opens the feed dialog
+  /user/<username> opens the user profile dialog
+  /post/<postid> opens the post dialog
 * When somebody "mentioned you in a comment", include an interaction row.
 * Figure out the proper way to compute `repostString`. It's wrong now.
   repost, repost a comment, quote, quote a comment, comment, comment on a comment.
@@ -21,11 +23,13 @@ This is a place to collect things left to do for GabDecker.
 * It looks like the notification API doesn't return comments on comments.
   Looks like it doesn't return comments either, unless they get liked.
   It should. Verify this, then report it.
-* Clicking on a name should give option of adding feed or opening profile.
-  Same with group and topic, once those feeds are in the API.
-  Should also be able to mute/unmute user.
+* Clicking on a group and topic should open a dialog,
+  once those feeds are in the API.
+  Should also be able to mute/unmute user in user profile dilaog.
+  User profile dialog should offer "Scroll to user feed".
 * Clicking on a post time should give the option of opening in Gab
   or performing an action, all five actions displayed in a feed.
+  Or, open post dialog with comment navigation (once I get tha API).
 * "Show comments in feeds" preference, or maybe per-feed.
   "Disable YouTube & Giphy embeds" (they track you).
   Or use the convenient Gab link to a non-tracking option.
@@ -86,6 +90,8 @@ This is a place to collect things left to do for GabDecker.
   Put a little black box below the cover image, like Gab does,
   So text won't collide with image.
   Clicking on "Followers" or "Following" count should show icons somewhere.
+* Fix rotate on mobile. Rotate back doesn’t update window height.
+  Works in Safari. Flaky in Firefox. A bug workaround would be good.
 * Help, About
 * Premium features.
   Gotta make money off of this somehow.
