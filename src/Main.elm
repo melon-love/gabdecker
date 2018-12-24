@@ -877,6 +877,8 @@ receiveStyle value model =
                                 , styleOption = set.styleOption
                                 , style = set.style
                             }
+                        , fontSizeInput = String.fromFloat set.fontSize
+                        , columnWidthInput = String.fromInt set.columnWidth
                     }
                         |> adjustOptions
                         |> withNoCmd
@@ -1361,6 +1363,7 @@ update msg model =
                 , fontSizeInput = String.fromFloat defaultFontSize
                 , columnWidthInput = String.fromInt defaultColumnWidth
             }
+                |> adjustOptions
                 |> withCmd (storeSettings newSettings model)
 
         AddNewFeed feedType ->
@@ -1432,8 +1435,8 @@ adjustOptions model =
             model.settings
     in
     { model
-        | fontSizeOption = fontSizeOption settings.fontSize
-        , columnWidthOption = columnWidthOption settings.columnWidth
+        | fontSizeOption = Debug.log "fontSizeOption" <| fontSizeOption settings.fontSize
+        , columnWidthOption = Debug.log "columnWidthOption" <| columnWidthOption settings.columnWidth
     }
 
 
