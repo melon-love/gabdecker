@@ -878,6 +878,7 @@ receiveStyle value model =
                                 , style = set.style
                             }
                     }
+                        |> adjustOptions
                         |> withNoCmd
 
 
@@ -1424,6 +1425,18 @@ autoSize model =
         |> saveSettings
 
 
+adjustOptions : Model -> Model
+adjustOptions model =
+    let
+        settings =
+            model.settings
+    in
+    { model
+        | fontSizeOption = fontSizeOption settings.fontSize
+        , columnWidthOption = columnWidthOption settings.columnWidth
+    }
+
+
 fontSizeOptions : List ( Float, SizeOption )
 fontSizeOptions =
     [ ( 10, SmallSize ), ( 15, MediumSize ), ( 20, LargeSize ) ]
@@ -1499,6 +1512,7 @@ saveSettings model =
                                 String.fromInt newSettings.columnWidth
                             , dialogError = Nothing
                         }
+                            |> adjustOptions
                             |> withCmd (storeSettings newSettings model)
 
 
