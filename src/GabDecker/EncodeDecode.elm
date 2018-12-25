@@ -1,17 +1,14 @@
 module GabDecker.EncodeDecode exposing
-    ( decodeFeedProperties
-    , decodeFeedType
-    , decodeFeedsProperties
+    ( decodeFeedType
+    , decodeFeedTypes
     , decodeIcons
     , decodeSettings
-    , encodeFeedProperties
     , encodeFeedType
-    , encodeFeedsProperties
+    , encodeFeedTypes
     , encodeIcons
     , encodeSettings
-    , feedPropertiesDecoder
     , feedTypeDecoder
-    , feedsPropertiesDecoder
+    , feedTypesDecoder
     , settingsDecoder
     )
 
@@ -24,8 +21,7 @@ import GabDecker.Elements
         )
 import GabDecker.Types
     exposing
-        ( FeedProperties
-        , FeedType(..)
+        ( FeedType(..)
         , Icons
         , Settings
         , Style
@@ -35,48 +31,27 @@ import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
 
 
-encodeFeedProperties : FeedProperties -> Value
-encodeFeedProperties properties =
-    if not properties.showProfile then
-        encodeFeedType properties.feedType
-
-    else
-        JE.object
-            [ ( "feedType", encodeFeedType properties.feedType )
-            , ( "showProfile", JE.bool True )
-            ]
+encodeFeedTypes : List FeedType -> Value
+encodeFeedTypes types =
+    JE.list encodeFeedType types
 
 
-encodeFeedsProperties : List FeedProperties -> Value
-encodeFeedsProperties properties =
-    JE.list encodeFeedProperties properties
-
-
-feedPropertiesDecoder : Decoder FeedProperties
+feedPropertiesDecoder : Decoder FeedType
 feedPropertiesDecoder =
     JD.oneOf
-        [ JD.map (\feedType -> FeedProperties feedType False)
-            feedTypeDecoder
-        , JD.map2 FeedProperties
-            (JD.field "feedType" feedTypeDecoder)
-            (JD.field "showProfile" JD.bool)
+        [ feedTypeDecoder
+        , JD.field "feedType" feedTypeDecoder
         ]
 
 
-decodeFeedProperties : Value -> Result String FeedProperties
-decodeFeedProperties value =
-    JD.decodeValue feedPropertiesDecoder value
-        |> fixDecodeResult
-
-
-feedsPropertiesDecoder : Decoder (List FeedProperties)
-feedsPropertiesDecoder =
+feedTypesDecoder : Decoder (List FeedType)
+feedTypesDecoder =
     JD.list feedPropertiesDecoder
 
 
-decodeFeedsProperties : Value -> Result String (List FeedProperties)
-decodeFeedsProperties value =
-    JD.decodeValue feedsPropertiesDecoder value
+decodeFeedTypes : Value -> Result String (List FeedType)
+decodeFeedTypes value =
+    JD.decodeValue feedTypesDecoder value
         |> fixDecodeResult
 
 

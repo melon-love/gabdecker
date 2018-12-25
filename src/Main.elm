@@ -105,7 +105,6 @@ import GabDecker.Types as Types
         , Feed
         , FeedData(..)
         , FeedGetter(..)
-        , FeedProperties
         , FeedResult
         , FeedType(..)
         , GangedNotification
@@ -205,7 +204,7 @@ type alias Model =
     , users : Dict String User
 
     -- This is only used at startup. It's not accurate after that.
-    , feedsProperties : List FeedProperties
+    , feedTypes : List FeedType
     , nextId : Int
     , feeds : List (Feed Msg)
     , lastFeeds : Dict String (Feed Msg)
@@ -248,10 +247,10 @@ type Msg
     | ScrollToControl String Dom.Element (Result Dom.Error Dom.Element)
     | ScrollToContent Dom.Element Dom.Element (Result Dom.Error Dom.Element)
     | AddFeed
-    | SaveFeedsProperties
+    | SaveFeedTypes
     | ShowSettings
     | SetStyle StyleOption
-    | RestoreFeedsProperties
+    | RestoreFeedTypes
     | DialogInput String
     | FontSizeInput String
     | ColumnWidthInput String
@@ -410,10 +409,9 @@ localStoragePrefix =
     "gab-api-example"
 
 
-initialFeedsProperties : List FeedProperties
-initialFeedsProperties =
-    List.map (\ft -> FeedProperties ft False)
-        [ HomeFeed, NotificationsFeed, PopularFeed, UserFeed "a" ]
+initialFeedTypes : List FeedType
+initialFeedTypes =
+    [ HomeFeed, NotificationsFeed, PopularFeed, UserFeed "a" ]
 
 
 init : Value -> Url -> Key -> ( Model, Cmd Msg )
@@ -488,9 +486,9 @@ init flags url key =
                                 ( be, Just auth )
 
                 feeds =
-                    feedsPropertiesToFeeds Nothing
+                    feedTypesToFeeds Nothing
                         backend
-                        initialFeedsProperties
+                        initialFeedTypes
                         0
             in
             { showDialog = NoDialog
@@ -521,7 +519,7 @@ init flags url key =
             , autoSizeColumns = 1
             , icons = Types.emptyIcons
             , users = Dict.empty
-            , feedsProperties = initialFeedsProperties
+            , feedTypes = initialFeedTypes
             , nextId = List.length feeds
             , feeds = feeds
             , lastFeeds = Dict.empty
@@ -578,21 +576,21 @@ getViewport viewport =
     WindowResize (round vp.width) (round vp.height)
 
 
-feedsPropertiesToFeeds : Maybe String -> Maybe Backend -> List FeedProperties -> Int -> List (Feed Msg)
-feedsPropertiesToFeeds username maybeBackend feedsProperties startId =
+feedTypesToFeeds : Maybe String -> Maybe Backend -> List FeedType -> Int -> List (Feed Msg)
+feedTypesToFeeds username maybeBackend feedTypes startId =
     case maybeBackend of
         Nothing ->
             []
 
         Just backend ->
-            List.map2 (feedPropertiesToFeed username backend)
-                feedsProperties
+            List.map2 (feedTypeToFeed username backend)
+                feedTypes
             <|
-                List.range startId (startId + List.length feedsProperties - 1)
+                List.range startId (startId + List.length feedTypes - 1)
 
 
-feedPropertiesToFeed : Maybe String -> Backend -> FeedProperties -> Int -> Feed Msg
-feedPropertiesToFeed username backend { feedType, showProfile } id =
+feedTypeToFeed : Maybe String -> Backend -> FeedType -> Int -> Feed Msg
+feedTypeToFeed username backend feedType id =
     let
         ft =
             if feedType == LoggedInUserFeed then
@@ -618,7 +616,6 @@ feedPropertiesToFeed username backend { feedType, showProfile } id =
                     PostFeedData []
         , no_more = False
         }
-    , showProfile = showProfile
     , newPosts = 0
     , error = Nothing
     , id = id
@@ -753,9 +750,9 @@ receiveToken mv model =
                                 RealBackend savedToken.token
 
                         feeds =
-                            feedsPropertiesToFeeds model.loggedInUser
+                            feedTypesToFeeds model.loggedInUser
                                 backend
-                                model.feedsProperties
+                                model.feedTypes
                                 0
                     in
                     List.foldl setLoadingFeed
@@ -778,8 +775,8 @@ receiveToken mv model =
                             ]
 
 
-restoreFeedsProperties : List FeedProperties -> Model -> ( Model, Cmd Msg )
-restoreFeedsProperties feedsProperties model =
+restoreFeedTypes : List FeedType -> Model -> ( Model, Cmd Msg )
+restoreFeedTypes feedTypes model =
     let
         icons =
             Types.emptyIcons
@@ -787,7 +784,7 @@ restoreFeedsProperties feedsProperties model =
     case model.backend of
         Nothing ->
             { model
-                | feedsProperties = feedsProperties
+                | feedTypes = feedTypes
                 , feeds = []
                 , icons = icons
             }
@@ -796,9 +793,9 @@ restoreFeedsProperties feedsProperties model =
         backend ->
             let
                 feeds =
-                    feedsPropertiesToFeeds model.loggedInUser
+                    feedTypesToFeeds model.loggedInUser
                         backend
-                        feedsProperties
+                        feedTypes
                         0
             in
             { model
@@ -828,11 +825,11 @@ receiveFeedTypes value model =
             model |> withCmd cmd
 
         Just v ->
-            case ED.decodeFeedsProperties v of
+            case ED.decodeFeedTypes v of
                 Err err ->
                     model |> withCmd cmd
 
-                Ok properties ->
+                Ok types ->
                     let
                         ( feeds, cmd2 ) =
                             case model.backend of
@@ -840,15 +837,15 @@ receiveFeedTypes value model =
                                     ( model.feeds, Cmd.none )
 
                                 backend ->
-                                    ( feedsPropertiesToFeeds model.loggedInUser
+                                    ( feedTypesToFeeds model.loggedInUser
                                         backend
-                                        properties
+                                        types
                                         0
                                     , loadAllCmd
                                     )
                     in
                     { model
-                        | feedsProperties = properties
+                        | feedTypes = types
                         , feeds = feeds
                     }
                         |> withCmds [ cmd, cmd2 ]
@@ -1241,11 +1238,11 @@ update msg model =
             }
                 |> withCmd (focusId addFeedInputId)
 
-        SaveFeedsProperties ->
+        SaveFeedTypes ->
             let
                 typesString =
-                    List.map feedToProperties model.feeds
-                        |> ED.encodeFeedsProperties
+                    List.map .feedType model.feeds
+                        |> ED.encodeFeedTypes
                         |> JE.encode 0
             in
             { model
@@ -1289,13 +1286,13 @@ update msg model =
             }
                 |> withCmd (storeSettings newSettings model)
 
-        RestoreFeedsProperties ->
-            case JD.decodeString ED.feedsPropertiesDecoder model.dialogInput of
+        RestoreFeedTypes ->
+            case JD.decodeString ED.feedTypesDecoder model.dialogInput of
                 Err err ->
                     { model | dialogError = Just <| JD.errorToString err }
                         |> withNoCmd
 
-                Ok properties ->
+                Ok feeds ->
                     let
                         mdl =
                             { model
@@ -1303,7 +1300,7 @@ update msg model =
                                 , dialogError = Nothing
                             }
                     in
-                    restoreFeedsProperties properties mdl
+                    restoreFeedTypes feeds mdl
 
         DialogInput username ->
             { model | dialogInput = username } |> withNoCmd
@@ -1905,17 +1902,12 @@ cdr list =
     Maybe.withDefault [] <| List.tail list
 
 
-feedToProperties : Feed msg -> FeedProperties
-feedToProperties feed =
-    FeedProperties feed.feedType feed.showProfile
-
-
 saveFeeds : List (Feed Msg) -> Model -> Cmd Msg
 saveFeeds feeds model =
     let
         value =
-            List.map feedToProperties feeds
-                |> ED.encodeFeedsProperties
+            List.map .feedType feeds
+                |> ED.encodeFeedTypes
     in
     localStorageSend
         (LocalStorage.put storageKeys.feeds <| Just value)
@@ -1984,9 +1976,9 @@ addNewFeed feedType baseFontSize model =
 
                         else
                             addit
-                                (feedPropertiesToFeed model.loggedInUser
+                                (feedTypeToFeed model.loggedInUser
                                     backend
-                                    (FeedProperties feedType True)
+                                    feedType
                                     model.nextId
                                 )
 
@@ -3555,7 +3547,7 @@ saveFeedsDialog model =
             , scale = 27
             , id = saveFeedInputId
             , buttonTitle = "Use Feeds"
-            , doit = RestoreFeedsProperties
+            , doit = RestoreFeedTypes
             , saveit = DialogInput
             , placeholder = Just "username"
             }
@@ -3785,7 +3777,7 @@ controlColumn columnWidth isLoading settings icons feeds =
                             (widthImage (getIconUrl style .settings) "Settings" iconHeight)
                         , standardButton style
                             "Restore Feeds"
-                            SaveFeedsProperties
+                            SaveFeedTypes
                             (widthImage (getIconUrl style .save) "Save" iconHeight)
                         , standardButton style "Logout" Logout <|
                             heightImage (getIconUrl style .logout) "Logout" iconHeight
