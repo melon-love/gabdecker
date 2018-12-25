@@ -81,6 +81,7 @@ import GabDecker.Elements
     exposing
         ( circularHeightImage
         , circularHeightImageWithAttributes
+        , circularRadiusAttribute
         , colors
         , darkStyle
         , defaultColumnWidth
@@ -2886,13 +2887,29 @@ userIconAndInfoOverlay style baseFontSize smallFont user =
           column
             [ paddingEach
                 { zeroes
-                    | left = 15
+                    | left = 5
                     , top = 315 - delta
                 }
-            , spacing 5
-            , Font.color colors.white
             ]
-            descriptionRows
+            [ row []
+                [ column
+                    [ spacing 5
+                    , paddingEach
+                        { zeroes
+                            | left = 10
+                            , right = 10
+                            , top = 10
+                            , bottom = 10
+                        }
+                    , Font.color colors.white
+                    , Element.htmlAttribute <|
+                        Attributes.style "border-radius" "30%"
+                    , styleAttribute "background" "rgb(0,0,0,0)"
+                    , styleAttribute "background" "radial-gradient(circle, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 99%)"
+                    ]
+                    descriptionRows
+                ]
+            ]
         ]
 
 

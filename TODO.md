@@ -4,9 +4,6 @@ This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
 * Multiple named pages of feeds, selectable on the left column.
-* The Settings dialog should have an auto-size function,
-  which sets the font size and column width automatically.
-  Mostly useful for mobile.
 * Magic numbers for scrolling horizontally depend on font size.
 * URLs:
   /feed/<feed> opens and scrolls to feed.

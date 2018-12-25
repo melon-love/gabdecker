@@ -15,6 +15,7 @@
 module GabDecker.Elements exposing
     ( circularHeightImage
     , circularHeightImageWithAttributes
+    , circularRadiusAttribute
     , colors
     , darkStyle
     , defaultColumnWidth
