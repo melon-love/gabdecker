@@ -266,9 +266,11 @@ iconUrls =
     , refresh = "refresh-arrow.svg"
     , reload = "reload.svg"
     , save = "folder.svg"
+    , restore = "upload-1.svg"
     , settings = "settings.svg"
     , user = "avatar.svg"
     , checkmark = "checkmark.svg"
+    , feedsets = "tag.svg"
     }
 
 

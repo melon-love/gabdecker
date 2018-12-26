@@ -106,6 +106,7 @@ import GabDecker.Types as Types
         , FeedData(..)
         , FeedGetter(..)
         , FeedResult
+        , FeedSet
         , FeedType(..)
         , GangedNotification
         , IconUrls
@@ -170,6 +171,7 @@ type DialogType
     | UserDialog User Bool
     | SaveFeedsDialog
     | SettingsDialog
+    | FeedSetsDialog
     | OperationErrorDialog String
 
 
@@ -205,6 +207,8 @@ type alias Model =
 
     -- This is only used at startup. It's not accurate after that.
     , feedTypes : List FeedType
+    , feedSets : List (FeedSet Msg)
+    , currentFeedSet : String
     , nextId : Int
     , feeds : List (Feed Msg)
     , lastFeeds : Dict String (Feed Msg)
@@ -247,6 +251,7 @@ type Msg
     | ScrollToControl String Dom.Element (Result Dom.Error Dom.Element)
     | ScrollToContent Dom.Element Dom.Element (Result Dom.Error Dom.Element)
     | AddFeed
+    | FeedSets
     | SaveFeedTypes
     | ShowSettings
     | SetStyle StyleOption
@@ -259,6 +264,11 @@ type Msg
     | SetAutoSizeColumns Int
     | AutoSize
     | SaveSettings
+    | NewFeedSet
+    | SetCurrentFeedSet String
+    | ReloadFeedSet String
+    | SaveToFeedSet String
+    | RestoreFromFeedSet String
     | RestoreDefaultSettings
     | AddNewFeed FeedType
     | Upvote FeedType Post
@@ -520,6 +530,8 @@ init flags url key =
             , icons = Types.emptyIcons
             , users = Dict.empty
             , feedTypes = initialFeedTypes
+            , feedSets = []
+            , currentFeedSet = "default"
             , nextId = List.length feeds
             , feeds = feeds
             , lastFeeds = Dict.empty
@@ -1238,6 +1250,9 @@ update msg model =
             }
                 |> withCmd (focusId addFeedInputId)
 
+        FeedSets ->
+            { model | showDialog = FeedSetsDialog } |> withNoCmd
+
         SaveFeedTypes ->
             let
                 typesString =
@@ -1310,6 +1325,21 @@ update msg model =
 
         SaveSettings ->
             saveSettings model
+
+        NewFeedSet ->
+            newFeedSet model
+
+        SetCurrentFeedSet name ->
+            { model | currentFeedSet = name } |> withNoCmd
+
+        ReloadFeedSet name ->
+            reloadFeedSet name model
+
+        SaveToFeedSet name ->
+            saveToFeedSet name model
+
+        RestoreFromFeedSet name ->
+            restoreFromFeedSet name model
 
         ColumnWidthInput columnWidth ->
             { model | columnWidthInput = columnWidth } |> withNoCmd
@@ -1515,6 +1545,28 @@ saveSettings model =
                         }
                             |> adjustOptions
                             |> withCmd (storeSettings newSettings model)
+
+
+{-| TODO
+-}
+newFeedSet : Model -> ( Model, Cmd Msg )
+newFeedSet model =
+    model |> withNoCmd
+
+
+reloadFeedSet : String -> Model -> ( Model, Cmd Msg )
+reloadFeedSet name model =
+    model |> withNoCmd
+
+
+saveToFeedSet : String -> Model -> ( Model, Cmd Msg )
+saveToFeedSet name model =
+    model |> withNoCmd
+
+
+restoreFromFeedSet : String -> Model -> ( Model, Cmd Msg )
+restoreFromFeedSet name model =
+    model |> withNoCmd
 
 
 scrollToFeed : FeedType -> Model -> ( Model, Cmd Msg )
@@ -2594,6 +2646,9 @@ showDialog model =
         SettingsDialog ->
             settingsDialog model
 
+        FeedSetsDialog ->
+            feedSetsDialog model
+
         OperationErrorDialog err ->
             operationErrorDialog err model
 
@@ -3172,13 +3227,13 @@ imageDialog url model =
             String.fromInt maxh ++ "px"
     in
     column
-        -- This is black magic.
-        -- It took much play with the CSS to get it right.
         [ centerX
         , centerY
         ]
         [ standardButton style "" CloseDialog <|
             (Html.img
+                -- This is black magic.
+                -- It took much play with the CSS to get it right.
                 [ Attributes.style "object-fit" "contain"
                 , Attributes.style "max-width" maxws
                 , Attributes.style "max-height" maxhs
@@ -3554,6 +3609,92 @@ saveFeedsDialog model =
         ]
 
 
+feedSetsDialog : Model -> Element Msg
+feedSetsDialog model =
+    let
+        settings =
+            model.settings
+
+        style =
+            settings.style
+
+        baseFontSize =
+            settings.fontSize
+
+        smallFont =
+            fontSize baseFontSize 0.9
+
+        iconHeight =
+            userIconHeight (2 * baseFontSize)
+    in
+    column
+        (dialogAttributes settings)
+        [ dialogTitleBar style baseFontSize "Feed Sets"
+        , dialogErrorRow model
+        , textInputRow style
+            baseFontSize
+            { label = ""
+            , text = ""
+            , scale = 10
+            , id = ""
+            , buttonTitle = "Save"
+            , doit = NewFeedSet
+            , saveit = SetCurrentFeedSet
+            , placeholder = Just model.currentFeedSet
+            }
+        , row []
+            [ Element.table
+                [ spacing 10, centerX ]
+                { data = List.map (feedSetDialogRow style iconHeight) model.feedSets
+                , columns =
+                    [ { header = Element.none
+                      , width = Element.shrink
+                      , view =
+                            \x ->
+                                el [ Font.bold, Element.alignRight ]
+                                    (text x.name)
+                      }
+                    , { header = Element.none
+                      , width = Element.shrink
+                      , view =
+                            \x -> row [ spacing 5 ] x.buttons
+                      }
+                    ]
+                }
+            ]
+        ]
+
+
+type alias FeedSetDialogRow =
+    { name : String
+    , count : Int
+    , buttons : List (Element Msg)
+    }
+
+
+feedSetDialogRow : Style -> Int -> FeedSet Msg -> FeedSetDialogRow
+feedSetDialogRow style iconHeight feedSet =
+    { name = feedSet.name
+    , count =
+        case feedSet.feeds of
+            Nothing ->
+                0
+
+            Just feeds ->
+                List.foldr (\feed sum -> sum + feed.newPosts) 0 feeds
+    , buttons =
+        let
+            makeButton label wrapper url =
+                standardButton style label (wrapper feedSet.name) <|
+                    heightImage (getIconUrl style url) label iconHeight
+        in
+        [ makeButton "Reload" ReloadFeedSet .reload
+        , makeButton "Save" SaveToFeedSet .save
+        , makeButton "Restore" RestoreFromFeedSet .restore
+        ]
+    }
+
+
 addFeedDialog : Model -> Element Msg
 addFeedDialog model =
     let
@@ -3762,10 +3903,21 @@ controlColumn columnWidth isLoading settings icons feeds =
               ]
             , List.map (feedSelectorButton style iconHeight icons) feeds
             , [ row
-                    [ Font.size <| 7 * iconHeight // 4
+                    [ paddingEach { zeroes | top = 10 }
                     , centerX
+                    , Font.size <| 7 * iconHeight // 4
                     ]
-                    [ standardButton style "Add New Feed" AddFeed (text "+") ]
+                    [ column [ spacing 0 ]
+                        [ standardButton style
+                            "FeedSets"
+                            FeedSets
+                            (widthImage (getIconUrl style .feedsets)
+                                "FeedSets"
+                                iconHeight
+                            )
+                        , standardButton style "Add New Feed" AddFeed (text "+")
+                        ]
+                    ]
               , row
                     [ alignBottom
                     , paddingEach { zeroes | bottom = 10 }

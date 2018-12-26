@@ -4,6 +4,7 @@ module GabDecker.Types exposing
     , FeedData(..)
     , FeedGetter(..)
     , FeedResult
+    , FeedSet
     , FeedTagger
     , FeedType(..)
     , GangedNotification
@@ -67,6 +68,13 @@ type FeedType
     | NotificationsFeed
     | LastClosedFeed
     | LoggedInUserFeed
+
+
+type alias FeedSet msg =
+    { name : String
+    , feedTypes : List FeedType
+    , feeds : Maybe (List (Feed msg))
+    }
 
 
 type alias LogList x =
@@ -220,9 +228,11 @@ type alias IconUrls =
     , refresh : String
     , reload : String
     , save : String
+    , restore : String
     , settings : String
     , user : String
     , checkmark : String
+    , feedsets : String
     }
 
 
