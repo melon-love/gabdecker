@@ -4023,7 +4023,7 @@ feedSetsDialog model =
             , buttonTitle = "Save"
             , doit = NewFeedSet
             , saveit = SetCurrentFeedSet
-            , placeholder = Nothing
+            , placeholder = Just "Feed Set Name"
             }
         , row []
             [ Element.table
