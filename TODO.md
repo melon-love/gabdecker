@@ -4,12 +4,17 @@ This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
 * Multiple named pages of feeds, selectable on the left column.
+  Merging new needs to preserve the old posts.
+  Make the feed sets persistent.
 * Magic numbers for scrolling horizontally depend on font size.
 * URLs:
   /feed/<feed> opens and scrolls to feed.
   /feed opens the feed dialog
   /user/<username> opens the user profile dialog
   /post/<postid> opens the post dialog
+* Quoting a comment doesn't display correctly.
+  https://gab.com/DeplorableBuilder/posts/44491314
+  It's not "Satoshi commented". It's "StarXO commented on Satoshi's post"
 * When somebody "mentioned you in a comment", include an interaction row.
 * Figure out the proper way to compute `repostString`. It's wrong now.
   repost, repost a comment, quote, quote a comment, comment, comment on a comment.

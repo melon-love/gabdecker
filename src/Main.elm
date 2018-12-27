@@ -1569,8 +1569,6 @@ saveSettings model =
                             |> withCmd (storeSettings newSettings model)
 
 
-{-| TODO
--}
 newFeedSet : Model -> ( Model, Cmd Msg )
 newFeedSet model =
     let
@@ -1686,12 +1684,28 @@ restoreFromFeedSet name model =
                 ( mdl, _ ) =
                     { model | feeds = feeds }
                         |> saveToFeedSet name
+
+                scrollToTop feed =
+                    let
+                        colid =
+                            columnId feed.id
+                    in
+                    Task.attempt (\_ -> Noop) (Dom.setViewportOf colid 0 0)
             in
-            mdl
+            { mdl
+                | scrollToFeed =
+                    case List.head feeds of
+                        Nothing ->
+                            Nothing
+
+                        Just feed ->
+                            Just feed.feedType
+            }
                 |> withCmds
                     [ saveFeeds feeds mdl
                     , if newPosts > 0 then
-                        Cmd.none
+                        List.map scrollToTop feeds
+                            |> Cmd.batch
 
                       else
                         loadAllCmd
@@ -2501,8 +2515,8 @@ updateFeeds updateType feedType result feeds =
 
 {-| This is here to try to preserve === on the whole feed or some of its elements.
 -}
-canonicalizeFeed : Feed Msg -> Feed Msg -> Feed Msg
-canonicalizeFeed newFeed feed =
+canonicalizeFeed : UpdateType -> Feed Msg -> Feed Msg -> Feed Msg
+canonicalizeFeed updateType newFeed feed =
     let
         newData =
             newFeed.feed.data
@@ -2511,20 +2525,20 @@ canonicalizeFeed newFeed feed =
             feed.feed.data
     in
     if newData == feedData then
-        let
-            ignore =
-                --Debug.log "Canonical" feed.feedType
-                1
-        in
-        if feed.newPosts == 0 then
-            feed
+        case updateType of
+            FeedSetUpdate _ ->
+                feed
 
-        else
-            { feed | newPosts = 0 }
+            _ ->
+                if feed.newPosts == 0 then
+                    feed
+
+                else
+                    { feed | newPosts = 0 }
 
     else
         let
-            ( data, newPosts ) =
+            ( data, newPosts, totalPosts ) =
                 case feedData of
                     PostFeedData feedList ->
                         case newData of
@@ -2533,10 +2547,10 @@ canonicalizeFeed newFeed feed =
                                     ( dat, cnt ) =
                                         canonicalizeData .id newList feedList
                                 in
-                                ( PostFeedData dat, cnt )
+                                ( PostFeedData dat, cnt, List.length dat )
 
                             _ ->
-                                ( newData, 0 )
+                                ( newData, 0, 0 )
 
                     NotificationFeedData feedList ->
                         case newData of
@@ -2547,10 +2561,10 @@ canonicalizeFeed newFeed feed =
                                             newList
                                             feedList
                                 in
-                                ( NotificationFeedData dat, cnt )
+                                ( NotificationFeedData dat, cnt, List.length dat )
 
                             _ ->
-                                ( newData, 0 )
+                                ( newData, 0, 0 )
 
             feed_feed =
                 feed.feed
@@ -2562,11 +2576,16 @@ canonicalizeFeed newFeed feed =
                 }
 
             np =
-                if feed.feedType == PopularFeed then
+                if List.member feed.feedType nonMergingFeedTypes then
                     0
 
                 else
-                    newPosts
+                    case updateType of
+                        FeedSetUpdate _ ->
+                            min (newPosts + res.newPosts) totalPosts
+
+                        _ ->
+                            newPosts
         in
         if np == res.newPosts then
             res
@@ -2673,6 +2692,11 @@ canonicalizeData key new old =
     loop new 0 []
 
 
+nonMergingFeedTypes : List FeedType
+nonMergingFeedTypes =
+    [ PopularFeed ]
+
+
 updateFeed : UpdateType -> FeedResult (LogList FeedData) -> Feed Msg -> Feed Msg
 updateFeed updateType result feed =
     case result of
@@ -2684,13 +2708,20 @@ updateFeed updateType result feed =
                 feed_feed =
                     feed.feed
 
+                mergeType =
+                    if List.member feed.feedType nonMergingFeedTypes then
+                        MergeUpdate
+
+                    else
+                        updateType
+
                 newFeed =
                     { feed
                         | feed =
                             { feed_feed
                                 | data =
                                     reprocessFeedData <|
-                                        updateFeedData updateType
+                                        updateFeedData mergeType
                                             resultLogList.data
                                             feed_feed.data
                             }
@@ -2698,7 +2729,7 @@ updateFeed updateType result feed =
             in
             let
                 res =
-                    canonicalizeFeed newFeed feed
+                    canonicalizeFeed updateType newFeed feed
             in
             case updateType of
                 AppendUpdate ->
@@ -2710,6 +2741,50 @@ updateFeed updateType result feed =
 
                 _ ->
                     res
+
+
+mergeLists : (a -> String) -> (a -> String) -> List a -> List a -> List a
+mergeLists toDate toId list1 list2 =
+    let
+        loop : List a -> List a -> List a -> List a
+        loop rest1 rest2 res =
+            case rest1 of
+                [] ->
+                    List.append (List.reverse res) rest2
+
+                head1 :: tail1 ->
+                    case rest2 of
+                        [] ->
+                            List.append (List.reverse res) rest1
+
+                        head2 :: tail2 ->
+                            let
+                                date1 =
+                                    toDate head1
+
+                                date2 =
+                                    toDate head2
+                            in
+                            if date1 > date2 then
+                                loop tail1 rest2 <| head1 :: res
+
+                            else if date1 < date2 then
+                                loop rest1 tail2 <| head2 :: res
+
+                            else if toId head1 == toId head2 then
+                                loop tail1 tail2 <| head1 :: res
+
+                            else
+                                loop tail1 tail2 <| head2 :: head1 :: res
+    in
+    loop list1 list2 []
+
+
+{-| A switch used below to make it easy to change my mind.
+-}
+keepOldFeedSetData : Bool
+keepOldFeedSetData =
+    False
 
 
 updateFeedData : UpdateType -> FeedData -> FeedData -> FeedData
@@ -2726,15 +2801,44 @@ updateFeedData updateType resultData feedData =
                         _ ->
                             resultData
 
-                NotificationFeedData gangedNotificationList ->
+                NotificationFeedData resultList ->
                     case feedData of
                         NotificationFeedData feedList ->
                             NotificationFeedData <|
-                                List.append feedList
-                                    gangedNotificationList
+                                List.append feedList resultList
 
                         _ ->
                             resultData
+
+        -- I'm not entirely convinced that this is a good idea.
+        -- It can leave gaps in the feed, and doing enough fetches
+        -- to close those gaps is probably an even worse idea.
+        FeedSetUpdate _ ->
+            if not keepOldFeedSetData then
+                resultData
+
+            else
+                case resultData of
+                    PostFeedData resultList ->
+                        case feedData of
+                            PostFeedData feedList ->
+                                PostFeedData <|
+                                    mergeLists .published_at .id resultList feedList
+
+                            _ ->
+                                resultData
+
+                    NotificationFeedData resultList ->
+                        case feedData of
+                            NotificationFeedData feedList ->
+                                NotificationFeedData <|
+                                    mergeLists (.notification >> .created_at)
+                                        (.notification >> .id)
+                                        resultList
+                                        feedList
+
+                            _ ->
+                                resultData
 
         _ ->
             resultData
@@ -4619,7 +4723,7 @@ undoneRow style typeString =
 
 moreRow : Style -> Attribute Msg -> Feed Msg -> Element Msg
 moreRow style colw feed =
-    if feed.feed.no_more then
+    if feed.feed.no_more || List.member feed.feedType nonMergingFeedTypes then
         Element.none
 
     else if
