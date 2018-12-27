@@ -1737,7 +1737,10 @@ restoreFromFeedSet name model =
                     totalNewPosts feeds
 
                 ( mdl, _ ) =
-                    { model | feeds = feeds }
+                    { model
+                        | feeds = feeds
+                        , showDialog = NoDialog
+                    }
                         |> saveToFeedSet name
 
                 scrollToTop feed =
