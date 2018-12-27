@@ -197,6 +197,7 @@ type alias Model =
     , tokenAuthorization : Maybe TokenAuthorization
     , username : String
     , dialogInput : String
+    , feedSetsInput : String
     , fontSizeInput : String
     , columnWidthInput : String
     , fontSizeOption : Maybe SizeOption
@@ -263,6 +264,8 @@ type Msg
     | SetStyle StyleOption
     | RestoreFeedTypes
     | DialogInput String
+    | RestoreFeedSets
+    | SetFeedSetsInput String
     | FontSizeInput String
     | ColumnWidthInput String
     | FontSizeOption SizeOption
@@ -530,6 +533,7 @@ init flags url key =
             , tokenAuthorization = authorization
             , username = ""
             , dialogInput = ""
+            , feedSetsInput = ""
             , fontSizeInput = String.fromFloat defaultFontSize
             , columnWidthInput = String.fromInt defaultColumnWidth
             , fontSizeOption = Just MediumSize
@@ -559,6 +563,7 @@ init flags url key =
                 Nothing ->
                     Cmd.none
             , localStorageSend (LocalStorage.get storageKeys.feeds) model
+            , localStorageSend (LocalStorage.get storageKeys.feedsets) model
             , localStorageSend (LocalStorage.get storageKeys.icons) model
             , localStorageSend (LocalStorage.get storageKeys.style) model
             , Task.perform getViewport Dom.getViewport
@@ -871,6 +876,22 @@ receiveFeedTypes value model =
                         |> withCmds [ cmd, cmd2 ]
 
 
+receiveFeedSets : Maybe Value -> Model -> ( Model, Cmd Msg )
+receiveFeedSets value model =
+    case value of
+        Nothing ->
+            model |> withNoCmd
+
+        Just v ->
+            case ED.decodeFeedSets v of
+                Err _ ->
+                    model |> withNoCmd
+
+                Ok feedSets ->
+                    { model | feedSets = feedSets }
+                        |> withNoCmd
+
+
 receiveStyle : Maybe Value -> Model -> ( Model, Cmd Msg )
 receiveStyle value model =
     case value of
@@ -926,6 +947,9 @@ storageHandler response state model =
 
             else if key == storageKeys.feeds then
                 receiveFeedTypes value model
+
+            else if key == storageKeys.feedsets then
+                receiveFeedSets value model
 
             else if key == storageKeys.icons then
                 receiveIcons value model
@@ -1271,11 +1295,16 @@ update msg model =
                     List.map .feedType model.feeds
                         |> ED.encodeFeedTypes
                         |> JE.encode 0
+
+                feedSetsString =
+                    ED.encodeFeedSets model.feedSets
+                        |> JE.encode 0
             in
             { model
                 | showDialog = SaveFeedsDialog
                 , dialogError = Nothing
                 , dialogInput = typesString
+                , feedSetsInput = feedSetsString
             }
                 |> withCmd (focusId saveFeedInputId)
 
@@ -1331,6 +1360,27 @@ update msg model =
 
         DialogInput username ->
             { model | dialogInput = username } |> withNoCmd
+
+        RestoreFeedSets ->
+            case JD.decodeString ED.feedSetsDecoder model.feedSetsInput of
+                Err err ->
+                    { model | dialogError = Just <| JD.errorToString err }
+                        |> withNoCmd
+
+                Ok feedSets ->
+                    let
+                        mdl =
+                            { model
+                                | showDialog = NoDialog
+                                , dialogError = Nothing
+                                , feedSets = feedSets
+                            }
+                    in
+                    mdl |> withCmd (saveFeedSets feedSets mdl)
+
+        SetFeedSetsInput feedSetsInput ->
+            { model | feedSetsInput = feedSetsInput }
+                |> withNoCmd
 
         FontSizeInput fontSizeInput ->
             { model | fontSizeInput = fontSizeInput } |> withNoCmd
@@ -1631,8 +1681,8 @@ reloadFeedSet name model =
 
 saveToFeedSet : String -> Model -> ( Model, Cmd Msg )
 saveToFeedSet name model =
-    { model | dialogError = Nothing }
-        |> updateFeedSet
+    let
+        feedSet =
             { name = name
             , feedTypes = List.map .feedType model.feeds
             , feeds =
@@ -1641,8 +1691,13 @@ saveToFeedSet name model =
                         model.feeds
             , loadingFeeds = Set.empty
             }
-        -- TODO: make persistent
-        |> withNoCmd
+
+        mdl =
+            { model | dialogError = Nothing }
+                |> updateFeedSet feedSet
+    in
+    mdl
+        |> withCmd (saveFeedSets mdl.feedSets mdl)
 
 
 updateFeedSet : FeedSet Msg -> Model -> Model
@@ -1724,9 +1779,12 @@ findFeedSet name model =
 
 deleteFeedSet : String -> Model -> ( Model, Cmd Msg )
 deleteFeedSet name model =
-    { model | feedSets = List.filter (\fs -> fs.name /= name) model.feedSets }
-        -- TODO: make persistent
-        |> withNoCmd
+    let
+        feedSets =
+            List.filter (\fs -> fs.name /= name) model.feedSets
+    in
+    { model | feedSets = feedSets }
+        |> withCmd (saveFeedSets feedSets model)
 
 
 scrollToFeed : FeedType -> Model -> ( Model, Cmd Msg )
@@ -2123,6 +2181,17 @@ saveFeeds feeds model =
     in
     localStorageSend
         (LocalStorage.put storageKeys.feeds <| Just value)
+        model
+
+
+saveFeedSets : List (FeedSet Msg) -> Model -> Cmd Msg
+saveFeedSets feedSets model =
+    let
+        value =
+            ED.encodeFeedSets feedSets
+    in
+    localStorageSend
+        (LocalStorage.put storageKeys.feedsets <| Just value)
         model
 
 
@@ -3894,13 +3963,25 @@ saveFeedsDialog model =
         , textInputRow
             style
             baseFontSize
-            { label = ""
+            { label = "Feeds:"
             , text = model.dialogInput
-            , scale = 27
+            , scale = 15
             , id = saveFeedInputId
-            , buttonTitle = "Use Feeds"
+            , buttonTitle = "Restore Feeds"
             , doit = RestoreFeedTypes
             , saveit = DialogInput
+            , placeholder = Just ""
+            }
+        , textInputRow
+            style
+            baseFontSize
+            { label = "Sets:"
+            , text = model.feedSetsInput
+            , scale = 15.7
+            , id = ""
+            , buttonTitle = "Restore Feed Sets"
+            , doit = RestoreFeedSets
+            , saveit = SetFeedSetsInput
             , placeholder = Just "username"
             }
         ]
@@ -6309,6 +6390,7 @@ codestr code =
 storageKeys =
     { token = "token"
     , feeds = "feeds"
+    , feedsets = "feedsets"
     , icons = "icons"
     , style = "style"
     }

@@ -21,6 +21,7 @@ module GabDecker.Types exposing
     , emptyUser
     , isEmptyUser
     , isUserProfile
+    , newFeedSet
     )
 
 import Dict exposing (Dict)
@@ -77,6 +78,11 @@ type alias FeedSet msg =
     , feeds : Maybe (List (Feed msg))
     , loadingFeeds : Set String
     }
+
+
+newFeedSet : String -> List FeedType -> FeedSet msg
+newFeedSet name feedTypes =
+    FeedSet name feedTypes Nothing Set.empty
 
 
 type alias LogList x =

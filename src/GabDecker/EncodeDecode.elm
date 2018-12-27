@@ -4,7 +4,6 @@ module GabDecker.EncodeDecode exposing
     , decodeFeedTypes
     , decodeIcons
     , decodeSettings
-    , encodeFeedSet
     , encodeFeedSets
     , encodeFeedType
     , encodeFeedTypes
@@ -31,6 +30,7 @@ import GabDecker.Types
         , Settings
         , Style
         , StyleOption(..)
+        , newFeedSet
         )
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
@@ -46,6 +46,8 @@ feedPropertiesDecoder : Decoder FeedType
 feedPropertiesDecoder =
     JD.oneOf
         [ feedTypeDecoder
+
+        -- Backward compatibilty
         , JD.field "feedType" feedTypeDecoder
         ]
 
@@ -288,32 +290,21 @@ settingsDecoder =
         ]
 
 
-encodeFeedSet : FeedSet msg -> Value
-encodeFeedSet feedSet =
-    JE.object
-        [ ( feedSet.name, encodeFeedTypes feedSet.feedTypes ) ]
-
-
 encodeFeedSets : List (FeedSet msg) -> Value
 encodeFeedSets feedSets =
-    JE.list encodeFeedSet feedSets
+    List.map (\feedSet -> ( feedSet.name, encodeFeedTypes feedSet.feedTypes ))
+        feedSets
+        |> JE.object
 
 
 feedSetsDecoder : Decoder (List (FeedSet msg))
 feedSetsDecoder =
-    JD.map
-        (\pairs ->
-            List.map
-                (\( name, feedTypes ) ->
-                    { name = name
-                    , feedTypes = feedTypes
-                    , feeds = Nothing
-                    , loadingFeeds = Set.empty
-                    }
-                )
-                pairs
-        )
-        (JD.keyValuePairs feedTypesDecoder)
+    JD.keyValuePairs feedTypesDecoder
+        |> JD.map
+            (List.map
+                (\( name, feedTypes ) -> newFeedSet name feedTypes)
+                >> List.sortBy .name
+            )
 
 
 decodeFeedSets : Value -> Result String (List (FeedSet msg))
