@@ -226,6 +226,12 @@ type UploadingState
     | ErrorUploading String
 
 
+type UpdateType
+    = MergeUpdate
+    | AppendUpdate
+    | MergeSetUpdate String
+
+
 type Msg
     = Noop
     | CloseDialog
@@ -238,7 +244,7 @@ type Msg
     | Here Zone
     | Login
     | Logout
-    | LoadMore Bool (Feed Msg)
+    | LoadMore UpdateType (Feed Msg)
     | LoadAll
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
@@ -264,19 +270,21 @@ type Msg
     | SetAutoSizeColumns Int
     | AutoSize
     | SaveSettings
+    | ClearFeeds
     | NewFeedSet
     | SetCurrentFeedSet String
     | ReloadFeedSet String
     | SaveToFeedSet String
     | RestoreFromFeedSet String
+    | DeleteFeedSet String
     | RestoreDefaultSettings
     | AddNewFeed FeedType
     | Upvote FeedType Post
     | Downvote FeedType Post
     | Repost FeedType Post
     | ReceiveOperation Operation (FeedResult Success)
-    | ReceivePostFeed Bool FeedType (FeedResult ActivityLogList)
-    | ReceiveNotificationsFeed Bool FeedType (FeedResult NotificationsLog)
+    | ReceivePostFeed UpdateType FeedType (FeedResult ActivityLogList)
+    | ReceiveNotificationsFeed UpdateType FeedType (FeedResult NotificationsLog)
     | ReceiveUser (FeedResult User)
 
 
@@ -531,7 +539,7 @@ init flags url key =
             , users = Dict.empty
             , feedTypes = initialFeedTypes
             , feedSets = []
-            , currentFeedSet = "default"
+            , currentFeedSet = ""
             , nextId = List.length feeds
             , feeds = feeds
             , lastFeeds = Dict.empty
@@ -574,9 +582,9 @@ loadAllCmd =
     Task.perform (\_ -> LoadAll) <| Task.succeed ()
 
 
-loadMoreCmd : Bool -> Feed Msg -> Cmd Msg
-loadMoreCmd appendResult feed =
-    Task.perform (LoadMore appendResult) <| Task.succeed feed
+loadMoreCmd : UpdateType -> Feed Msg -> Cmd Msg
+loadMoreCmd updateType feed =
+    Task.perform (LoadMore updateType) <| Task.succeed feed
 
 
 getViewport : Viewport -> Msg
@@ -1084,9 +1092,9 @@ update msg model =
                         model
                     )
 
-        LoadMore appendResult feed ->
+        LoadMore updateType feed ->
             ( setLoadingFeed feed model
-            , loadMore appendResult feed
+            , loadMore updateType feed
             )
 
         LoadAll ->
@@ -1251,7 +1259,11 @@ update msg model =
                 |> withCmd (focusId addFeedInputId)
 
         FeedSets ->
-            { model | showDialog = FeedSetsDialog } |> withNoCmd
+            { model
+                | showDialog = FeedSetsDialog
+                , currentFeedSet = ""
+            }
+                |> withCmd (focusId newFeedSetInputId)
 
         SaveFeedTypes ->
             let
@@ -1326,6 +1338,13 @@ update msg model =
         SaveSettings ->
             saveSettings model
 
+        ClearFeeds ->
+            { model
+                | feeds = []
+                , feedTypes = []
+            }
+                |> withCmd (saveFeeds [] model)
+
         NewFeedSet ->
             newFeedSet model
 
@@ -1340,6 +1359,9 @@ update msg model =
 
         RestoreFromFeedSet name ->
             restoreFromFeedSet name model
+
+        DeleteFeedSet name ->
+            deleteFeedSet name model
 
         ColumnWidthInput columnWidth ->
             { model | columnWidthInput = columnWidth } |> withNoCmd
@@ -1409,14 +1431,14 @@ update msg model =
         ReceiveOperation operation result ->
             receiveOperation operation result model
 
-        ReceivePostFeed scrollToTop feedType result ->
-            receiveFeed scrollToTop
+        ReceivePostFeed updateType feedType result ->
+            receiveFeed updateType
                 feedType
                 (boxActivityLogListResult result)
                 model
 
-        ReceiveNotificationsFeed scrollToTop feedType result ->
-            receiveFeed scrollToTop
+        ReceiveNotificationsFeed updateType feedType result ->
+            receiveFeed updateType
                 feedType
                 (boxNotificationsLogResult result)
                 model
@@ -1551,7 +1573,20 @@ saveSettings model =
 -}
 newFeedSet : Model -> ( Model, Cmd Msg )
 newFeedSet model =
-    model |> withNoCmd
+    let
+        name =
+            model.currentFeedSet
+    in
+    case LE.find (\fs -> fs.name == name) model.feedSets of
+        Just _ ->
+            { model
+                | dialogError =
+                    Just <| "There is already a feed set named \"" ++ name ++ "\""
+            }
+                |> withNoCmd
+
+        Nothing ->
+            saveToFeedSet name { model | currentFeedSet = "" }
 
 
 reloadFeedSet : String -> Model -> ( Model, Cmd Msg )
@@ -1561,12 +1596,80 @@ reloadFeedSet name model =
 
 saveToFeedSet : String -> Model -> ( Model, Cmd Msg )
 saveToFeedSet name model =
-    model |> withNoCmd
+    let
+        feedSets =
+            List.filter (\fs -> fs.name /= name) model.feedSets
+    in
+    { model
+        | dialogError = Nothing
+        , feedSets =
+            List.sortBy .name <|
+                { name = name
+                , feedTypes = List.map .feedType model.feeds
+                , feeds =
+                    Just <|
+                        List.map (\feed -> { feed | newPosts = 0 })
+                            model.feeds
+                , loadingFeeds = Set.empty
+                }
+                    :: feedSets
+    }
+        -- TODO: make persistent
+        |> withNoCmd
 
 
 restoreFromFeedSet : String -> Model -> ( Model, Cmd Msg )
 restoreFromFeedSet name model =
-    model |> withNoCmd
+    case findFeedSet name model of
+        Nothing ->
+            model |> withNoCmd
+
+        Just feedSet ->
+            let
+                feeds =
+                    case feedSet.feeds of
+                        Nothing ->
+                            feedTypesToFeeds Nothing
+                                model.backend
+                                feedSet.feedTypes
+                                0
+
+                        Just fs ->
+                            fs
+
+                newPosts =
+                    totalNewPosts feeds
+
+                ( mdl, _ ) =
+                    { model | feeds = feeds }
+                        |> saveToFeedSet name
+            in
+            mdl
+                |> withCmds
+                    [ saveFeeds feeds mdl
+                    , if newPosts == 0 then
+                        Cmd.none
+
+                      else
+                        loadAllCmd
+                    ]
+
+
+totalNewPosts : List (Feed msg) -> Int
+totalNewPosts feeds =
+    List.foldr (\feed sum -> sum + feed.newPosts) 0 feeds
+
+
+findFeedSet : String -> Model -> Maybe (FeedSet Msg)
+findFeedSet name model =
+    LE.find (\fs -> fs.name == name) model.feedSets
+
+
+deleteFeedSet : String -> Model -> ( Model, Cmd Msg )
+deleteFeedSet name model =
+    { model | feedSets = List.filter (\fs -> fs.name /= name) model.feedSets }
+        -- TODO: make persistent
+        |> withNoCmd
 
 
 scrollToFeed : FeedType -> Model -> ( Model, Cmd Msg )
@@ -1983,7 +2086,7 @@ addNewFeed feedType baseFontSize model =
                 , scrollToFeed = Just feed.feedType
             }
                 |> withCmds
-                    [ loadMoreCmd False feed
+                    [ loadMoreCmd MergeUpdate feed
                     , saveFeeds feeds model
                     ]
     in
@@ -2040,7 +2143,7 @@ loadAll model =
     let
         getone feed ( m, cs ) =
             ( setLoadingFeed feed m
-            , loadMore False feed :: cs
+            , loadMore MergeUpdate feed :: cs
             )
 
         ( mdl, cmds ) =
@@ -2069,22 +2172,23 @@ feedBefore feed =
                     gangedNotification.notification.id
 
 
-loadMore : Bool -> Feed Msg -> Cmd Msg
-loadMore appendResult feed =
+loadMore : UpdateType -> Feed Msg -> Cmd Msg
+loadMore updateType feed =
     let
         before =
-            if appendResult then
-                feedBefore feed
+            case updateType of
+                AppendUpdate ->
+                    feedBefore feed
 
-            else
-                ""
+                _ ->
+                    ""
     in
     case feed.getter of
         PostFeedGetter getter ->
-            getter (ReceivePostFeed (not appendResult) feed.feedType) before
+            getter (ReceivePostFeed updateType feed.feedType) before
 
         NotificationFeedGetter getter ->
-            getter (ReceiveNotificationsFeed (not appendResult) feed.feedType) before
+            getter (ReceiveNotificationsFeed updateType feed.feedType) before
 
 
 updateIcons : LogList FeedData -> Model -> ( Model, Cmd Msg )
@@ -2181,8 +2285,8 @@ receiveUser result model =
             )
 
 
-receiveFeed : Bool -> FeedType -> FeedResult (LogList FeedData) -> Model -> ( Model, Cmd Msg )
-receiveFeed scrollToTop feedType result model =
+receiveFeed : UpdateType -> FeedType -> FeedResult (LogList FeedData) -> Model -> ( Model, Cmd Msg )
+receiveFeed updateType feedType result model =
     let
         ( mdl, cmd ) =
             case result of
@@ -2198,7 +2302,7 @@ receiveFeed scrollToTop feedType result model =
                     updateIcons logList model
 
         ( id, feeds ) =
-            updateFeeds (not scrollToTop) feedType result mdl.feeds
+            updateFeeds updateType feedType result mdl.feeds
 
         loadingFeeds =
             Set.remove (feedTypeToString feedType) model.loadingFeeds
@@ -2233,7 +2337,7 @@ receiveFeed scrollToTop feedType result model =
     }
         |> withCmds
             [ cmd
-            , if scrollToTop && id /= "" then
+            , if updateType == MergeUpdate && id /= "" then
                 Task.attempt (\_ -> Noop) (Dom.setViewportOf id 0 0)
 
               else
@@ -2281,8 +2385,8 @@ processReceiveFeedError feedType err model =
         |> withNoCmd
 
 
-updateFeeds : Bool -> FeedType -> FeedResult (LogList FeedData) -> List (Feed Msg) -> ( String, List (Feed Msg) )
-updateFeeds appendResult feedType result feeds =
+updateFeeds : UpdateType -> FeedType -> FeedResult (LogList FeedData) -> List (Feed Msg) -> ( String, List (Feed Msg) )
+updateFeeds updateType feedType result feeds =
     let
         loop tail res =
             case tail of
@@ -2294,10 +2398,7 @@ updateFeeds appendResult feedType result feeds =
                         ( columnId feed.id
                         , List.concat
                             [ List.reverse res
-                            , [ updateFeed appendResult
-                                    result
-                                    feed
-                              ]
+                            , [ updateFeed updateType result feed ]
                             , rest
                             ]
                         )
@@ -2482,8 +2583,8 @@ canonicalizeData key new old =
     loop new 0 []
 
 
-updateFeed : Bool -> FeedResult (LogList FeedData) -> Feed Msg -> Feed Msg
-updateFeed appendResult result feed =
+updateFeed : UpdateType -> FeedResult (LogList FeedData) -> Feed Msg -> Feed Msg
+updateFeed updateType result feed =
     case result of
         Err err ->
             { feed | error = Just err }
@@ -2499,7 +2600,7 @@ updateFeed appendResult result feed =
                             { feed_feed
                                 | data =
                                     reprocessFeedData <|
-                                        updateFeedData appendResult
+                                        updateFeedData updateType
                                             resultLogList.data
                                             feed_feed.data
                             }
@@ -2509,42 +2610,44 @@ updateFeed appendResult result feed =
                 res =
                     canonicalizeFeed newFeed feed
             in
-            if appendResult then
-                if res.newPosts == 0 then
+            case updateType of
+                AppendUpdate ->
+                    if res.newPosts == 0 then
+                        res
+
+                    else
+                        { res | newPosts = 0 }
+
+                _ ->
                     res
 
-                else
-                    { res | newPosts = 0 }
 
-            else
-                res
+updateFeedData : UpdateType -> FeedData -> FeedData -> FeedData
+updateFeedData updateType resultData feedData =
+    case updateType of
+        AppendUpdate ->
+            case resultData of
+                PostFeedData resultList ->
+                    case feedData of
+                        PostFeedData feedList ->
+                            PostFeedData <|
+                                List.append feedList resultList
 
+                        _ ->
+                            resultData
 
-updateFeedData : Bool -> FeedData -> FeedData -> FeedData
-updateFeedData appendResult resultData feedData =
-    if not appendResult then
-        resultData
+                NotificationFeedData gangedNotificationList ->
+                    case feedData of
+                        NotificationFeedData feedList ->
+                            NotificationFeedData <|
+                                List.append feedList
+                                    gangedNotificationList
 
-    else
-        case resultData of
-            PostFeedData resultList ->
-                case feedData of
-                    PostFeedData feedList ->
-                        PostFeedData <|
-                            List.append feedList resultList
+                        _ ->
+                            resultData
 
-                    _ ->
-                        resultData
-
-            NotificationFeedData gangedNotificationList ->
-                case feedData of
-                    NotificationFeedData feedList ->
-                        NotificationFeedData <|
-                            List.append feedList
-                                gangedNotificationList
-
-                    _ ->
-                        resultData
+        _ ->
+            resultData
 
 
 reprocessFeedData : FeedData -> FeedData
@@ -3625,22 +3728,24 @@ feedSetsDialog model =
             fontSize baseFontSize 0.9
 
         iconHeight =
-            userIconHeight (2 * baseFontSize)
+            userIconHeight (1.5 * baseFontSize)
     in
     column
         (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Feed Sets"
         , dialogErrorRow model
+        , row []
+            [ textButton style "Clear Feeds" ClearFeeds "Clear Feeds" ]
         , textInputRow style
             baseFontSize
             { label = ""
-            , text = ""
+            , text = model.currentFeedSet
             , scale = 10
-            , id = ""
+            , id = newFeedSetInputId
             , buttonTitle = "Save"
             , doit = NewFeedSet
             , saveit = SetCurrentFeedSet
-            , placeholder = Just model.currentFeedSet
+            , placeholder = Nothing
             }
         , row []
             [ Element.table
@@ -3651,13 +3756,23 @@ feedSetsDialog model =
                       , width = Element.shrink
                       , view =
                             \x ->
-                                el [ Font.bold, Element.alignRight ]
+                                el
+                                    [ Font.bold
+                                    , Element.alignRight
+                                    , centerY
+                                    ]
                                     (text x.name)
                       }
                     , { header = Element.none
                       , width = Element.shrink
                       , view =
-                            \x -> row [ spacing 5 ] x.buttons
+                            \x ->
+                                countBox False x.count (2 * iconHeight)
+                      }
+                    , { header = Element.none
+                      , width = Element.shrink
+                      , view =
+                            \x -> row [ spacing 10 ] x.buttons
                       }
                     ]
                 }
@@ -3681,16 +3796,17 @@ feedSetDialogRow style iconHeight feedSet =
                 0
 
             Just feeds ->
-                List.foldr (\feed sum -> sum + feed.newPosts) 0 feeds
+                totalNewPosts feeds
     , buttons =
         let
             makeButton label wrapper url =
                 standardButton style label (wrapper feedSet.name) <|
                     heightImage (getIconUrl style url) label iconHeight
         in
-        [ makeButton "Reload" ReloadFeedSet .reload
+        [ makeButton "Restore" RestoreFromFeedSet .restore
         , makeButton "Save" SaveToFeedSet .save
-        , makeButton "Restore" RestoreFromFeedSet .restore
+        , makeButton "Reload" ReloadFeedSet .reload
+        , makeButton "Delete" DeleteFeedSet .close
         ]
     }
 
@@ -3834,6 +3950,11 @@ controlColumnId =
 contentId : String
 contentId =
     "contentColumn"
+
+
+newFeedSetInputId : String
+newFeedSetInputId =
+    "newFeedSet"
 
 
 addFeedInputId : String
@@ -4012,33 +4133,44 @@ heightImageWithCount count src description h =
 
 heightImageWithCountInternal : Int -> Element msg -> Int -> Element msg
 heightImageWithCountInternal count img h =
+    el
+        [ Element.inFront <| countBox True count h ]
+        img
+
+
+countBox : Bool -> Int -> Int -> Element msg
+countBox doOffset count h =
     let
         size =
             h // 2
     in
-    el
-        [ Element.inFront <|
-            if count == 0 then
-                Element.none
+    if count == 0 then
+        Element.none
 
-            else
-                el
-                    [ width <| px size
-                    , height <| px size
-                    , Element.moveRight <| toFloat size
+    else
+        el
+            (List.append
+                [ width <| px size
+                , height <| px size
+                , Font.color colors.red
+                , Background.color colors.white
+                ]
+                (if doOffset then
+                    [ Element.moveRight <| toFloat size
                     , Element.moveDown <| toFloat size
-                    , Font.color colors.red
-                    , Background.color colors.white
                     ]
-                    (el
-                        [ Font.size <| 8 * h // 16
-                        , centerX
-                        , centerY
-                        ]
-                        (text <| String.fromInt count)
-                    )
-        ]
-        img
+
+                 else
+                    []
+                )
+            )
+            (el
+                [ Font.size <| 8 * h // 16
+                , centerX
+                , centerY
+                ]
+                (text <| String.fromInt count)
+            )
 
 
 zeroes =
@@ -4225,7 +4357,7 @@ feedColumn isLoading settings icons feed =
                             standardButtonWithDontHover style
                                 isLoading
                                 "Refresh Feed"
-                                (LoadMore False feed)
+                                (LoadMore MergeUpdate feed)
                                 (heightImage (getIconUrl style .reload) "Refresh" iconHeight)
                         , text " "
                         , feedTypeDescription style
@@ -4412,7 +4544,7 @@ moreRow style colw feed =
                     String.repeat 3 chars.nbsp
 
                 msg =
-                    LoadMore True feed
+                    LoadMore AppendUpdate feed
               in
               textButton style
                 ""

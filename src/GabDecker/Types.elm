@@ -37,6 +37,7 @@ import Gab.Types
         , UserList
         )
 import Http
+import Set exposing (Set)
 import Time exposing (Zone)
 
 
@@ -74,6 +75,7 @@ type alias FeedSet msg =
     { name : String
     , feedTypes : List FeedType
     , feeds : Maybe (List (Feed msg))
+    , loadingFeeds : Set String
     }
 
 
