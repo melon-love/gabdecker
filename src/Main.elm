@@ -229,7 +229,7 @@ type UploadingState
 type UpdateType
     = MergeUpdate
     | AppendUpdate
-    | MergeSetUpdate String
+    | FeedSetUpdate String
 
 
 type Msg
@@ -1577,45 +1577,88 @@ newFeedSet model =
         name =
             model.currentFeedSet
     in
-    case LE.find (\fs -> fs.name == name) model.feedSets of
-        Just _ ->
-            { model
-                | dialogError =
-                    Just <| "There is already a feed set named \"" ++ name ++ "\""
-            }
-                |> withNoCmd
+    if name == "" then
+        { model
+            | dialogError =
+                Just "Feed set name may not be blank."
+        }
+            |> withNoCmd
 
-        Nothing ->
-            saveToFeedSet name { model | currentFeedSet = "" }
+    else
+        case LE.find (\fs -> fs.name == name) model.feedSets of
+            Just _ ->
+                { model
+                    | dialogError =
+                        Just <| "There is already a feed set named \"" ++ name ++ "\""
+                }
+                    |> withNoCmd
+
+            Nothing ->
+                saveToFeedSet name { model | currentFeedSet = "" }
 
 
 reloadFeedSet : String -> Model -> ( Model, Cmd Msg )
 reloadFeedSet name model =
-    model |> withNoCmd
+    case findFeedSet name model of
+        Nothing ->
+            model |> withNoCmd
+
+        Just feedSet ->
+            let
+                updateType =
+                    FeedSetUpdate name
+
+                feeds =
+                    case feedSet.feeds of
+                        Just fs ->
+                            fs
+
+                        Nothing ->
+                            feedTypesToFeeds Nothing
+                                model.backend
+                                feedSet.feedTypes
+                                0
+
+                cmds =
+                    List.map (loadMore updateType) feeds
+
+                loadingFeeds =
+                    Set.fromList <|
+                        List.map feedTypeToString feedSet.feedTypes
+            in
+            model
+                |> updateFeedSet { feedSet | loadingFeeds = loadingFeeds }
+                |> withCmds cmds
 
 
 saveToFeedSet : String -> Model -> ( Model, Cmd Msg )
 saveToFeedSet name model =
+    { model | dialogError = Nothing }
+        |> updateFeedSet
+            { name = name
+            , feedTypes = List.map .feedType model.feeds
+            , feeds =
+                Just <|
+                    List.map (\feed -> { feed | newPosts = 0 })
+                        model.feeds
+            , loadingFeeds = Set.empty
+            }
+        -- TODO: make persistent
+        |> withNoCmd
+
+
+updateFeedSet : FeedSet Msg -> Model -> Model
+updateFeedSet feedSet model =
     let
+        name =
+            feedSet.name
+
         feedSets =
             List.filter (\fs -> fs.name /= name) model.feedSets
     in
     { model
-        | dialogError = Nothing
-        , feedSets =
-            List.sortBy .name <|
-                { name = name
-                , feedTypes = List.map .feedType model.feeds
-                , feeds =
-                    Just <|
-                        List.map (\feed -> { feed | newPosts = 0 })
-                            model.feeds
-                , loadingFeeds = Set.empty
-                }
-                    :: feedSets
+        | feedSets = List.sortBy .name <| feedSet :: feedSets
     }
-        -- TODO: make persistent
-        |> withNoCmd
 
 
 restoreFromFeedSet : String -> Model -> ( Model, Cmd Msg )
@@ -1647,7 +1690,7 @@ restoreFromFeedSet name model =
             mdl
                 |> withCmds
                     [ saveFeeds feeds mdl
-                    , if newPosts == 0 then
+                    , if newPosts > 0 then
                         Cmd.none
 
                       else
@@ -2301,8 +2344,56 @@ receiveFeed updateType feedType result model =
                 Ok logList ->
                     updateIcons logList model
 
+        ( mdl2, cmd2 ) =
+            case updateType of
+                FeedSetUpdate setName ->
+                    receiveFeedSet setName feedType result mdl
+
+                _ ->
+                    receiveDisplayedFeed updateType feedType result mdl
+    in
+    mdl2 |> withCmds [ cmd, cmd2 ]
+
+
+receiveFeedSet : String -> FeedType -> FeedResult (LogList FeedData) -> Model -> ( Model, Cmd Msg )
+receiveFeedSet setName feedType result model =
+    case findFeedSet setName model of
+        Nothing ->
+            model |> withNoCmd
+
+        Just feedSet ->
+            let
+                feeds =
+                    case feedSet.feeds of
+                        Just fs ->
+                            fs
+
+                        Nothing ->
+                            feedTypesToFeeds Nothing
+                                model.backend
+                                feedSet.feedTypes
+                                0
+
+                ( _, feeds2 ) =
+                    updateFeeds (FeedSetUpdate setName) feedType result feeds
+
+                loadingFeeds =
+                    Set.remove (feedTypeToString feedType) feedSet.loadingFeeds
+            in
+            model
+                |> updateFeedSet
+                    { feedSet
+                        | feeds = Just feeds2
+                        , loadingFeeds = loadingFeeds
+                    }
+                |> withNoCmd
+
+
+receiveDisplayedFeed : UpdateType -> FeedType -> FeedResult (LogList FeedData) -> Model -> ( Model, Cmd Msg )
+receiveDisplayedFeed updateType feedType result model =
+    let
         ( id, feeds ) =
-            updateFeeds updateType feedType result mdl.feeds
+            updateFeeds updateType feedType result model.feeds
 
         loadingFeeds =
             Set.remove (feedTypeToString feedType) model.loadingFeeds
@@ -2317,7 +2408,7 @@ receiveFeed updateType feedType result model =
             else
                 LE.find (\feed -> feed.newPosts > 0) feeds
     in
-    { mdl
+    { model
         | feeds = feeds
         , loadingFeeds =
             loadingFeeds
@@ -2335,14 +2426,13 @@ receiveFeed updateType feedType result model =
                 Just feed ->
                     Just feed.feedType
     }
-        |> withCmds
-            [ cmd
-            , if updateType == MergeUpdate && id /= "" then
+        |> withCmd
+            (if updateType == MergeUpdate && id /= "" then
                 Task.attempt (\_ -> Noop) (Dom.setViewportOf id 0 0)
 
-              else
+             else
                 Cmd.none
-            ]
+            )
 
 
 processReceivedError : Http.Error -> Model -> ( Model, Cmd Msg )
@@ -3799,14 +3889,28 @@ feedSetDialogRow style iconHeight feedSet =
                 totalNewPosts feeds
     , buttons =
         let
-            makeButton label wrapper url =
-                standardButton style label (wrapper feedSet.name) <|
+            makeButton label wrapper url dontHover =
+                standardButtonWithDontHover style
+                    dontHover
+                    label
+                    (wrapper feedSet.name)
+                <|
                     heightImage (getIconUrl style url) label iconHeight
+
+            isLoading =
+                not <| Set.isEmpty feedSet.loadingFeeds
+
+            reloadButton =
+                makeButton "Reload" ReloadFeedSet .reload isLoading
         in
-        [ makeButton "Restore" RestoreFromFeedSet .restore
-        , makeButton "Save" SaveToFeedSet .save
-        , makeButton "Reload" ReloadFeedSet .reload
-        , makeButton "Delete" DeleteFeedSet .close
+        [ makeButton "Restore" RestoreFromFeedSet .restore False
+        , makeButton "Save" SaveToFeedSet .save False
+        , if isLoading then
+            el [ Background.color colors.orange ] reloadButton
+
+          else
+            reloadButton
+        , makeButton "Delete" DeleteFeedSet .close False
         ]
     }
 
