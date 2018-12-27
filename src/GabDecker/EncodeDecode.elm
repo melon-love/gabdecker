@@ -1,12 +1,16 @@
 module GabDecker.EncodeDecode exposing
-    ( decodeFeedType
+    ( decodeFeedSets
+    , decodeFeedType
     , decodeFeedTypes
     , decodeIcons
     , decodeSettings
+    , encodeFeedSet
+    , encodeFeedSets
     , encodeFeedType
     , encodeFeedTypes
     , encodeIcons
     , encodeSettings
+    , feedSetsDecoder
     , feedTypeDecoder
     , feedTypesDecoder
     , settingsDecoder
@@ -21,7 +25,8 @@ import GabDecker.Elements
         )
 import GabDecker.Types
     exposing
-        ( FeedType(..)
+        ( FeedSet
+        , FeedType(..)
         , Icons
         , Settings
         , Style
@@ -29,6 +34,7 @@ import GabDecker.Types
         )
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE exposing (Value)
+import Set exposing (Set)
 
 
 encodeFeedTypes : List FeedType -> Value
@@ -280,3 +286,37 @@ settingsDecoder =
             (JD.field "fontSize" JD.float)
             (JD.field "style" styleOptionDecoder)
         ]
+
+
+encodeFeedSet : FeedSet msg -> Value
+encodeFeedSet feedSet =
+    JE.object
+        [ ( feedSet.name, encodeFeedTypes feedSet.feedTypes ) ]
+
+
+encodeFeedSets : List (FeedSet msg) -> Value
+encodeFeedSets feedSets =
+    JE.list encodeFeedSet feedSets
+
+
+feedSetsDecoder : Decoder (List (FeedSet msg))
+feedSetsDecoder =
+    JD.map
+        (\pairs ->
+            List.map
+                (\( name, feedTypes ) ->
+                    { name = name
+                    , feedTypes = feedTypes
+                    , feeds = Nothing
+                    , loadingFeeds = Set.empty
+                    }
+                )
+                pairs
+        )
+        (JD.keyValuePairs feedTypesDecoder)
+
+
+decodeFeedSets : Value -> Result String (List (FeedSet msg))
+decodeFeedSets value =
+    JD.decodeValue feedSetsDecoder value
+        |> fixDecodeResult
