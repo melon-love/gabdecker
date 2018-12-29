@@ -216,6 +216,7 @@ type alias Model =
     , loadingAll : Bool
     , lastClosedFeed : Maybe ( Feed Msg, Int )
     , scrollToFeed : Maybe FeedType
+    , draggingFeed : Maybe FeedType
     }
 
 
@@ -249,6 +250,9 @@ type Msg
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
     | MoveFeedRight FeedType
+    | MouseDown ( Int, Int )
+    | MouseUp ( Int, Int )
+    | MouseMoved ( Int, Int )
     | ShowImageDialog String
     | ShowUserDialog String
     | ScrollToFeed FeedType
@@ -415,6 +419,14 @@ subscriptions model =
         [ PortFunnels.subscriptions ProcessLocalStorage model
         , Events.onResize WindowResize
         , Events.onKeyDown <| keyDownDecoder keycodes.escape CloseDialog
+        , Events.onMouseDown <| mousePositionDecoder MouseDown
+        , Events.onMouseUp <| mousePositionDecoder MouseUp
+        , case model.draggingFeed of
+            Just _ ->
+                Events.onMouseMove <| mousePositionDecoder MouseMoved
+
+            Nothing ->
+                Sub.none
         , case model.scrollToFeed of
             Just feedType ->
                 Time.every 100 (\_ -> ScrollToNewFeed feedType)
@@ -549,6 +561,7 @@ init flags url key =
             , loadingAll = False
             , lastClosedFeed = Nothing
             , scrollToFeed = Nothing
+            , draggingFeed = Nothing
             }
     in
     List.foldl setLoadingFeed model model.feeds
@@ -1180,6 +1193,28 @@ update msg model =
 
         MoveFeedRight feedType ->
             moveFeedRight feedType model
+
+        MouseDown ( x, y ) ->
+            let
+                _ =
+                    Debug.log "MouseDown" ( x, y )
+            in
+            -- need to compute draggingFeed
+            model |> withNoCmd
+
+        MouseUp ( x, y ) ->
+            let
+                _ =
+                    Debug.log "MouseUp" ( x, y )
+            in
+            { model | draggingFeed = Nothing } |> withNoCmd
+
+        MouseMoved ( x, y ) ->
+            let
+                _ =
+                    Debug.log "MouseMoved" ( x, y )
+            in
+            model |> withNoCmd
 
         ScrollToFeed feedType ->
             scrollToFeed feedType model
@@ -3098,7 +3133,8 @@ mainPage settings icons loadingFeeds feeds =
             }
         , Border.color style.border
         ]
-        [ column []
+        [ Element.html undraggableImageStyleNode
+        , column []
             [ row [ height <| px settings.windowHeight ]
                 [ controlColumn ccw
                     (not <| Set.isEmpty loadingFeeds)
@@ -3681,6 +3717,13 @@ isKeycode pairs keycode =
 
         Nothing ->
             JD.fail "These are not the keycodes you're looking for."
+
+
+mousePositionDecoder : (( Int, Int ) -> Msg) -> Decoder Msg
+mousePositionDecoder wrapper =
+    JD.map2 (\x y -> wrapper ( x, y ))
+        (JD.field "clientX" JD.int)
+        (JD.field "clientY" JD.int)
 
 
 dialogTitleBar : Style -> Float -> String -> Element Msg
@@ -4306,7 +4349,8 @@ controlColumn columnWidth isLoading settings icons feeds =
     in
     column
         (List.concat
-            [ [ colw
+            [ [ classAttribute "gabdecker-undraggable"
+              , colw
               , height Element.fill
               , padding columnPadding
               , Border.widthEach
@@ -4516,6 +4560,11 @@ idAttribute id =
 titleAttribute : String -> Attribute msg
 titleAttribute string =
     Element.htmlAttribute <| Attributes.title string
+
+
+classAttribute : String -> Attribute msg
+classAttribute string =
+    Element.htmlAttribute <| Attributes.class string
 
 
 columnId : Int -> String
@@ -5298,6 +5347,21 @@ notificationTypeToDescription style typ isComment notification otherUsers =
 styleNode : String -> Html msg
 styleNode css =
     Html.node "style" [] [ Html.text css ]
+
+
+{-| <https://stackoverflow.com/a/35924844/1386989>
+-}
+undraggableImageStyleNode : Html msg
+undraggableImageStyleNode =
+    styleNode """.gabdecker-undraggable img {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout:
+}"""
 
 
 gangedTypes : List NotificationType
