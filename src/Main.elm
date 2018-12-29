@@ -212,10 +212,9 @@ type alias Model =
     , currentFeedSet : String
     , nextId : Int
     , feeds : List (Feed Msg)
-    , lastFeeds : Dict String (Feed Msg)
     , loadingFeeds : Set String
     , loadingAll : Bool
-    , lastClosedFeed : Maybe (Feed Msg)
+    , lastClosedFeed : Maybe ( Feed Msg, Int )
     , scrollToFeed : Maybe FeedType
     }
 
@@ -546,7 +545,6 @@ init flags url key =
             , currentFeedSet = ""
             , nextId = List.length feeds
             , feeds = feeds
-            , lastFeeds = Dict.empty
             , loadingFeeds = Set.empty
             , loadingAll = False
             , lastClosedFeed = Nothing
@@ -1129,13 +1127,28 @@ update msg model =
                 feedType =
                     feed.feedType
 
+                findNeighbor rest idx =
+                    case rest of
+                        [] ->
+                            idx
+
+                        head :: tail ->
+                            if head.feedType == feedType then
+                                idx
+
+                            else
+                                findNeighbor tail (idx + 1)
+
+                index =
+                    findNeighbor model.feeds 0
+
                 feeds =
                     List.filter (\f -> feedType /= f.feedType)
                         model.feeds
             in
             { model
                 | feeds = feeds
-                , lastClosedFeed = Just feed
+                , lastClosedFeed = Just ( feed, index )
             }
                 |> withCmd (saveFeeds feeds model)
 
@@ -2128,7 +2141,8 @@ moveFeedLeft feedType model =
         mdl =
             loop model.feeds []
     in
-    mdl |> withCmd (saveFeeds mdl.feeds mdl)
+    { mdl | scrollToFeed = Just feedType }
+        |> withCmd (saveFeeds mdl.feeds mdl)
 
 
 moveFeedRight : FeedType -> Model -> ( Model, Cmd Msg )
@@ -2167,7 +2181,8 @@ moveFeedRight feedType model =
         mdl =
             loop model.feeds []
     in
-    mdl |> withCmd (saveFeeds mdl.feeds mdl)
+    { mdl | scrollToFeed = Just feedType }
+        |> withCmd (saveFeeds mdl.feeds mdl)
 
 
 cdr : List a -> List a
@@ -2201,10 +2216,18 @@ saveFeedSets feedSets model =
 addNewFeed : FeedType -> Float -> Model -> ( Model, Cmd Msg )
 addNewFeed feedType baseFontSize model =
     let
-        addit feed =
+        addit feed index =
             let
                 feeds =
-                    List.concat [ model.feeds, [ feed ] ]
+                    if index < 0 then
+                        List.concat [ model.feeds, [ feed ] ]
+
+                    else
+                        List.concat
+                            [ List.take index model.feeds
+                            , [ feed ]
+                            , List.drop index model.feeds
+                            ]
             in
             { model
                 | feeds = feeds
@@ -2215,7 +2238,11 @@ addNewFeed feedType baseFontSize model =
                 , scrollToFeed = Just feed.feedType
             }
                 |> withCmds
-                    [ loadMoreCmd MergeUpdate feed
+                    [ if feedType == LastClosedFeed then
+                        Cmd.none
+
+                      else
+                        loadMoreCmd MergeUpdate feed
                     , saveFeeds feeds model
                     ]
     in
@@ -2224,8 +2251,8 @@ addNewFeed feedType baseFontSize model =
             Nothing ->
                 model |> withNoCmd
 
-            Just feed ->
-                addit feed
+            Just ( feed, index ) ->
+                addit feed index
 
     else
         case model.backend of
@@ -2265,6 +2292,7 @@ addNewFeed feedType baseFontSize model =
                                     feedType
                                     model.nextId
                                 )
+                                -1
 
 
 loadAll : Model -> ( Model, Cmd Msg )
