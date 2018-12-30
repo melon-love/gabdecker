@@ -224,6 +224,7 @@ type alias DraggingInfo =
     { feedType : FeedType
     , index : Int
     , point : ( Int, Int )
+    , feeds : List (Feed Msg)
     }
 
 
@@ -1220,15 +1221,15 @@ update msg model =
                             Nothing
 
                         Just f ->
-                            Just <| DraggingInfo f.feedType idx point
+                            Just <| DraggingInfo f.feedType idx point model.feeds
             in
             { model
                 | draggingInfo = draggingInfo
             }
                 |> withNoCmd
 
-        MouseUp _ ->
-            { model | draggingInfo = Nothing } |> withNoCmd
+        MouseUp point ->
+            mouseUp point model
 
         MouseMoved point ->
             mouseMoved point model
@@ -1562,6 +1563,28 @@ update msg model =
             receiveUser result model
 
 
+mouseUp : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
+mouseUp point model =
+    case model.draggingInfo of
+        Nothing ->
+            model |> withNoCmd
+
+        Just info ->
+            let
+                mdl =
+                    { model | draggingInfo = Nothing }
+            in
+            if List.map .feedType model.feeds == List.map .feedType info.feeds then
+                mdl |> withNoCmd
+
+            else
+                { mdl
+                    | feeds = info.feeds
+                    , scrollToFeed = Just info.feedType
+                }
+                    |> withNoCmd
+
+
 mouseMoved : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
 mouseMoved point model =
     case model.draggingInfo of
@@ -1590,7 +1613,7 @@ mouseMoved point model =
 
                                     feeds =
                                         List.filter (\f -> f.feedType /= feedType)
-                                            model.feeds
+                                            info.feeds
 
                                     newFeeds =
                                         List.concat
@@ -1600,14 +1623,13 @@ mouseMoved point model =
                                             ]
                                 in
                                 { model
-                                    | feeds = newFeeds
-                                    , draggingInfo =
+                                    | draggingInfo =
                                         Just
                                             { info
                                                 | index = idx
                                                 , point = point
+                                                , feeds = newFeeds
                                             }
-                                    , scrollToFeed = Just feedType
                                 }
                                     |> withNoCmd
 
@@ -4541,7 +4563,13 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                         (widthImage (getIconUrl style .reload) "Refresh" iconHeight)
                     ]
               ]
-            , List.map (feedSelectorButton isDragging style iconHeight icons) feeds
+            , List.map (feedSelectorButton isDragging style iconHeight icons) <|
+                case draggingInfo of
+                    Nothing ->
+                        feeds
+
+                    Just info ->
+                        info.feeds
             , [ row
                     [ paddingEach { zeroes | top = 10 }
                     , centerX
