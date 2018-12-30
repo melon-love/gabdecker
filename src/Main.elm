@@ -1680,11 +1680,7 @@ mouseFeedIndex point model =
             cnt =
                 List.length model.feeds
         in
-        if index >= cnt then
-            Nothing
-
-        else
-            Just index
+        Just <| min (cnt - 1) index
 
 
 autoSize : Model -> ( Model, Cmd Msg )
