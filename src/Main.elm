@@ -216,9 +216,14 @@ type alias Model =
     , loadingAll : Bool
     , lastClosedFeed : Maybe ( Feed Msg, Int )
     , scrollToFeed : Maybe FeedType
-    , draggingFeed : Maybe FeedType
-    , draggingIndex : Int
-    , draggingPoint : ( Int, Int )
+    , draggingInfo : Maybe DraggingInfo
+    }
+
+
+type alias DraggingInfo =
+    { feedType : FeedType
+    , index : Int
+    , point : ( Int, Int )
     }
 
 
@@ -423,7 +428,7 @@ subscriptions model =
         , Events.onKeyDown <| keyDownDecoder keycodes.escape CloseDialog
         , Events.onMouseDown <| mousePositionDecoder MouseDown
         , Events.onMouseUp <| mousePositionDecoder MouseUp
-        , case model.draggingFeed of
+        , case model.draggingInfo of
             Just _ ->
                 Events.onMouseMove <| mousePositionDecoder MouseMoved
 
@@ -563,9 +568,7 @@ init flags url key =
             , loadingAll = False
             , lastClosedFeed = Nothing
             , scrollToFeed = Nothing
-            , draggingFeed = Nothing
-            , draggingIndex = -1
-            , draggingPoint = ( 0, 0 )
+            , draggingInfo = Nothing
             }
     in
     List.foldl setLoadingFeed model model.feeds
@@ -1211,23 +1214,21 @@ update msg model =
                         Just i ->
                             ( LE.getAt i model.feeds, i )
 
-                draggingFeed =
+                draggingInfo =
                     case feed of
                         Nothing ->
                             Nothing
 
                         Just f ->
-                            Just f.feedType
+                            Just <| DraggingInfo f.feedType idx point
             in
             { model
-                | draggingFeed = draggingFeed
-                , draggingIndex = idx
-                , draggingPoint = point
+                | draggingInfo = draggingInfo
             }
                 |> withNoCmd
 
         MouseUp _ ->
-            { model | draggingFeed = Nothing } |> withNoCmd
+            { model | draggingInfo = Nothing } |> withNoCmd
 
         MouseMoved point ->
             mouseMoved point model
@@ -1563,27 +1564,30 @@ update msg model =
 
 mouseMoved : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
 mouseMoved point model =
-    case model.draggingFeed of
+    case model.draggingInfo of
         Nothing ->
             -- can't happen
             model |> withNoCmd
 
-        Just feedType ->
+        Just info ->
             case mouseFeedIndex point model of
                 Nothing ->
                     model |> withNoCmd
 
                 Just idx ->
-                    case findFeed feedType model of
+                    case findFeed info.feedType model of
                         Nothing ->
                             model |> withNoCmd
 
                         Just feed ->
-                            if idx == model.draggingIndex then
+                            if idx == info.index then
                                 model |> withNoCmd
 
                             else
                                 let
+                                    feedType =
+                                        info.feedType
+
                                     feeds =
                                         List.filter (\f -> f.feedType /= feedType)
                                             model.feeds
@@ -1597,8 +1601,12 @@ mouseMoved point model =
                                 in
                                 { model
                                     | feeds = newFeeds
-                                    , draggingIndex = idx
-                                    , draggingPoint = point
+                                    , draggingInfo =
+                                        Just
+                                            { info
+                                                | index = idx
+                                                , point = point
+                                            }
                                     , scrollToFeed = Just feedType
                                 }
                                     |> withNoCmd
@@ -3157,7 +3165,7 @@ view model =
                     optimizers.mainPage
                         model.settings
                         model.icons
-                        (model.draggingFeed /= Nothing)
+                        model.draggingInfo
                         model.loadingFeeds
                         model.feeds
             )
@@ -3167,31 +3175,25 @@ view model =
 
 {-| Currently unused, until I figure out how to get it to update.
 -}
-dragImage : Model -> Maybe (Element Msg)
-dragImage model =
-    case model.draggingFeed of
+dragImage : Settings -> Maybe DraggingInfo -> Icons -> Maybe (Element Msg)
+dragImage settings draggingInfo icons =
+    case draggingInfo of
         Nothing ->
             Nothing
 
-        Just feedType ->
+        Just info ->
             let
-                settings =
-                    model.settings
-
                 style =
                     settings.style
-
-                icons =
-                    model.icons
 
                 iconHeight =
                     bigUserIconHeight settings.fontSize
 
                 image =
-                    feedSelectorImage style iconHeight icons feedType
+                    feedSelectorImage style iconHeight icons info.feedType
 
                 ( x, y ) =
-                    model.draggingPoint
+                    info.point
             in
             Just <|
                 el
@@ -3244,8 +3246,8 @@ fillWidth =
     width Element.fill
 
 
-mainPage : Settings -> Icons -> Bool -> Set String -> List (Feed Msg) -> Element Msg
-mainPage settings icons isDragging loadingFeeds feeds =
+mainPage : Settings -> Icons -> Maybe DraggingInfo -> Set String -> List (Feed Msg) -> Element Msg
+mainPage settings icons draggingInfo loadingFeeds feeds =
     let
         style =
             settings.style
@@ -3278,7 +3280,7 @@ mainPage settings icons isDragging loadingFeeds feeds =
         , column []
             [ row [ height <| px settings.windowHeight ]
                 [ controlColumn ccw
-                    isDragging
+                    draggingInfo
                     (not <| Set.isEmpty loadingFeeds)
                     settings
                     icons
@@ -4477,9 +4479,12 @@ settingsInputId =
     "settingsInput"
 
 
-controlColumn : Int -> Bool -> Bool -> Settings -> Icons -> List (Feed Msg) -> Element Msg
-controlColumn columnWidth isDragging isLoading settings icons feeds =
+controlColumn : Int -> Maybe DraggingInfo -> Bool -> Settings -> Icons -> List (Feed Msg) -> Element Msg
+controlColumn columnWidth draggingInfo isLoading settings icons feeds =
     let
+        isDragging =
+            draggingInfo /= Nothing
+
         style =
             settings.style
 
@@ -4507,6 +4512,14 @@ controlColumn columnWidth isDragging isLoading settings icons feeds =
               , idAttribute controlColumnId
               ]
             , columnBorderAttributes style True
+            , case dragImage settings draggingInfo icons of
+                Nothing ->
+                    []
+
+                Just image ->
+                    -- This only moves when something else changes.
+                    --[ Element.inFront image ]
+                    []
             ]
         )
     <|

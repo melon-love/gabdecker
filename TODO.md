@@ -3,6 +3,9 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
+* Dragging in the control column is too slow.
+  Update the feed column as you drag, but don't actually move the
+  column until you raise the mouse.
 * Feed set chooser should pop up near the control column icon.
   It allows quick switching or opening the dialog.
 * Magic numbers for scrolling horizontally depend on font size.
@@ -51,9 +54,6 @@ This is a place to collect things left to do for GabDecker.
   feed portion and scroll that, ensuring that the "+" to add a feed, and
   the settings and whatever else at the bottom are always visible.
 * Incremental search. Show only posts containing the string the user types.
-* A faster way than move-left-or-right clicks to move a column.
-  Dragging in the control column would be great, but just typing a number
-  in a popup would be good enough.
 * Auto-load more near end of scrolling a column.
 * Periodic update of feed. Mark it somehow if not scrolled to top of column.
 * Colored versions of icons instead of rectangular background color highlight.
