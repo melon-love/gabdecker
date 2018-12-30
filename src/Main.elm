@@ -217,6 +217,8 @@ type alias Model =
     , lastClosedFeed : Maybe ( Feed Msg, Int )
     , scrollToFeed : Maybe FeedType
     , draggingFeed : Maybe FeedType
+    , draggingIndex : Int
+    , draggingPoint : ( Int, Int )
     }
 
 
@@ -562,6 +564,8 @@ init flags url key =
             , lastClosedFeed = Nothing
             , scrollToFeed = Nothing
             , draggingFeed = Nothing
+            , draggingIndex = -1
+            , draggingPoint = ( 0, 0 )
             }
     in
     List.foldl setLoadingFeed model model.feeds
@@ -1194,27 +1198,39 @@ update msg model =
         MoveFeedRight feedType ->
             moveFeedRight feedType model
 
-        MouseDown ( x, y ) ->
+        MouseDown point ->
             let
-                _ =
-                    Debug.log "MouseDown" ( x, y )
-            in
-            -- need to compute draggingFeed
-            model |> withNoCmd
+                index =
+                    mouseFeedIndex point model
 
-        MouseUp ( x, y ) ->
-            let
-                _ =
-                    Debug.log "MouseUp" ( x, y )
+                ( feed, idx ) =
+                    case index of
+                        Nothing ->
+                            ( Nothing, -1 )
+
+                        Just i ->
+                            ( LE.getAt i model.feeds, i )
+
+                draggingFeed =
+                    case feed of
+                        Nothing ->
+                            Nothing
+
+                        Just f ->
+                            Just f.feedType
             in
+            { model
+                | draggingFeed = draggingFeed
+                , draggingIndex = idx
+                , draggingPoint = point
+            }
+                |> withNoCmd
+
+        MouseUp _ ->
             { model | draggingFeed = Nothing } |> withNoCmd
 
-        MouseMoved ( x, y ) ->
-            let
-                _ =
-                    Debug.log "MouseMoved" ( x, y )
-            in
-            model |> withNoCmd
+        MouseMoved point ->
+            mouseMoved point model
 
         ScrollToFeed feedType ->
             scrollToFeed feedType model
@@ -1543,6 +1559,94 @@ update msg model =
 
         ReceiveUser result ->
             receiveUser result model
+
+
+mouseMoved : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
+mouseMoved point model =
+    case model.draggingFeed of
+        Nothing ->
+            -- can't happen
+            model |> withNoCmd
+
+        Just feedType ->
+            case mouseFeedIndex point model of
+                Nothing ->
+                    model |> withNoCmd
+
+                Just idx ->
+                    case findFeed feedType model of
+                        Nothing ->
+                            model |> withNoCmd
+
+                        Just feed ->
+                            if idx == model.draggingIndex then
+                                model |> withNoCmd
+
+                            else
+                                let
+                                    feeds =
+                                        List.filter (\f -> f.feedType /= feedType)
+                                            model.feeds
+
+                                    newFeeds =
+                                        List.concat
+                                            [ List.take idx feeds
+                                            , [ feed ]
+                                            , List.drop idx feeds
+                                            ]
+                                in
+                                { model
+                                    | feeds = newFeeds
+                                    , draggingIndex = idx
+                                    , draggingPoint = point
+                                    , scrollToFeed = Just feedType
+                                }
+                                    |> withNoCmd
+
+
+mouseFeedIndex : ( Int, Int ) -> Model -> Maybe Int
+mouseFeedIndex point model =
+    let
+        ( x, y ) =
+            point
+
+        settings =
+            model.settings
+
+        baseFontSize =
+            settings.fontSize
+
+        iconHeight =
+            bigUserIconHeight baseFontSize
+
+        topPad =
+            13
+
+        space =
+            10
+
+        topy =
+            topPad + iconHeight + (space // 2)
+
+        deltay =
+            iconHeight + space
+    in
+    if x < 15 || x > 15 + iconHeight then
+        Nothing
+
+    else
+        let
+            index =
+                (y - topy) // deltay
+
+            cnt =
+                List.length model.feeds
+        in
+        if index >= cnt then
+            Nothing
+
+        else
+            Just index
 
 
 autoSize : Model -> ( Model, Cmd Msg )
@@ -3053,11 +3157,48 @@ view model =
                     optimizers.mainPage
                         model.settings
                         model.icons
+                        (model.draggingFeed /= Nothing)
                         model.loadingFeeds
                         model.feeds
             )
         ]
     }
+
+
+{-| Currently unused, until I figure out how to get it to update.
+-}
+dragImage : Model -> Maybe (Element Msg)
+dragImage model =
+    case model.draggingFeed of
+        Nothing ->
+            Nothing
+
+        Just feedType ->
+            let
+                settings =
+                    model.settings
+
+                style =
+                    settings.style
+
+                icons =
+                    model.icons
+
+                iconHeight =
+                    bigUserIconHeight settings.fontSize
+
+                image =
+                    feedSelectorImage style iconHeight icons feedType
+
+                ( x, y ) =
+                    model.draggingPoint
+            in
+            Just <|
+                el
+                    [ paddingEach { zeroes | left = x - 10, top = y - 10 }
+                    , classAttribute "gabdecker-undraggable"
+                    ]
+                    image
 
 
 showDialog : Model -> Element Msg
@@ -3103,8 +3244,8 @@ fillWidth =
     width Element.fill
 
 
-mainPage : Settings -> Icons -> Set String -> List (Feed Msg) -> Element Msg
-mainPage settings icons loadingFeeds feeds =
+mainPage : Settings -> Icons -> Bool -> Set String -> List (Feed Msg) -> Element Msg
+mainPage settings icons isDragging loadingFeeds feeds =
     let
         style =
             settings.style
@@ -3137,6 +3278,7 @@ mainPage settings icons loadingFeeds feeds =
         , column []
             [ row [ height <| px settings.windowHeight ]
                 [ controlColumn ccw
+                    isDragging
                     (not <| Set.isEmpty loadingFeeds)
                     settings
                     icons
@@ -4335,8 +4477,8 @@ settingsInputId =
     "settingsInput"
 
 
-controlColumn : Int -> Bool -> Settings -> Icons -> List (Feed Msg) -> Element Msg
-controlColumn columnWidth isLoading settings icons feeds =
+controlColumn : Int -> Bool -> Bool -> Settings -> Icons -> List (Feed Msg) -> Element Msg
+controlColumn columnWidth isDragging isLoading settings icons feeds =
     let
         style =
             settings.style
@@ -4380,27 +4522,32 @@ controlColumn columnWidth isLoading settings icons feeds =
                         )
                     ]
                     [ standardButtonWithDontHover style
-                        isLoading
+                        (isDragging || isLoading)
                         "Refresh All Feeds"
                         LoadAll
                         (widthImage (getIconUrl style .reload) "Refresh" iconHeight)
                     ]
               ]
-            , List.map (feedSelectorButton style iconHeight icons) feeds
+            , List.map (feedSelectorButton isDragging style iconHeight icons) feeds
             , [ row
                     [ paddingEach { zeroes | top = 10 }
                     , centerX
                     , Font.size <| 7 * iconHeight // 4
                     ]
                     [ column [ spacing 0 ]
-                        [ standardButton style
+                        [ standardButtonWithDontHover style
+                            isDragging
                             "FeedSets"
                             FeedSets
                             (widthImage (getIconUrl style .feedsets)
                                 "FeedSets"
                                 iconHeight
                             )
-                        , standardButton style "Add New Feed" AddFeed (text "+")
+                        , standardButtonWithDontHover style
+                            isDragging
+                            "Add New Feed"
+                            AddFeed
+                            (text "+")
                         ]
                     ]
               , row
@@ -4408,16 +4555,24 @@ controlColumn columnWidth isLoading settings icons feeds =
                     , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ column [ spacing 10 ]
-                        [ standardButton style
+                        [ standardButtonWithDontHover style
+                            isDragging
                             "Settings"
                             ShowSettings
                             (widthImage (getIconUrl style .settings) "Settings" iconHeight)
-                        , standardButton style
+                        , standardButtonWithDontHover style
+                            isDragging
                             "Restore Feeds"
                             SaveFeedTypes
                             (widthImage (getIconUrl style .save) "Save" iconHeight)
-                        , standardButton style "Logout" Logout <|
-                            heightImage (getIconUrl style .logout) "Logout" iconHeight
+                        , standardButtonWithDontHover style
+                            isDragging
+                            "Logout"
+                            Logout
+                            (heightImage (getIconUrl style .logout)
+                                "Logout"
+                                iconHeight
+                            )
                         ]
                     ]
               ]
@@ -4449,8 +4604,8 @@ feedTypeIconUrl style feedType icons =
             ( "", "", False )
 
 
-feedSelectorButton : Style -> Int -> Icons -> Feed Msg -> Element Msg
-feedSelectorButton style iconHeight icons feed =
+feedSelectorButton : Bool -> Style -> Int -> Icons -> Feed Msg -> Element Msg
+feedSelectorButton dontHover style iconHeight icons feed =
     case feedTypeIconUrl style feed.feedType icons of
         ( "", _, _ ) ->
             Element.none
@@ -4459,7 +4614,7 @@ feedSelectorButton style iconHeight icons feed =
             row
                 [ centerX ]
                 [ standardButtonWithDontHover style
-                    False
+                    dontHover
                     label
                     (ScrollToFeed feed.feedType)
                   <|
@@ -4479,6 +4634,29 @@ feedSelectorButton style iconHeight icons feed =
                             iconHeight
                         )
                 ]
+
+
+feedSelectorImage : Style -> Int -> Icons -> FeedType -> Element Msg
+feedSelectorImage style iconHeight icons feedType =
+    case feedTypeIconUrl style feedType icons of
+        ( "", _, _ ) ->
+            Element.none
+
+        ( url, label, isCircular ) ->
+            (if isCircular then
+                circularHeightImage
+
+             else
+                heightImage
+            )
+                url
+                label
+                (if isCircular then
+                    adjustUserIconHeight iconHeight
+
+                 else
+                    iconHeight
+                )
 
 
 circularHeightImageWithCount : Int -> String -> String -> Int -> Element msg
@@ -6507,7 +6685,7 @@ keycodes =
 optimizers =
     { mainPage =
         if optimizations.lazyMainPage then
-            Lazy.lazy4 mainPage
+            Lazy.lazy5 mainPage
 
         else
             mainPage
