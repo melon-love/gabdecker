@@ -1595,7 +1595,15 @@ mouseMoved point model =
         Just info ->
             case mouseFeedIndex point model of
                 Nothing ->
-                    model |> withNoCmd
+                    { model
+                        | draggingInfo =
+                            Just
+                                { info
+                                    | index = -1
+                                    , feeds = model.feeds
+                                }
+                    }
+                        |> withNoCmd
 
                 Just idx ->
                     case findFeed info.feedType model of
