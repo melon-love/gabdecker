@@ -206,6 +206,7 @@ type alias Style =
     , text : Color
     , link : Color
     , linkHover : Color
+    , selected : Color
     , border : Color
     , headerBackground : Color
     , quotedPostBackground : Color

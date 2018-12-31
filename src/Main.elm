@@ -1919,58 +1919,82 @@ updateFeedSet feedSet model =
 
 restoreFromFeedSet : String -> Model -> ( Model, Cmd Msg )
 restoreFromFeedSet name model =
+    let
+        feedTypes =
+            List.map .feedType model.feeds
+
+        isInstalled feedSet =
+            feedTypes == feedSet.feedTypes
+    in
     case findFeedSet name model of
         Nothing ->
             model |> withNoCmd
 
         Just feedSet ->
-            let
-                feeds =
-                    case feedSet.feeds of
-                        Nothing ->
-                            feedTypesToFeeds Nothing
-                                model.backend
-                                feedSet.feedTypes
-                                0
+            if isInstalled feedSet then
+                { model | showDialog = NoDialog } |> withNoCmd
 
-                        Just fs ->
+            else
+                let
+                    feeds =
+                        case feedSet.feeds of
+                            Nothing ->
+                                feedTypesToFeeds Nothing
+                                    model.backend
+                                    feedSet.feedTypes
+                                    0
+
+                            Just fs ->
+                                fs
+
+                    newPosts =
+                        totalNewPosts feeds
+
+                    -- This makes swapping a feedset back in
+                    -- preserve its new post counts.
+                    maybeOldFeeds fs =
+                        if isInstalled fs then
+                            { fs | feeds = Just model.feeds }
+
+                        else
                             fs
 
-                newPosts =
-                    totalNewPosts feeds
+                    feedSets =
+                        List.map maybeOldFeeds model.feedSets
 
-                ( mdl, _ ) =
-                    { model
-                        | feeds = feeds
-                        , showDialog = NoDialog
-                    }
-                        |> saveToFeedSet name
+                    ( mdl, _ ) =
+                        { model
+                            | feeds = feeds
+                            , showDialog = NoDialog
+                            , feedSets = feedSets
+                        }
+                            |> saveToFeedSet name
 
-                scrollToTop feed =
-                    let
-                        colid =
-                            columnId feed.id
-                    in
-                    Task.attempt (\_ -> Noop) (Dom.setViewportOf colid 0 0)
-            in
-            { mdl
-                | scrollToFeed =
-                    case List.head feeds of
-                        Nothing ->
-                            Nothing
+                    scrollToTop feed =
+                        let
+                            colid =
+                                columnId feed.id
+                        in
+                        Task.attempt (\_ -> Noop) (Dom.setViewportOf colid 0 0)
+                in
+                { mdl
+                    | scrollToFeed =
+                        case List.head feeds of
+                            Nothing ->
+                                Nothing
 
-                        Just feed ->
-                            Just feed.feedType
-            }
-                |> withCmds
-                    [ saveFeeds feeds mdl
-                    , if newPosts > 0 then
-                        List.map scrollToTop feeds
-                            |> Cmd.batch
+                            Just feed ->
+                                Just feed.feedType
+                }
+                    |> withCmds
+                        [ saveFeeds feeds mdl
+                        , if newPosts > 0 then
+                            List.map scrollToTop feeds
+                                |> Cmd.batch
 
-                      else
-                        loadAllCmd
-                    ]
+                          else
+                            loadAllCmd
+                        ]
 
 
 totalNewPosts : List (Feed msg) -> Int
@@ -4312,7 +4336,7 @@ feedSetChooserDialog model =
             row []
                 [ (if isInstalled feedSet then
                     generalButton
-                        [ Font.color colors.gabGreen
+                        [ Font.color style.selected
                         , titleAttribute name
                         ]
                         False
@@ -4427,7 +4451,7 @@ feedSetDialogRow style iconHeight isInstalled feedSet =
 
          else
             generalButton
-                [ Font.color colors.gabGreen
+                [ Font.color style.selected
                 , titleAttribute name
                 ]
                 False
