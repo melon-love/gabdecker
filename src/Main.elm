@@ -1205,30 +1205,7 @@ update msg model =
             moveFeedRight feedType model
 
         MouseDown point ->
-            let
-                index =
-                    mouseFeedIndex point model
-
-                ( feed, idx ) =
-                    case index of
-                        Nothing ->
-                            ( Nothing, -1 )
-
-                        Just i ->
-                            ( LE.getAt i model.feeds, i )
-
-                draggingInfo =
-                    case feed of
-                        Nothing ->
-                            Nothing
-
-                        Just f ->
-                            Just <| DraggingInfo f.feedType idx point model.feeds
-            in
-            { model
-                | draggingInfo = draggingInfo
-            }
-                |> withNoCmd
+            mouseDown point model
 
         MouseUp point ->
             mouseUp point model
@@ -1573,6 +1550,34 @@ update msg model =
 
         ReceiveUser result ->
             receiveUser result model
+
+
+mouseDown : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
+mouseDown point model =
+    let
+        index =
+            mouseFeedIndex point model
+
+        ( feed, idx ) =
+            case index of
+                Nothing ->
+                    ( Nothing, -1 )
+
+                Just i ->
+                    ( LE.getAt i model.feeds, i )
+
+        draggingInfo =
+            case feed of
+                Nothing ->
+                    Nothing
+
+                Just f ->
+                    Just <| DraggingInfo f.feedType idx point model.feeds
+    in
+    { model
+        | draggingInfo = draggingInfo
+    }
+        |> withNoCmd
 
 
 mouseUp : ( Int, Int ) -> Model -> ( Model, Cmd Msg )

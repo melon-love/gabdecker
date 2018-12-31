@@ -3,11 +3,6 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote / repost
-* Dragging in the control column is too slow.
-  Update the feed column as you drag, but don't actually move the
-  column until you raise the mouse.
-* Feed set chooser should pop up near the control column icon.
-  It allows quick switching or opening the dialog.
 * Magic numbers for scrolling horizontally depend on font size.
 * URLs:
   /feed/<feed> opens and scrolls to feed.
