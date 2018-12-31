@@ -171,6 +171,7 @@ type DialogType
     | UserDialog User Bool
     | SaveFeedsDialog
     | SettingsDialog
+    | FeedSetChooserDialog
     | FeedSetsDialog
     | OperationErrorDialog String
 
@@ -269,6 +270,7 @@ type Msg
     | ScrollToControl String Dom.Element (Result Dom.Error Dom.Element)
     | ScrollToContent Dom.Element Dom.Element (Result Dom.Error Dom.Element)
     | AddFeed
+    | FeedSetChooser
     | FeedSets
     | SaveFeedTypes
     | ShowSettings
@@ -1347,6 +1349,16 @@ update msg model =
                 , dialogInput = ""
             }
                 |> withCmd (focusId addFeedInputId)
+
+        FeedSetChooser ->
+            if 2 > List.length model.feedSets then
+                update FeedSets model
+
+            else
+                { model
+                    | showDialog = FeedSetChooserDialog
+                }
+                    |> withNoCmd
 
         FeedSets ->
             { model
@@ -3165,6 +3177,38 @@ focusStyle =
         }
 
 
+dialogPositionAttributes : Model -> List (Attribute Msg)
+dialogPositionAttributes model =
+    case model.showDialog of
+        FeedSetChooserDialog ->
+            let
+                settings =
+                    model.settings
+
+                baseFontSize =
+                    settings.fontSize
+
+                ccw =
+                    controlColumnWidth baseFontSize
+
+                iconHeight =
+                    bigUserIconHeight baseFontSize
+
+                cnt =
+                    List.length model.feeds + 1
+
+                x =
+                    ccw + 10
+
+                y =
+                    cnt * (iconHeight + 10) + 10
+            in
+            [ paddingEach { zeroes | top = y, left = x } ]
+
+        _ ->
+            [ centerX, centerY ]
+
+
 view : Model -> Document Msg
 view model =
     let
@@ -3176,7 +3220,7 @@ view model =
         [ Element.layoutWith
             { options = [ focusStyle ] }
             [ Element.inFront <|
-                optimizers.keyedShowDialog [ centerX, centerY ]
+                optimizers.keyedShowDialog (dialogPositionAttributes model)
                     ( "dialog"
                     , optimizers.lazyShowDialog model
                     )
@@ -3246,6 +3290,9 @@ showDialog model =
 
         SettingsDialog ->
             settingsDialog model
+
+        FeedSetChooserDialog ->
+            feedSetChooserDialog model
 
         FeedSetsDialog ->
             feedSetsDialog model
@@ -4231,6 +4278,58 @@ saveFeedsDialog model =
         ]
 
 
+feedSetChooserDialog : Model -> Element Msg
+feedSetChooserDialog model =
+    let
+        settings =
+            model.settings
+
+        style =
+            settings.style
+
+        baseFontSize =
+            settings.fontSize
+
+        iconHeight =
+            userIconHeight (1.5 * baseFontSize)
+
+        feedTypes =
+            List.map .feedType model.feeds
+
+        isInstalled feedSet =
+            feedTypes == feedSet.feedTypes
+
+        feedSetRow feedSet =
+            let
+                name =
+                    feedSet.name
+            in
+            row []
+                [ (if isInstalled feedSet then
+                    generalButton
+                        [ Font.color colors.gabGreen
+                        , titleAttribute name
+                        ]
+                        False
+
+                   else
+                    standardButton
+                  )
+                    style
+                    name
+                    (RestoreFromFeedSet name)
+                    (text name)
+                ]
+    in
+    column
+        (dialogAttributes settings)
+    <|
+        List.concat
+            [ [ row [] [ textButton style "Edit Feed Sets" FeedSets "Edit Feed Sets" ] ]
+            , List.map feedSetRow model.feedSets
+            ]
+
+
 feedSetsDialog : Model -> Element Msg
 feedSetsDialog model =
     let
@@ -4243,22 +4342,14 @@ feedSetsDialog model =
         baseFontSize =
             settings.fontSize
 
-        smallFont =
-            fontSize baseFontSize 0.9
-
         iconHeight =
             userIconHeight (1.5 * baseFontSize)
 
         feedTypes =
             List.map .feedType model.feeds
 
-        selectedSet =
-            case LE.find (\set -> set.feedTypes == feedTypes) model.feedSets of
-                Just set ->
-                    Just set.name
-
-                Nothing ->
-                    Nothing
+        isInstalled feedSet =
+            feedTypes == feedSet.feedTypes
     in
     column
         (dialogAttributes settings)
@@ -4281,7 +4372,7 @@ feedSetsDialog model =
             [ Element.table
                 [ spacing 10, centerX ]
                 { data =
-                    List.map (feedSetDialogRow style iconHeight selectedSet)
+                    List.map (feedSetDialogRow style iconHeight isInstalled)
                         model.feedSets
                 , columns =
                     [ { header = Element.none
@@ -4319,27 +4410,22 @@ type alias FeedSetDialogRow =
     }
 
 
-feedSetDialogRow : Style -> Int -> Maybe String -> FeedSet Msg -> FeedSetDialogRow
-feedSetDialogRow style iconHeight selectedName feedSet =
+feedSetDialogRow : Style -> Int -> (FeedSet Msg -> Bool) -> FeedSet Msg -> FeedSetDialogRow
+feedSetDialogRow style iconHeight isInstalled feedSet =
     let
         name =
             feedSet.name
     in
     { name =
-        (case selectedName of
-            Nothing ->
-                standardButton
+        (if not <| isInstalled feedSet then
+            standardButton
 
-            Just n ->
-                if n == name then
-                    generalButton
-                        [ Font.color colors.gabGreen
-                        , titleAttribute name
-                        ]
-                        False
-
-                else
-                    standardButton
+         else
+            generalButton
+                [ Font.color colors.gabGreen
+                , titleAttribute name
+                ]
+                False
         )
             style
             name
@@ -4619,9 +4705,9 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                         [ standardButtonWithDontHover isDragging
                             style
                             "FeedSets"
-                            FeedSets
+                            FeedSetChooser
                             (widthImage (getIconUrl style .feedsets)
-                                "FeedSets"
+                                "FeedSet Chooser"
                                 iconHeight
                             )
                         , standardButtonWithDontHover isDragging
