@@ -4280,7 +4280,7 @@ feedSetsDialog model =
                                     , Element.alignRight
                                     , centerY
                                     ]
-                                    (text x.name)
+                                    x.name
                       }
                     , { header = Element.none
                       , width = Element.shrink
@@ -4300,7 +4300,7 @@ feedSetsDialog model =
 
 
 type alias FeedSetDialogRow =
-    { name : String
+    { name : Element Msg
     , count : Int
     , buttons : List (Element Msg)
     }
@@ -4308,7 +4308,13 @@ type alias FeedSetDialogRow =
 
 feedSetDialogRow : Style -> Int -> FeedSet Msg -> FeedSetDialogRow
 feedSetDialogRow style iconHeight feedSet =
-    { name = feedSet.name
+    let
+        name =
+            feedSet.name
+    in
+    { name =
+        standardButton style name (RestoreFromFeedSet name) <|
+            text name
     , count =
         case feedSet.feeds of
             Nothing ->
@@ -4322,7 +4328,7 @@ feedSetDialogRow style iconHeight feedSet =
                 standardButtonWithDontHover style
                     dontHover
                     label
-                    (wrapper feedSet.name)
+                    (wrapper name)
                 <|
                     heightImage (getIconUrl style url) label iconHeight
 
@@ -4332,8 +4338,7 @@ feedSetDialogRow style iconHeight feedSet =
             reloadButton =
                 makeButton "Reload" ReloadFeedSet .reload isLoading
         in
-        [ makeButton "Restore" RestoreFromFeedSet .restore False
-        , makeButton "Save" SaveToFeedSet .save False
+        [ makeButton "Save" SaveToFeedSet .save False
         , if isLoading then
             el [ Background.color colors.orange ] reloadButton
 
