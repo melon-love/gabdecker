@@ -668,8 +668,8 @@ feedTypeToFeed username backend feedType id =
 
 genericUserButton : Style -> Bool -> (user -> Element Msg) -> String -> String -> user -> Element Msg
 genericUserButton style dontHover renderer title username user =
-    standardButtonWithDontHover style
-        dontHover
+    standardButtonWithDontHover dontHover
+        style
         (if title == "" then
             "Show user profile"
 
@@ -3495,8 +3495,8 @@ verifiedBadge style offset size isButton user =
                     -- I don't know why I have to do this, but I do.
                     -- Otherwise, user icons with verified badges are
                     -- not clickable.
-                    standardButtonWithDontHover style
-                        True
+                    standardButtonWithDontHover True
+                        style
                         "Show user profile"
                         (ShowUserDialog user.username)
                         element
@@ -3720,8 +3720,8 @@ userDialog user isLoading model =
                     row
                         [ centerX
                         , Element.inFront <|
-                            standardButtonWithDontHover style
-                                True
+                            standardButtonWithDontHover True
+                                style
                                 ""
                                 CloseDialog
                             <|
@@ -4248,6 +4248,17 @@ feedSetsDialog model =
 
         iconHeight =
             userIconHeight (1.5 * baseFontSize)
+
+        feedTypes =
+            List.map .feedType model.feeds
+
+        selectedSet =
+            case LE.find (\set -> set.feedTypes == feedTypes) model.feedSets of
+                Just set ->
+                    Just set.name
+
+                Nothing ->
+                    Nothing
     in
     column
         (dialogAttributes settings)
@@ -4269,7 +4280,9 @@ feedSetsDialog model =
         , row []
             [ Element.table
                 [ spacing 10, centerX ]
-                { data = List.map (feedSetDialogRow style iconHeight) model.feedSets
+                { data =
+                    List.map (feedSetDialogRow style iconHeight selectedSet)
+                        model.feedSets
                 , columns =
                     [ { header = Element.none
                       , width = Element.shrink
@@ -4306,14 +4319,32 @@ type alias FeedSetDialogRow =
     }
 
 
-feedSetDialogRow : Style -> Int -> FeedSet Msg -> FeedSetDialogRow
-feedSetDialogRow style iconHeight feedSet =
+feedSetDialogRow : Style -> Int -> Maybe String -> FeedSet Msg -> FeedSetDialogRow
+feedSetDialogRow style iconHeight selectedName feedSet =
     let
         name =
             feedSet.name
     in
     { name =
-        standardButton style name (RestoreFromFeedSet name) <|
+        (case selectedName of
+            Nothing ->
+                standardButton
+
+            Just n ->
+                if n == name then
+                    generalButton
+                        [ Font.color colors.gabGreen
+                        , titleAttribute name
+                        ]
+                        False
+
+                else
+                    standardButton
+        )
+            style
+            name
+            (RestoreFromFeedSet name)
+        <|
             text name
     , count =
         case feedSet.feeds of
@@ -4325,8 +4356,8 @@ feedSetDialogRow style iconHeight feedSet =
     , buttons =
         let
             makeButton label wrapper url dontHover =
-                standardButtonWithDontHover style
-                    dontHover
+                standardButtonWithDontHover dontHover
+                    style
                     label
                     (wrapper name)
                 <|
@@ -4565,8 +4596,8 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                             style.headerBackground
                         )
                     ]
-                    [ standardButtonWithDontHover style
-                        (isDragging || isLoading)
+                    [ standardButtonWithDontHover (isDragging || isLoading)
+                        style
                         "Refresh All Feeds"
                         LoadAll
                         (widthImage (getIconUrl style .reload) "Refresh" iconHeight)
@@ -4585,16 +4616,16 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                     , Font.size <| 7 * iconHeight // 4
                     ]
                     [ column [ spacing 0 ]
-                        [ standardButtonWithDontHover style
-                            isDragging
+                        [ standardButtonWithDontHover isDragging
+                            style
                             "FeedSets"
                             FeedSets
                             (widthImage (getIconUrl style .feedsets)
                                 "FeedSets"
                                 iconHeight
                             )
-                        , standardButtonWithDontHover style
-                            isDragging
+                        , standardButtonWithDontHover isDragging
+                            style
                             "Add New Feed"
                             AddFeed
                             (text "+")
@@ -4605,18 +4636,18 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                     , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ column [ spacing 10 ]
-                        [ standardButtonWithDontHover style
-                            isDragging
+                        [ standardButtonWithDontHover isDragging
+                            style
                             "Settings"
                             ShowSettings
                             (widthImage (getIconUrl style .settings) "Settings" iconHeight)
-                        , standardButtonWithDontHover style
-                            isDragging
+                        , standardButtonWithDontHover isDragging
+                            style
                             "Restore Feeds"
                             SaveFeedTypes
                             (widthImage (getIconUrl style .save) "Save" iconHeight)
-                        , standardButtonWithDontHover style
-                            isDragging
+                        , standardButtonWithDontHover isDragging
+                            style
                             "Logout"
                             Logout
                             (heightImage (getIconUrl style .logout)
@@ -4663,8 +4694,8 @@ feedSelectorButton dontHover style iconHeight icons feed =
         ( url, label, isCircular ) ->
             row
                 [ centerX ]
-                [ standardButtonWithDontHover style
-                    dontHover
+                [ standardButtonWithDontHover dontHover
+                    style
                     label
                     (ScrollToFeed feed.feedType)
                   <|
@@ -4951,8 +4982,8 @@ feedColumn isLoading settings icons feed =
                                 []
                             )
                           <|
-                            standardButtonWithDontHover style
-                                isLoading
+                            standardButtonWithDontHover isLoading
+                                style
                                 "Refresh Feed"
                                 (LoadMore MergeUpdate feed)
                                 (heightImage (getIconUrl style .reload) "Refresh" iconHeight)
@@ -6225,8 +6256,8 @@ mediaRow style colw record =
                 , bottom = 5
             }
         ]
-        [ standardButtonWithDontHover style
-            True
+        [ standardButtonWithDontHover True
+            style
             ""
             (ShowImageDialog record.url_full)
           <|
@@ -6635,17 +6666,26 @@ loginPage settings =
 
 
 standardButton : Style -> String -> Msg -> Element Msg -> Element Msg
-standardButton style =
-    standardButtonWithDontHover style False
+standardButton =
+    standardButtonWithDontHover False
 
 
-standardButtonWithDontHover : Style -> Bool -> String -> Msg -> Element Msg -> Element Msg
-standardButtonWithDontHover style dontHover title msg label =
+standardButtonWithDontHover : Bool -> Style -> String -> Msg -> Element Msg -> Element Msg
+standardButtonWithDontHover dontHover style title =
+    generalButton
+        [ Font.color style.link
+        , titleAttribute title
+        ]
+        dontHover
+        style
+        title
+
+
+generalButton : List (Attribute Msg) -> Bool -> Style -> String -> Msg -> Element Msg -> Element Msg
+generalButton attributes dontHover style title msg label =
     button
         (List.concat
-            [ [ Font.color style.link
-              , titleAttribute title
-              ]
+            [ attributes
             , if dontHover then
                 []
 
