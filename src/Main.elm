@@ -1576,6 +1576,7 @@ mouseDown point model =
     in
     { model
         | draggingInfo = draggingInfo
+        , showDialog = NoDialog
     }
         |> withNoCmd
 
