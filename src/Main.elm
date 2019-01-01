@@ -1555,7 +1555,7 @@ update msg model =
 mouseDown : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
 mouseDown point model =
     let
-        index =
+        ( index, inControlColumn ) =
             mouseFeedIndex point model
 
         ( feed, idx ) =
@@ -1576,7 +1576,12 @@ mouseDown point model =
     in
     { model
         | draggingInfo = draggingInfo
-        , showDialog = NoDialog
+        , showDialog =
+            if inControlColumn then
+                NoDialog
+
+            else
+                model.showDialog
     }
         |> withNoCmd
 
@@ -1611,7 +1616,7 @@ mouseMoved point model =
             model |> withNoCmd
 
         Just info ->
-            case mouseFeedIndex point model of
+            case justMouseFeedIndex point model of
                 Nothing ->
                     { model
                         | draggingInfo =
@@ -1660,7 +1665,12 @@ mouseMoved point model =
                                     |> withNoCmd
 
 
-mouseFeedIndex : ( Int, Int ) -> Model -> Maybe Int
+justMouseFeedIndex : ( Int, Int ) -> Model -> Maybe Int
+justMouseFeedIndex point model =
+    mouseFeedIndex point model |> Tuple.first
+
+
+mouseFeedIndex : ( Int, Int ) -> Model -> ( Maybe Int, Bool )
 mouseFeedIndex point model =
     let
         ( x, y ) =
@@ -1686,9 +1696,12 @@ mouseFeedIndex point model =
 
         deltay =
             iconHeight + space
+
+        inControlColumn =
+            x < controlColumnWidth baseFontSize
     in
     if x < 15 || x > 15 + iconHeight then
-        Nothing
+        ( Nothing, inControlColumn )
 
     else
         let
@@ -1698,7 +1711,7 @@ mouseFeedIndex point model =
             cnt =
                 List.length model.feeds
         in
-        Just <| min (cnt - 1) index
+        ( Just <| min (cnt - 1) index, inControlColumn )
 
 
 autoSize : Model -> ( Model, Cmd Msg )
