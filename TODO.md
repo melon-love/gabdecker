@@ -104,6 +104,7 @@ This is a place to collect things left to do for GabDecker.
 * (un)Follow and (un)Mute do not work.
 * The Popular Users feed (GET https://api.gab.com/v1.0/popular/users)
   always returns nothing.
+* The rate limiting should be per user, not per app.
 
 ## Gap API Features Wanted
 
