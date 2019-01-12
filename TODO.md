@@ -100,7 +100,6 @@ This is a place to collect things left to do for GabDecker.
 
 ## Gab API Bugs
 
-* Posting still gets an error 429 (too many requests).
 * (un)Follow and (un)Mute do not work.
 * The Popular Users feed (GET https://api.gab.com/v1.0/popular/users)
   always returns nothing.
