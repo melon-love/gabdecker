@@ -598,8 +598,7 @@ init flags url key =
                         Cmd.none
 
                 Just st ->
-                    Http.send ReceiveLoggedInUser <|
-                        Gab.me st.token
+                    Gab.me ReceiveLoggedInUser st.token
             ]
 
 
@@ -816,8 +815,7 @@ receiveToken mv model =
                                 Cmd.none
 
                               else
-                                Http.send ReceiveLoggedInUser <|
-                                    Gab.me savedToken.token
+                                Gab.me ReceiveLoggedInUser savedToken.token
                             ]
 
 
@@ -2134,8 +2132,8 @@ receiveOperation operation result model =
 
                     Just httpError ->
                         case httpError of
-                            Http.BadStatus response ->
-                                if response.status.code == 400 then
+                            Http.BadStatus code ->
+                                if code == 400 then
                                     case operation of
                                         DownvoteOperation _ _ _ ->
                                             "Downvote error, probably unauthorized."
@@ -2145,7 +2143,7 @@ receiveOperation operation result model =
 
                                 else
                                     "Bad HTTP status: "
-                                        ++ String.fromInt response.status.code
+                                        ++ String.fromInt code
                                         ++ opname
 
                             _ ->
