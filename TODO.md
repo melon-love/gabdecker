@@ -19,6 +19,12 @@ This is a place to collect things left to do for GabDecker.
   the date gets covered by the parent below.
   Likewise for the parent post. If it has no body, but does have an attachment,
   show the attachment (usually an image).
+* Errors are confusing on liking or reposting a Gab from a private
+  account.  https://gab.com/chadbigly/posts/47431352
+* Make errors on fetching a feed easier to understand.
+  1. Multiple errors in one dialog.
+  2. Preference to auto-retry some number of times with a delay betewen them.
+  3. Maybe return x-ratelimit-limit and x-ratelimit-remaining return headers.
 * It looks like the notification API doesn't return comments on comments.
   Looks like it doesn't return comments either, unless they get liked.
   It should. Verify this, then report it.
