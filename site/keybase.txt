@@ -1,0 +1,56 @@
+==================================================================
+https://keybase.io/billstclair
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://gabdecker.com
+  * I am billstclair (https://keybase.io/billstclair) on keybase.
+  * I have a public key ASD63eNx-4eNpXiRO2hNRvsaB478UbQW5y6lFKizoiJSxAo
+
+To do so, I am signing this object:
+
+{
+  "body": {
+    "key": {
+      "eldest_kid": "0120fadde371fb878da578913b684d46fb1a078efc51b416e72ea514a8b3a22252c40a",
+      "host": "keybase.io",
+      "kid": "0120fadde371fb878da578913b684d46fb1a078efc51b416e72ea514a8b3a22252c40a",
+      "uid": "f41c6924e6668ebf586328fe85bb8d19",
+      "username": "billstclair"
+    },
+    "merkle_root": {
+      "ctime": 1548522144,
+      "hash": "dc30617795f346dd89eafb4a04eda8ef29f96704e54eb38233fcd6a79c7015743200ef64f518f6b3dfc415b9913623d2e37c3b3eb3cf063f146fb577a65c15a9",
+      "hash_meta": "25dd45ab5bfb51e9bee3a3354675f02227d0341bb100c728baab4888e9335650",
+      "seqno": 4626417
+    },
+    "service": {
+      "entropy": "BGbBov0jCkKByloWrzRgiyvA",
+      "hostname": "gabdecker.com",
+      "protocol": "https:"
+    },
+    "type": "web_service_binding",
+    "version": 2
+  },
+  "client": {
+    "name": "keybase.io go client",
+    "version": "2.13.2"
+  },
+  "ctime": 1548522165,
+  "expire_in": 504576000,
+  "prev": "5758206b07ce7ac901660114250b614ca000fe13a24e5b02715ec2c5da76c418",
+  "seqno": 18,
+  "tag": "signature"
+}
+
+which yields the signature:
+
+hKRib2R5hqhkZXRhY2hlZMOpaGFzaF90eXBlCqNrZXnEIwEg+t3jcfuHjaV4kTtoTUb7GgeO/FG0FucupRSos6IiUsQKp3BheWxvYWTESpcCEsQgV1ggawfOeskBZgEUJQthTKAA/hOiTlsCcV7Cxdp2xBjEIDvMyU6k4XkyWQRV/nO0jF2sJmVxB1Skne+az78lU2dwAgHCo3NpZ8RAC7L7O0MH8Ho0yjO9IoTXweSUjqMroeUq7PBTkvhzq26Snd2lZotXe81sbxRPkHPrMQJ3x4awvexE/KPoLKaBCqhzaWdfdHlwZSCkaGFzaIKkdHlwZQildmFsdWXEIEZMh9K4/Q8QIVWwA+PKtKZYFinvSix797ayLPIdq/voo3RhZ80CAqd2ZXJzaW9uAQ==
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/billstclair
+
+==================================================================
