@@ -2,7 +2,9 @@
 
 This is a place to collect things left to do for GabDecker.
 
-* Post / reply / quote / repost
+* Post / reply / quote
+  Selecting an image doesn't work on mobile.
+  It never even notices that the image has been selected.
 * Magic numbers for scrolling horizontally depend on font size.
 * URLs:
   /feed/<feed> opens and scrolls to feed.

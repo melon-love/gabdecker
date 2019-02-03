@@ -2,7 +2,7 @@
 --
 -- Main.elm
 -- GabDecker top-level
--- Copyright (c) 2018 Bill St. Clair <billstclair@gmail.com>
+-- Copyright (c) 2018-2019 Bill St. Clair <billstclair@gmail.com>
 -- Some rights reserved.
 -- Distributed under the MIT License
 -- See LICENSE.txt
@@ -176,41 +176,63 @@ type DialogType
     | OperationErrorDialog String
 
 
-type alias Model =
-    { showDialog : DialogType
-    , dialogError : Maybe String
-    , useSimulator : Bool
-    , styleOption : StyleOption
-    , settings : Settings
-    , backend : Maybe Backend
-    , url : Url
-    , key : Key
-    , funnelState : PortFunnels.State
-    , token : Maybe SavedToken
-    , state : Maybe String
-    , msg : Maybe String
+type alias DialogInputs =
+    { feedTypes : List FeedType
+    , feedSets : List (FeedSet Msg)
+    , currentFeedSet : String
     , loggedInUser : Maybe String
-    , replyType : String
-    , reply : Maybe Value
-    , redirectBackUri : String
-    , scopes : List String
-    , receivedScopes : List String
-    , tokenAuthorization : Maybe TokenAuthorization
-    , username : String
+    , showDialog : DialogType
+    , dialogError : Maybe String
     , dialogInput : String
+    , postInput : String
     , feedSetsInput : String
     , fontSizeInput : String
     , columnWidthInput : String
     , fontSizeOption : Maybe SizeOption
     , columnWidthOption : Maybe SizeOption
     , autoSizeColumns : Int
+    }
+
+
+initialDialogInputs : DialogInputs
+initialDialogInputs =
+    { feedTypes = initialFeedTypes
+    , feedSets = []
+    , currentFeedSet = ""
+    , loggedInUser = Nothing
+    , showDialog = NoDialog
+    , dialogError = Nothing
+    , dialogInput = ""
+    , postInput = ""
+    , feedSetsInput = ""
+    , fontSizeInput = String.fromFloat defaultFontSize
+    , columnWidthInput = String.fromInt defaultColumnWidth
+    , fontSizeOption = Just MediumSize
+    , columnWidthOption = Just MediumSize
+    , autoSizeColumns = 1
+    }
+
+
+type alias Model =
+    { useSimulator : Bool
+    , styleOption : StyleOption
+    , settings : Settings
+    , backend : Maybe Backend
+    , url : Url
+    , key : Key
+    , funnelState : PortFunnels.State
+    , dialogInputs : DialogInputs
+    , token : Maybe SavedToken
+    , state : Maybe String
+    , msg : Maybe String
+    , replyType : String
+    , reply : Maybe Value
+    , redirectBackUri : String
+    , scopes : List String
+    , receivedScopes : List String
+    , tokenAuthorization : Maybe TokenAuthorization
     , icons : Icons
     , users : Dict String User
-
-    -- This is only used at startup. It's not accurate after that.
-    , feedTypes : List FeedType
-    , feedSets : List (FeedSet Msg)
-    , currentFeedSet : String
     , nextId : Int
     , feeds : List (Feed Msg)
     , loadingFeeds : Set String
@@ -533,38 +555,25 @@ init flags url key =
                         initialFeedTypes
                         0
             in
-            { showDialog = NoDialog
-            , dialogError = Nothing
-            , useSimulator = useSimulator
+            { useSimulator = useSimulator
+            , styleOption = LightStyle
+            , settings = defaultSettings
             , backend = backend
             , url = url
             , key = key
-            , styleOption = LightStyle
-            , settings = defaultSettings
             , funnelState = PortFunnels.initialState localStoragePrefix
+            , dialogInputs = initialDialogInputs
             , token = savedToken
             , state = state
             , msg = msg
-            , loggedInUser = Nothing
             , replyType = "Token"
             , reply = reply
             , redirectBackUri = redirectBackUri
             , scopes = scopes
             , receivedScopes = scopes
             , tokenAuthorization = authorization
-            , username = ""
-            , dialogInput = ""
-            , feedSetsInput = ""
-            , fontSizeInput = String.fromFloat defaultFontSize
-            , columnWidthInput = String.fromInt defaultColumnWidth
-            , fontSizeOption = Just MediumSize
-            , columnWidthOption = Just MediumSize
-            , autoSizeColumns = 1
             , icons = Types.emptyIcons
             , users = Dict.empty
-            , feedTypes = initialFeedTypes
-            , feedSets = []
-            , currentFeedSet = ""
             , nextId = List.length feeds
             , feeds = feeds
             , loadingFeeds = Set.empty
@@ -795,9 +804,9 @@ receiveToken mv model =
                                 RealBackend savedToken.token
 
                         feeds =
-                            feedTypesToFeeds model.loggedInUser
+                            feedTypesToFeeds model.dialogInputs.loggedInUser
                                 backend
-                                model.feedTypes
+                                model.dialogInputs.feedTypes
                                 0
                     in
                     List.foldl setLoadingFeed
@@ -827,17 +836,17 @@ restoreFeedTypes feedTypes model =
     in
     case model.backend of
         Nothing ->
-            { model
-                | feedTypes = feedTypes
-                , feeds = []
-                , icons = icons
-            }
+            setFeedTypes feedTypes
+                { model
+                    | feeds = []
+                    , icons = icons
+                }
                 |> withNoCmd
 
         backend ->
             let
                 feeds =
-                    feedTypesToFeeds model.loggedInUser
+                    feedTypesToFeeds model.dialogInputs.loggedInUser
                         backend
                         feedTypes
                         0
@@ -881,17 +890,17 @@ receiveFeedTypes value model =
                                     ( model.feeds, Cmd.none )
 
                                 backend ->
-                                    ( feedTypesToFeeds model.loggedInUser
+                                    ( feedTypesToFeeds model.dialogInputs.loggedInUser
                                         backend
                                         types
                                         0
                                     , loadAllCmd
                                     )
                     in
-                    { model
-                        | feedTypes = types
-                        , feeds = feeds
-                    }
+                    setFeedTypes types
+                        { model
+                            | feeds = feeds
+                        }
                         |> withCmds [ cmd, cmd2 ]
 
 
@@ -907,7 +916,7 @@ receiveFeedSets value model =
                     model |> withNoCmd
 
                 Ok feedSets ->
-                    { model | feedSets = feedSets }
+                    setFeedSets feedSets model
                         |> withNoCmd
 
 
@@ -926,6 +935,9 @@ receiveStyle value model =
                     let
                         settings =
                             model.settings
+
+                        dialogInputs =
+                            model.dialogInputs
                     in
                     { model
                         | settings =
@@ -935,8 +947,11 @@ receiveStyle value model =
                                 , styleOption = set.styleOption
                                 , style = set.style
                             }
-                        , fontSizeInput = String.fromFloat set.fontSize
-                        , columnWidthInput = String.fromInt set.columnWidth
+                        , dialogInputs =
+                            { dialogInputs
+                                | fontSizeInput = String.fromFloat set.fontSize
+                                , columnWidthInput = String.fromInt set.columnWidth
+                            }
                     }
                         |> adjustOptions
                         |> withNoCmd
@@ -1012,17 +1027,117 @@ mungeToken token =
         token
 
 
+setShowDialog : DialogType -> Maybe String -> Model -> Model
+setShowDialog showDialog dialogError model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | showDialog = showDialog
+                , dialogError = dialogError
+            }
+    }
+
+
+setDialogError : Maybe String -> Model -> Model
+setDialogError dialogError model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | dialogError = dialogError
+            }
+    }
+
+
+setOnlyShowDialog : DialogType -> Model -> Model
+setOnlyShowDialog showDialog model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | showDialog = showDialog
+            }
+    }
+
+
+setFeedTypes : List FeedType -> Model -> Model
+setFeedTypes feedTypes model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | feedTypes = feedTypes
+            }
+    }
+
+
+setFeedSets : List (FeedSet Msg) -> Model -> Model
+setFeedSets feedSets model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | feedSets = feedSets
+            }
+    }
+
+
+setCurrentFeedSet : String -> Model -> Model
+setCurrentFeedSet currentFeedSet model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | currentFeedSet = currentFeedSet
+            }
+    }
+
+
+setDialogInput : String -> Model -> Model
+setDialogInput dialogInput model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | dialogInput = dialogInput
+            }
+    }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
     case msg of
         Noop ->
             model |> withNoCmd
 
         CloseDialog ->
-            { model
-                | showDialog = NoDialog
-                , dialogError = Nothing
-            }
+            setShowDialog NoDialog Nothing model
                 |> withNoCmd
 
         HandleUrlRequest request ->
@@ -1054,7 +1169,12 @@ update msg model =
                             )
 
                 Ok user ->
-                    { model | loggedInUser = Just user.username }
+                    { model
+                        | dialogInputs =
+                            { dialogInputs
+                                | loggedInUser = Just user.username
+                            }
+                    }
                         |> withCmd loadAllCmd
 
         PersistResponseToken token time ->
@@ -1177,19 +1297,22 @@ update msg model =
             moveFeedLeft feedType model
 
         ShowImageDialog url ->
-            { model | showDialog = ImageDialog url } |> withNoCmd
+            setShowDialog (ImageDialog url) Nothing model
+                |> withNoCmd
 
         ShowUserDialog username ->
-            { model
-                | showDialog =
+            let
+                dialogUser =
                     case Dict.get username model.users of
                         Just user ->
-                            UserDialog user True
+                            user
 
                         Nothing ->
-                            UserDialog (Types.emptyUser username) True
-                , dialogError = Just "Loading..."
-            }
+                            Types.emptyUser username
+            in
+            setShowDialog (UserDialog dialogUser True)
+                (Just "Loading...")
+                model
                 |> withCmd
                     (case model.backend of
                         Nothing ->
@@ -1318,28 +1441,21 @@ update msg model =
                                 )
 
         AddFeed ->
-            { model
-                | showDialog = AddFeedDialog
-                , dialogError = Nothing
-                , dialogInput = ""
-            }
+            setShowDialog AddFeedDialog Nothing (setDialogInput "" model)
                 |> withCmd (focusId addFeedInputId)
 
         FeedSetChooser ->
-            if 2 > List.length model.feedSets then
+            if 2 > List.length dialogInputs.feedSets then
                 update FeedSets model
 
             else
-                { model
-                    | showDialog = FeedSetChooserDialog
-                }
+                setShowDialog FeedSetChooserDialog Nothing model
                     |> withNoCmd
 
         FeedSets ->
-            { model
-                | showDialog = FeedSetsDialog
-                , currentFeedSet = ""
-            }
+            setShowDialog FeedSetsDialog
+                Nothing
+                (setCurrentFeedSet "" model)
                 |> withCmd (focusId newFeedSetInputId)
 
         SaveFeedTypes ->
@@ -1350,23 +1466,29 @@ update msg model =
                         |> JE.encode 0
 
                 feedSetsString =
-                    ED.encodeFeedSets model.feedSets
+                    ED.encodeFeedSets dialogInputs.feedSets
                         |> JE.encode 0
             in
             { model
-                | showDialog = SaveFeedsDialog
-                , dialogError = Nothing
-                , dialogInput = typesString
-                , feedSetsInput = feedSetsString
+                | dialogInputs =
+                    { dialogInputs
+                        | showDialog = SaveFeedsDialog
+                        , dialogError = Nothing
+                        , dialogInput = typesString
+                        , feedSetsInput = feedSetsString
+                    }
             }
                 |> withCmd (focusId saveFeedInputId)
 
         ShowSettings ->
             { model
-                | showDialog = SettingsDialog
-                , dialogError = Nothing
-                , fontSizeInput = String.fromFloat model.settings.fontSize
-                , columnWidthInput = String.fromInt model.settings.columnWidth
+                | dialogInputs =
+                    { dialogInputs
+                        | showDialog = SettingsDialog
+                        , dialogError = Nothing
+                        , fontSizeInput = String.fromFloat model.settings.fontSize
+                        , columnWidthInput = String.fromInt model.settings.columnWidth
+                    }
             }
                 |> withCmd (focusId settingsInputId)
 
@@ -1396,63 +1518,70 @@ update msg model =
                 |> withCmd (storeSettings newSettings model)
 
         RestoreFeedTypes ->
-            case JD.decodeString ED.feedTypesDecoder model.dialogInput of
+            case JD.decodeString ED.feedTypesDecoder dialogInputs.dialogInput of
                 Err err ->
-                    { model | dialogError = Just <| JD.errorToString err }
+                    setDialogError (Just <| JD.errorToString err) model
                         |> withNoCmd
 
                 Ok feeds ->
                     let
                         mdl =
-                            { model
-                                | showDialog = NoDialog
-                                , dialogError = Nothing
-                            }
+                            setShowDialog NoDialog Nothing model
                     in
                     restoreFeedTypes feeds mdl
 
         DialogInput username ->
-            { model | dialogInput = username } |> withNoCmd
+            setDialogInput username model |> withNoCmd
 
         RestoreFeedSets ->
-            case JD.decodeString ED.feedSetsDecoder model.feedSetsInput of
+            case JD.decodeString ED.feedSetsDecoder dialogInputs.feedSetsInput of
                 Err err ->
-                    { model | dialogError = Just <| JD.errorToString err }
+                    setDialogError (Just <| JD.errorToString err) model
                         |> withNoCmd
 
                 Ok feedSets ->
                     let
                         mdl =
-                            { model
-                                | showDialog = NoDialog
-                                , dialogError = Nothing
-                                , feedSets = feedSets
-                            }
+                            setShowDialog NoDialog
+                                Nothing
+                                { model
+                                    | dialogInputs =
+                                        { dialogInputs | feedSets = feedSets }
+                                }
                     in
                     mdl |> withCmd (saveFeedSets feedSets mdl)
 
         SetFeedSetsInput feedSetsInput ->
-            { model | feedSetsInput = feedSetsInput }
+            { model
+                | dialogInputs =
+                    { dialogInputs | feedSetsInput = feedSetsInput }
+            }
                 |> withNoCmd
 
         FontSizeInput fontSizeInput ->
-            { model | fontSizeInput = fontSizeInput } |> withNoCmd
+            { model
+                | dialogInputs =
+                    { dialogInputs
+                        | fontSizeInput = fontSizeInput
+                    }
+            }
+                |> withNoCmd
 
         SaveSettings ->
             saveSettings model
 
         ClearFeeds ->
-            { model
-                | feeds = []
-                , feedTypes = []
-            }
+            setFeedTypes []
+                { model
+                    | feeds = []
+                }
                 |> withCmd (saveFeeds [] model)
 
         NewFeedSet ->
             newFeedSet model
 
         SetCurrentFeedSet name ->
-            { model | currentFeedSet = name } |> withNoCmd
+            setCurrentFeedSet name model |> withNoCmd
 
         ReloadFeedSet name ->
             reloadFeedSet name model
@@ -1467,7 +1596,11 @@ update msg model =
             deleteFeedSet name model
 
         ColumnWidthInput columnWidth ->
-            { model | columnWidthInput = columnWidth } |> withNoCmd
+            { model
+                | dialogInputs =
+                    { dialogInputs | columnWidthInput = columnWidth }
+            }
+                |> withNoCmd
 
         FontSizeOption option ->
             case LE.find (\( _, o ) -> option == o) fontSizeOptions of
@@ -1477,8 +1610,11 @@ update msg model =
                 Just ( size, _ ) ->
                     saveSettings
                         { model
-                            | fontSizeOption = Just option
-                            , fontSizeInput = String.fromFloat size
+                            | dialogInputs =
+                                { dialogInputs
+                                    | fontSizeOption = Just option
+                                    , fontSizeInput = String.fromFloat size
+                                }
                         }
 
         ColumnWidthOption option ->
@@ -1489,12 +1625,18 @@ update msg model =
                 Just ( size, _ ) ->
                     saveSettings
                         { model
-                            | columnWidthOption = Just option
-                            , columnWidthInput = String.fromInt size
+                            | dialogInputs =
+                                { dialogInputs
+                                    | columnWidthOption = Just option
+                                    , columnWidthInput = String.fromInt size
+                                }
                         }
 
         SetAutoSizeColumns columns ->
-            { model | autoSizeColumns = columns }
+            { model
+                | dialogInputs =
+                    { dialogInputs | autoSizeColumns = columns }
+            }
                 |> withNoCmd
 
         AutoSize ->
@@ -1513,8 +1655,11 @@ update msg model =
             in
             { model
                 | settings = newSettings
-                , fontSizeInput = String.fromFloat defaultFontSize
-                , columnWidthInput = String.fromInt defaultColumnWidth
+                , dialogInputs =
+                    { dialogInputs
+                        | fontSizeInput = String.fromFloat defaultFontSize
+                        , columnWidthInput = String.fromInt defaultColumnWidth
+                    }
             }
                 |> adjustOptions
                 |> withCmd (storeSettings newSettings model)
@@ -1571,17 +1716,34 @@ mouseDown point model =
 
                 Just f ->
                     Just <| DraggingInfo f.feedType idx point model.feeds
-    in
-    { model
-        | draggingInfo = draggingInfo
-        , showDialog =
+
+        dialogInputs =
+            model.dialogInputs
+
+        showDialog =
             if inControlColumn then
                 NoDialog
 
             else
-                model.showDialog
-    }
-        |> withNoCmd
+                dialogInputs.showDialog
+
+        mdl =
+            if
+                (draggingInfo == model.draggingInfo)
+                    && (showDialog == dialogInputs.showDialog)
+            then
+                model
+
+            else
+                { model
+                    | draggingInfo = draggingInfo
+                    , dialogInputs =
+                        { dialogInputs
+                            | showDialog = showDialog
+                        }
+                }
+    in
+    mdl |> withNoCmd
 
 
 mouseUp : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
@@ -1724,8 +1886,11 @@ autoSize model =
         ccw =
             controlColumnWidth baseFontSize
 
+        dialogInputs =
+            model.dialogInputs
+
         columnWidth =
-            (settings.windowWidth - ccw - 5) // model.autoSizeColumns
+            (settings.windowWidth - ccw - 5) // dialogInputs.autoSizeColumns
 
         newFontSize =
             toFloat (round <| toFloat columnWidth / 22.5)
@@ -1734,11 +1899,14 @@ autoSize model =
             controlColumnWidth newFontSize
 
         realCw =
-            (settings.windowWidth - realCcw - 5) // model.autoSizeColumns
+            (settings.windowWidth - realCcw - 5) // dialogInputs.autoSizeColumns
     in
     { model
-        | fontSizeInput = String.fromFloat newFontSize
-        , columnWidthInput = String.fromInt realCw
+        | dialogInputs =
+            { dialogInputs
+                | fontSizeInput = String.fromFloat newFontSize
+                , columnWidthInput = String.fromInt realCw
+            }
     }
         |> saveSettings
 
@@ -1748,10 +1916,16 @@ adjustOptions model =
     let
         settings =
             model.settings
+
+        dialogInputs =
+            model.dialogInputs
     in
     { model
-        | fontSizeOption = Debug.log "fontSizeOption" <| fontSizeOption settings.fontSize
-        , columnWidthOption = Debug.log "columnWidthOption" <| columnWidthOption settings.columnWidth
+        | dialogInputs =
+            { dialogInputs
+                | fontSizeOption = fontSizeOption settings.fontSize
+                , columnWidthOption = columnWidthOption settings.columnWidth
+            }
     }
 
 
@@ -1792,15 +1966,15 @@ focusId id =
 
 saveSettings : Model -> ( Model, Cmd Msg )
 saveSettings model =
-    case String.toFloat model.fontSizeInput of
+    case String.toFloat model.dialogInputs.fontSizeInput of
         Nothing ->
-            { model | dialogError = Just "Font Size is not a number." }
+            setDialogError (Just "Font Size is not a number.") model
                 |> withNoCmd
 
         Just size ->
-            case String.toInt model.columnWidthInput of
+            case String.toInt model.dialogInputs.columnWidthInput of
                 Nothing ->
-                    { model | dialogError = Just "Column Width is not a number." }
+                    setDialogError (Just "Column Width is not a number.") model
                         |> withNoCmd
 
                 Just width ->
@@ -1821,14 +1995,20 @@ saveSettings model =
                                     | fontSize = max 10 size
                                     , columnWidth = max 100 width
                                 }
+
+                            dialogInputs =
+                                model.dialogInputs
                         in
                         { model
                             | settings = newSettings
-                            , fontSizeInput =
-                                String.fromFloat newSettings.fontSize
-                            , columnWidthInput =
-                                String.fromInt newSettings.columnWidth
-                            , dialogError = Nothing
+                            , dialogInputs =
+                                { dialogInputs
+                                    | fontSizeInput =
+                                        String.fromFloat newSettings.fontSize
+                                    , columnWidthInput =
+                                        String.fromInt newSettings.columnWidth
+                                    , dialogError = Nothing
+                                }
                         }
                             |> adjustOptions
                             |> withCmd (storeSettings newSettings model)
@@ -1838,26 +2018,23 @@ newFeedSet : Model -> ( Model, Cmd Msg )
 newFeedSet model =
     let
         name =
-            model.currentFeedSet
+            model.dialogInputs.currentFeedSet
     in
     if name == "" then
-        { model
-            | dialogError =
-                Just "Feed set name may not be blank."
-        }
+        setDialogError (Just "Feed set name may not be blank.") model
             |> withNoCmd
 
     else
-        case LE.find (\fs -> fs.name == name) model.feedSets of
+        case LE.find (\fs -> fs.name == name) model.dialogInputs.feedSets of
             Just _ ->
-                { model
-                    | dialogError =
-                        Just <| "There is already a feed set named \"" ++ name ++ "\""
-                }
+                setDialogError
+                    (Just <| "There is already a feed set named \"" ++ name ++ "\"")
+                    model
                     |> withNoCmd
 
             Nothing ->
-                saveToFeedSet name { model | currentFeedSet = "" }
+                saveToFeedSet name
+                    (setCurrentFeedSet "" model)
 
 
 reloadFeedSet : String -> Model -> ( Model, Cmd Msg )
@@ -1908,11 +2085,11 @@ saveToFeedSet name model =
             }
 
         mdl =
-            { model | dialogError = Nothing }
+            setDialogError Nothing model
                 |> updateFeedSet feedSet
     in
     mdl
-        |> withCmd (saveFeedSets mdl.feedSets mdl)
+        |> withCmd (saveFeedSets mdl.dialogInputs.feedSets mdl)
 
 
 updateFeedSet : FeedSet Msg -> Model -> Model
@@ -1922,11 +2099,9 @@ updateFeedSet feedSet model =
             feedSet.name
 
         feedSets =
-            List.filter (\fs -> fs.name /= name) model.feedSets
+            List.filter (\fs -> fs.name /= name) model.dialogInputs.feedSets
     in
-    { model
-        | feedSets = List.sortBy .name <| feedSet :: feedSets
-    }
+    setFeedSets (List.sortBy .name <| feedSet :: feedSets) model
 
 
 restoreFromFeedSet : String -> Model -> ( Model, Cmd Msg )
@@ -1937,6 +2112,9 @@ restoreFromFeedSet name model =
 
         isInstalled feedSet =
             feedTypes == feedSet.feedTypes
+
+        dialogInputs =
+            model.dialogInputs
     in
     case findFeedSet name model of
         Nothing ->
@@ -1944,7 +2122,8 @@ restoreFromFeedSet name model =
 
         Just feedSet ->
             if isInstalled feedSet then
-                { model | showDialog = NoDialog } |> withNoCmd
+                setOnlyShowDialog NoDialog model
+                    |> withNoCmd
 
             else
                 let
@@ -1972,13 +2151,16 @@ restoreFromFeedSet name model =
                             fs
 
                     feedSets =
-                        List.map maybeOldFeeds model.feedSets
+                        List.map maybeOldFeeds dialogInputs.feedSets
 
                     ( mdl, _ ) =
                         { model
                             | feeds = feeds
-                            , showDialog = NoDialog
-                            , feedSets = feedSets
+                            , dialogInputs =
+                                { dialogInputs
+                                    | showDialog = NoDialog
+                                    , feedSets = feedSets
+                                }
                         }
                             |> saveToFeedSet name
 
@@ -2016,16 +2198,19 @@ totalNewPosts feeds =
 
 findFeedSet : String -> Model -> Maybe (FeedSet Msg)
 findFeedSet name model =
-    LE.find (\fs -> fs.name == name) model.feedSets
+    LE.find (\fs -> fs.name == name) model.dialogInputs.feedSets
 
 
 deleteFeedSet : String -> Model -> ( Model, Cmd Msg )
 deleteFeedSet name model =
     let
+        dialogInputs =
+            model.dialogInputs
+
         feedSets =
-            List.filter (\fs -> fs.name /= name) model.feedSets
+            List.filter (\fs -> fs.name /= name) dialogInputs.feedSets
     in
-    { model | feedSets = feedSets }
+    setFeedSets feedSets model
         |> withCmd (saveFeedSets feedSets model)
 
 
@@ -2116,7 +2301,7 @@ receiveOperation operation result model =
                         RepostOperation feedType postid ->
                             updatePost toggleReposted feedType postid model
             in
-            { mdl | showDialog = OperationErrorDialog err }
+            setOnlyShowDialog (OperationErrorDialog err) mdl
                 |> withNoCmd
     in
     case result of
@@ -2455,14 +2640,14 @@ addNewFeed feedType baseFontSize model =
                             , List.drop index model.feeds
                             ]
             in
-            { model
-                | feeds = feeds
-                , showDialog = NoDialog
-                , dialogError = Nothing
-                , lastClosedFeed = Nothing
-                , nextId = model.nextId + 1
-                , scrollToFeed = Just feed.feedType
-            }
+            setShowDialog NoDialog
+                Nothing
+                { model
+                    | feeds = feeds
+                    , lastClosedFeed = Nothing
+                    , nextId = model.nextId + 1
+                    , scrollToFeed = Just feed.feedType
+                }
                 |> withCmds
                     [ if feedType == LastClosedFeed then
                         Cmd.none
@@ -2488,10 +2673,8 @@ addNewFeed feedType baseFontSize model =
             Just backend ->
                 case findFeed feedType model of
                     Just _ ->
-                        { model
-                            | dialogError =
-                                Just "That feed is already displayed."
-                        }
+                        setDialogError (Just "That feed is already displayed.")
+                            model
                             |> withNoCmd
 
                     Nothing ->
@@ -2505,15 +2688,12 @@ addNewFeed feedType baseFontSize model =
                                         False
                         in
                         if blankUser then
-                            { model
-                                | dialogError =
-                                    Just "Username may not be blank."
-                            }
+                            setDialogError (Just "Username may not be blank.") model
                                 |> withNoCmd
 
                         else
                             addit
-                                (feedTypeToFeed model.loggedInUser
+                                (feedTypeToFeed model.dialogInputs.loggedInUser
                                     backend
                                     feedType
                                     model.nextId
@@ -2643,11 +2823,15 @@ updateIcons logList model =
 
 receiveUser : FeedResult User -> Model -> ( Model, Cmd Msg )
 receiveUser result model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
     case result of
         Err _ ->
-            ( case model.showDialog of
+            ( case dialogInputs.showDialog of
                 UserDialog _ _ ->
-                    { model | dialogError = Just "Error getting user profile." }
+                    setDialogError (Just "Error getting user profile.") model
 
                 _ ->
                     model
@@ -2655,12 +2839,9 @@ receiveUser result model =
             )
 
         Ok user ->
-            ( case model.showDialog of
+            ( case dialogInputs.showDialog of
                 UserDialog _ _ ->
-                    { model
-                        | showDialog = UserDialog user False
-                        , dialogError = Nothing
-                    }
+                    setShowDialog (UserDialog user False) Nothing model
 
                 _ ->
                     model
@@ -2781,17 +2962,19 @@ processReceivedError err model =
         message =
             "HTTP error: "
                 ++ (Debug.toString err |> String.left 100)
-    in
-    { model
-        | showDialog =
-            case model.showDialog of
-                NoDialog ->
-                    OperationErrorDialog message
 
-                dialog ->
-                    dialog
-    }
-        |> withNoCmd
+        dialogInputs =
+            model.dialogInputs
+
+        mdl =
+            case dialogInputs.showDialog of
+                NoDialog ->
+                    setOnlyShowDialog (OperationErrorDialog message) model
+
+                _ ->
+                    model
+    in
+    mdl |> withNoCmd
 
 
 processReceiveFeedError : FeedType -> Http.Error -> Model -> ( Model, Cmd Msg )
@@ -2802,17 +2985,19 @@ processReceiveFeedError feedType err model =
                 ++ feedTypeToString feedType
                 ++ ">: "
                 ++ (Debug.toString err |> String.left 100)
-    in
-    { model
-        | showDialog =
-            case model.showDialog of
-                NoDialog ->
-                    OperationErrorDialog message
 
-                dialog ->
-                    dialog
-    }
-        |> withNoCmd
+        dialogInputs =
+            model.dialogInputs
+
+        mdl =
+            case dialogInputs.showDialog of
+                NoDialog ->
+                    setOnlyShowDialog (OperationErrorDialog message) model
+
+                _ ->
+                    model
+    in
+    mdl |> withNoCmd
 
 
 updateFeeds : UpdateType -> FeedType -> FeedResult (LogList FeedData) -> List (Feed Msg) -> ( String, List (Feed Msg) )
@@ -3220,7 +3405,7 @@ focusStyle =
 
 dialogPositionAttributes : Model -> List (Attribute Msg)
 dialogPositionAttributes model =
-    case model.showDialog of
+    case model.dialogInputs.showDialog of
         FeedSetChooserDialog ->
             let
                 settings =
@@ -3314,9 +3499,13 @@ dragImage settings draggingInfo icons =
                     image
 
 
-showDialog : Model -> Element Msg
-showDialog model =
-    case model.showDialog of
+showTheDialog : Model -> Element Msg
+showTheDialog model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    case dialogInputs.showDialog of
         AddFeedDialog ->
             addFeedDialog model
 
@@ -3444,7 +3633,7 @@ addFeedChoices model =
             findFeed NotificationsFeed model
 
         ( username, userFeed ) =
-            case model.loggedInUser of
+            case model.dialogInputs.loggedInUser of
                 Nothing ->
                     ( "", Nothing )
 
@@ -4011,7 +4200,7 @@ dialogTitleBar style baseFontSize title =
 
 dialogErrorRow : Model -> Element msg
 dialogErrorRow model =
-    case model.dialogError of
+    case model.dialogInputs.dialogError of
         Nothing ->
             Element.none
 
@@ -4028,6 +4217,9 @@ settingsDialog model =
     let
         settings =
             model.settings
+
+        dialogInputs =
+            model.dialogInputs
 
         style =
             settings.style
@@ -4049,7 +4241,7 @@ settingsDialog model =
                         [ spacing 10
                         ]
                         { onChange = SetStyle
-                        , selected = Just model.settings.styleOption
+                        , selected = Just settings.styleOption
                         , label = Input.labelLeft [] Element.none
                         , options =
                             [ Input.option LightStyle (text "Light")
@@ -4066,7 +4258,7 @@ settingsDialog model =
                             [ spacing 10
                             ]
                             { onChange = FontSizeOption
-                            , selected = model.fontSizeOption
+                            , selected = dialogInputs.fontSizeOption
                             , label = Input.labelLeft [] Element.none
                             , options =
                                 [ Input.option SmallSize (text "S")
@@ -4078,7 +4270,7 @@ settingsDialog model =
                         , textInput style
                             baseFontSize
                             { label = ""
-                            , text = model.fontSizeInput
+                            , text = dialogInputs.fontSizeInput
                             , scale = 4
                             , id = settingsInputId
                             , buttonTitle = ""
@@ -4097,7 +4289,7 @@ settingsDialog model =
                             [ spacing 10
                             ]
                             { onChange = ColumnWidthOption
-                            , selected = model.columnWidthOption
+                            , selected = dialogInputs.columnWidthOption
                             , label = Input.labelLeft [] Element.none
                             , options =
                                 [ Input.option SmallSize (text "S")
@@ -4109,7 +4301,7 @@ settingsDialog model =
                         , textInput style
                             baseFontSize
                             { label = ""
-                            , text = model.columnWidthInput
+                            , text = dialogInputs.columnWidthInput
                             , scale = 4
                             , id = ""
                             , buttonTitle = ""
@@ -4175,7 +4367,7 @@ settingsDialog model =
                 , paddingEach { zeroes | right = 10 }
                 ]
                 { onChange = SetAutoSizeColumns
-                , selected = Just model.autoSizeColumns
+                , selected = Just dialogInputs.autoSizeColumns
                 , label = Input.labelLeft [] Element.none
                 , options =
                     [ Input.option 1 (text "one")
@@ -4280,6 +4472,9 @@ saveFeedsDialog model =
         settings =
             model.settings
 
+        dialogInputs =
+            model.dialogInputs
+
         style =
             settings.style
 
@@ -4296,7 +4491,7 @@ saveFeedsDialog model =
             style
             baseFontSize
             { label = "Feeds:"
-            , text = model.dialogInput
+            , text = dialogInputs.dialogInput
             , scale = 15
             , id = saveFeedInputId
             , buttonTitle = "Restore Feeds"
@@ -4308,7 +4503,7 @@ saveFeedsDialog model =
             style
             baseFontSize
             { label = "Sets:"
-            , text = model.feedSetsInput
+            , text = dialogInputs.feedSetsInput
             , scale = 15.7
             , id = ""
             , buttonTitle = "Restore Feed Sets"
@@ -4324,6 +4519,9 @@ feedSetChooserDialog model =
     let
         settings =
             model.settings
+
+        dialogInputs =
+            model.dialogInputs
 
         style =
             settings.style
@@ -4367,7 +4565,7 @@ feedSetChooserDialog model =
     <|
         List.concat
             [ [ row [] [ textButton style "Edit Feed Sets" FeedSets "Edit Feed Sets" ] ]
-            , List.map feedSetRow model.feedSets
+            , List.map feedSetRow dialogInputs.feedSets
             ]
 
 
@@ -4376,6 +4574,9 @@ feedSetsDialog model =
     let
         settings =
             model.settings
+
+        dialogInputs =
+            model.dialogInputs
 
         style =
             settings.style
@@ -4401,7 +4602,7 @@ feedSetsDialog model =
         , textInputRow style
             baseFontSize
             { label = ""
-            , text = model.currentFeedSet
+            , text = dialogInputs.currentFeedSet
             , scale = 10
             , id = newFeedSetInputId
             , buttonTitle = "Save"
@@ -4414,7 +4615,7 @@ feedSetsDialog model =
                 [ spacing 10, centerX ]
                 { data =
                     List.map (feedSetDialogRow style iconHeight isInstalled)
-                        model.feedSets
+                        dialogInputs.feedSets
                 , columns =
                     [ { header = Element.none
                       , width = Element.shrink
@@ -4532,7 +4733,7 @@ addFeedDialog model =
         addUserFeedRow =
             let
                 feedType =
-                    UserFeed model.dialogInput
+                    UserFeed model.dialogInputs.dialogInput
             in
             { label = "User: "
             , element =
@@ -4551,7 +4752,7 @@ addFeedDialog model =
                     , Font.color style.text
                     ]
                     { onChange = DialogInput
-                    , text = model.dialogInput
+                    , text = model.dialogInputs.dialogInput
                     , placeholder =
                         Just <|
                             Input.placeholder [] (text "username")
@@ -4611,17 +4812,6 @@ addFeedDialog model =
                 }
             ]
         ]
-
-
-addFeedHeader : Model -> Element Msg
-addFeedHeader model =
-    el
-        [ centerX
-        , Font.bold
-        , fontSize model.settings.fontSize 1.5
-        ]
-    <|
-        text "Add Feed"
 
 
 okButton : Html Msg
@@ -6956,10 +7146,10 @@ optimizers =
             keyedEl
     , lazyShowDialog =
         if optimizations.lazyShowDialog then
-            Lazy.lazy showDialog
+            Lazy.lazy showTheDialog
 
         else
-            showDialog
+            showTheDialog
     }
 
 
