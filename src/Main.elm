@@ -1079,6 +1079,11 @@ setFeedTypes feedTypes model =
         model
 
 
+updateFeedTypes : Model -> Model
+updateFeedTypes model =
+    setFeedTypes (List.map .feedType model.feeds) model
+
+
 setFeedSets : List (FeedSet Msg) -> Model -> Model
 setFeedSets feedSets model =
     setDialogInputs
@@ -1273,12 +1278,13 @@ update msg model =
                     List.filter (\f -> feedType /= f.feedType)
                         model.feeds
             in
-            { model
-                | feeds = feeds
-                , lastClosedFeed = Just ( feed, index )
-                , dialogInputs =
-                    { dialogInputs | isLastClosedFeed = True }
-            }
+            updateFeedTypes
+                { model
+                    | feeds = feeds
+                    , lastClosedFeed = Just ( feed, index )
+                    , dialogInputs =
+                        { dialogInputs | isLastClosedFeed = True }
+                }
                 |> withCmd (saveFeeds feeds model)
 
         MoveFeedLeft feedType ->
@@ -1749,10 +1755,11 @@ mouseUp point model =
                 mdl |> withNoCmd
 
             else
-                { mdl
-                    | feeds = info.feeds
-                    , scrollToFeed = Just info.feedType
-                }
+                updateFeedTypes
+                    { mdl
+                        | feeds = info.feeds
+                        , scrollToFeed = Just info.feedType
+                    }
                     |> withNoCmd
 
 
@@ -2142,14 +2149,15 @@ restoreFromFeedSet name model =
                         List.map maybeOldFeeds dialogInputs.feedSets
 
                     ( mdl, _ ) =
-                        { model
-                            | feeds = feeds
-                            , dialogInputs =
-                                { dialogInputs
-                                    | showDialog = NoDialog
-                                    , feedSets = feedSets
-                                }
-                        }
+                        updateFeedTypes
+                            { model
+                                | feeds = feeds
+                                , dialogInputs =
+                                    { dialogInputs
+                                        | showDialog = NoDialog
+                                        , feedSets = feedSets
+                                    }
+                            }
                             |> saveToFeedSet name
 
                     scrollToTop feed =
@@ -2522,20 +2530,22 @@ moveFeedLeft feedType model =
                     else
                         case res of
                             [] ->
-                                { model
-                                    | feeds =
-                                        List.concat [ tail, [ feed ] ]
-                                }
+                                updateFeedTypes
+                                    { model
+                                        | feeds =
+                                            List.concat [ tail, [ feed ] ]
+                                    }
 
                             f :: t ->
-                                { model
-                                    | feeds =
-                                        List.concat
-                                            [ List.reverse t
-                                            , [ feed, f ]
-                                            , tail
-                                            ]
-                                }
+                                updateFeedTypes
+                                    { model
+                                        | feeds =
+                                            List.concat
+                                                [ List.reverse t
+                                                , [ feed, f ]
+                                                , tail
+                                                ]
+                                    }
 
         mdl =
             loop model.feeds []
@@ -2559,23 +2569,25 @@ moveFeedRight feedType model =
                     else
                         case tail of
                             [] ->
-                                { model
-                                    | feeds =
-                                        List.concat
-                                            [ [ feed ]
-                                            , List.reverse res
-                                            ]
-                                }
+                                updateFeedTypes
+                                    { model
+                                        | feeds =
+                                            List.concat
+                                                [ [ feed ]
+                                                , List.reverse res
+                                                ]
+                                    }
 
                             f :: t ->
-                                { model
-                                    | feeds =
-                                        List.concat
-                                            [ List.reverse res
-                                            , [ f, feed ]
-                                            , t
-                                            ]
-                                }
+                                updateFeedTypes
+                                    { model
+                                        | feeds =
+                                            List.concat
+                                                [ List.reverse res
+                                                , [ f, feed ]
+                                                , t
+                                                ]
+                                    }
 
         mdl =
             loop model.feeds []
@@ -2633,14 +2645,16 @@ addNewFeed feedType baseFontSize model =
             in
             setShowDialog NoDialog
                 Nothing
-                { model
-                    | feeds = feeds
-                    , lastClosedFeed = Nothing
-                    , dialogInputs =
-                        { dialogInputs | isLastClosedFeed = False }
-                    , nextId = model.nextId + 1
-                    , scrollToFeed = Just feed.feedType
-                }
+                (updateFeedTypes
+                    { model
+                        | feeds = feeds
+                        , lastClosedFeed = Nothing
+                        , dialogInputs =
+                            { dialogInputs | isLastClosedFeed = False }
+                        , nextId = model.nextId + 1
+                        , scrollToFeed = Just feed.feedType
+                    }
+                )
                 |> withCmds
                     [ if feedType == LastClosedFeed then
                         Cmd.none
