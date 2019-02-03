@@ -180,6 +180,7 @@ type alias DialogInputs =
     { feedTypes : List FeedType
     , feedSets : List (FeedSet Msg)
     , currentFeedSet : String
+    , isLastClosedFeed : Bool
     , loggedInUser : Maybe String
     , showDialog : DialogType
     , dialogError : Maybe String
@@ -199,6 +200,7 @@ initialDialogInputs =
     { feedTypes = initialFeedTypes
     , feedSets = []
     , currentFeedSet = ""
+    , isLastClosedFeed = False
     , loggedInUser = Nothing
     , showDialog = NoDialog
     , dialogError = Nothing
@@ -1027,103 +1029,87 @@ mungeToken token =
         token
 
 
+setDialogInputs : (DialogInputs -> DialogInputs) -> Model -> Model
+setDialogInputs setter model =
+    { model | dialogInputs = setter model.dialogInputs }
+
+
 setShowDialog : DialogType -> Maybe String -> Model -> Model
 setShowDialog showDialog dialogError model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
-    { model
-        | dialogInputs =
+    setDialogInputs
+        (\dialogInputs ->
             { dialogInputs
                 | showDialog = showDialog
                 , dialogError = dialogError
             }
-    }
+        )
+        model
 
 
 setDialogError : Maybe String -> Model -> Model
 setDialogError dialogError model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
-    { model
-        | dialogInputs =
+    setDialogInputs
+        (\dialogInputs ->
             { dialogInputs
                 | dialogError = dialogError
             }
-    }
+        )
+        model
 
 
 setOnlyShowDialog : DialogType -> Model -> Model
 setOnlyShowDialog showDialog model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
-    { model
-        | dialogInputs =
+    setDialogInputs
+        (\dialogInputs ->
             { dialogInputs
                 | showDialog = showDialog
             }
-    }
+        )
+        model
 
 
 setFeedTypes : List FeedType -> Model -> Model
 setFeedTypes feedTypes model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
-    { model
-        | dialogInputs =
+    setDialogInputs
+        (\dialogInputs ->
             { dialogInputs
                 | feedTypes = feedTypes
             }
-    }
+        )
+        model
 
 
 setFeedSets : List (FeedSet Msg) -> Model -> Model
 setFeedSets feedSets model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
-    { model
-        | dialogInputs =
+    setDialogInputs
+        (\dialogInputs ->
             { dialogInputs
                 | feedSets = feedSets
             }
-    }
+        )
+        model
 
 
 setCurrentFeedSet : String -> Model -> Model
 setCurrentFeedSet currentFeedSet model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
-    { model
-        | dialogInputs =
+    setDialogInputs
+        (\dialogInputs ->
             { dialogInputs
                 | currentFeedSet = currentFeedSet
             }
-    }
+        )
+        model
 
 
 setDialogInput : String -> Model -> Model
 setDialogInput dialogInput model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
-    { model
-        | dialogInputs =
+    setDialogInputs
+        (\dialogInputs ->
             { dialogInputs
                 | dialogInput = dialogInput
             }
-    }
+        )
+        model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -3403,14 +3389,11 @@ focusStyle =
         }
 
 
-dialogPositionAttributes : Model -> List (Attribute Msg)
-dialogPositionAttributes model =
-    case model.dialogInputs.showDialog of
+dialogPositionAttributes : DialogInputs -> Settings -> List (Attribute Msg)
+dialogPositionAttributes dialogInputs settings =
+    case dialogInputs.showDialog of
         FeedSetChooserDialog ->
             let
-                settings =
-                    model.settings
-
                 baseFontSize =
                     settings.fontSize
 
@@ -3421,7 +3404,7 @@ dialogPositionAttributes model =
                     bigUserIconHeight baseFontSize
 
                 cnt =
-                    List.length model.feeds + 1
+                    List.length dialogInputs.feedTypes + 1
 
                 x =
                     ccw + 10
@@ -3438,28 +3421,35 @@ dialogPositionAttributes model =
 view : Model -> Document Msg
 view model =
     let
+        settings =
+            model.settings
+
         style =
-            model.settings.style
+            settings.style
+
+        dialogInputs =
+            model.dialogInputs
     in
     { title = pageTitle
     , body =
         [ Element.layoutWith
             { options = [ focusStyle ] }
             [ Element.inFront <|
-                optimizers.keyedShowDialog (dialogPositionAttributes model)
+                optimizers.keyedShowDialog
+                    (dialogPositionAttributes dialogInputs settings)
                     ( "dialog"
-                    , optimizers.lazyShowDialog model
+                    , optimizers.lazyShowDialog dialogInputs settings
                     )
             , Background.color <| style.background
             , Font.color <| style.text
             ]
             (case model.backend of
                 Nothing ->
-                    loginPage model.settings
+                    loginPage settings
 
                 Just backend ->
                     optimizers.mainPage
-                        model.settings
+                        settings
                         model.icons
                         model.draggingInfo
                         model.loadingFeeds
@@ -3499,36 +3489,32 @@ dragImage settings draggingInfo icons =
                     image
 
 
-showTheDialog : Model -> Element Msg
-showTheDialog model =
-    let
-        dialogInputs =
-            model.dialogInputs
-    in
+showTheDialog : DialogInputs -> Settings -> Element Msg
+showTheDialog dialogInputs settings =
     case dialogInputs.showDialog of
         AddFeedDialog ->
-            addFeedDialog model
+            addFeedDialog dialogInputs settings
 
         ImageDialog url ->
-            imageDialog url model
+            imageDialog url dialogInputs settings
 
         UserDialog username isLoading ->
-            userDialog username isLoading model
+            userDialog username isLoading dialogInputs settings
 
         SaveFeedsDialog ->
-            saveFeedsDialog model
+            saveFeedsDialog dialogInputs settings
 
         SettingsDialog ->
-            settingsDialog model
+            settingsDialog dialogInputs settings
 
         FeedSetChooserDialog ->
-            feedSetChooserDialog model
+            feedSetChooserDialog dialogInputs settings
 
         FeedSetsDialog ->
-            feedSetsDialog model
+            feedSetsDialog dialogInputs settings
 
         OperationErrorDialog err ->
-            operationErrorDialog err model
+            operationErrorDialog err dialogInputs settings
 
         _ ->
             Element.none
@@ -3620,63 +3606,61 @@ findFeed feedType model =
     LE.find (\f -> feedType == f.feedType) model.feeds
 
 
-addFeedChoices : Model -> List ( String, FeedType )
-addFeedChoices model =
+addFeedChoices : DialogInputs -> List ( String, FeedType )
+addFeedChoices dialogInputs =
     let
+        feedTypes =
+            dialogInputs.feedTypes
+
         homeFeed =
-            findFeed HomeFeed model
+            List.member HomeFeed feedTypes
 
         popularFeed =
-            findFeed PopularFeed model
+            List.member PopularFeed feedTypes
 
         notificationsFeed =
-            findFeed NotificationsFeed model
+            List.member NotificationsFeed feedTypes
 
         ( username, userFeed ) =
-            case model.dialogInputs.loggedInUser of
+            case dialogInputs.loggedInUser of
                 Nothing ->
-                    ( "", Nothing )
+                    ( "", False )
 
                 Just name ->
                     ( name
-                    , findFeed (UserFeed name) model
+                    , List.member (UserFeed name) feedTypes
                     )
     in
     List.concat
-        [ case homeFeed of
-            Nothing ->
-                [ ( "Home", HomeFeed ) ]
+        [ if homeFeed then
+            [ ( "Home", HomeFeed ) ]
 
-            _ ->
+          else
+            []
+        , if popularFeed then
+            [ ( "Popular", PopularFeed ) ]
+
+          else
+            []
+        , if notificationsFeed then
+            [ ( "Notifications", NotificationsFeed ) ]
+
+          else
+            []
+        , if userFeed then
+            if username == "" then
                 []
-        , case popularFeed of
-            Nothing ->
-                [ ( "Popular", PopularFeed ) ]
 
-            _ ->
-                []
-        , case notificationsFeed of
-            Nothing ->
-                [ ( "Notifications", NotificationsFeed ) ]
+            else
+                [ ( "Your Posts", LoggedInUserFeed ) ]
 
-            _ ->
-                []
-        , case userFeed of
-            Nothing ->
-                if username == "" then
-                    []
+          else
+            []
+        , if dialogInputs.isLastClosedFeed then
+            [ ( "Last Closed", LastClosedFeed ) ]
 
-                else
-                    [ ( "Your Posts", LoggedInUserFeed ) ]
-
-            _ ->
-                []
-        , case model.lastClosedFeed of
-            Just feed ->
-                [ ( "Last Closed", LastClosedFeed ) ]
-
-            _ ->
-                []
+          else
+            []
         ]
 
 
@@ -3707,12 +3691,9 @@ dialogAttributesNoPadding settings =
     ]
 
 
-operationErrorDialog : String -> Model -> Element Msg
-operationErrorDialog err model =
+operationErrorDialog : String -> DialogInputs -> Settings -> Element Msg
+operationErrorDialog err dialogInputs settings =
     let
-        settings =
-            model.settings
-
         style =
             settings.style
 
@@ -3957,12 +3938,9 @@ userCountColumn smallFont label value =
                 ]
 
 
-userDialog : User -> Bool -> Model -> Element Msg
-userDialog user isLoading model =
+userDialog : User -> Bool -> DialogInputs -> Settings -> Element Msg
+userDialog user isLoading dialogInputs settings =
     let
-        settings =
-            model.settings
-
         style =
             settings.style
 
@@ -3978,7 +3956,7 @@ userDialog user isLoading model =
     if isLoading then
         column (dialogAttributes settings) <|
             [ dialogTitleBar style baseFontSize <| user.name
-            , dialogErrorRow model
+            , dialogErrorRow dialogInputs
             , row []
                 [ newTabLink style
                     (userUrl user)
@@ -4045,20 +4023,19 @@ userDialog user isLoading model =
                             "Open profile at Gab.com"
                         ]
                     , let
-                        feed =
+                        feedType =
                             UserFeed user.username
                       in
-                      case findFeed feed model of
-                        Just _ ->
-                            Element.none
+                      if List.member feedType dialogInputs.feedTypes then
+                        Element.none
 
-                        Nothing ->
-                            row [ centerX ]
-                                [ textButton style
-                                    ""
-                                    (AddNewFeed feed)
-                                    "Add feed for user"
-                                ]
+                      else
+                        row [ centerX ]
+                            [ textButton style
+                                ""
+                                (AddNewFeed feedType)
+                                "Add feed for user"
+                            ]
                     , case user.bio of
                         Nothing ->
                             Element.none
@@ -4085,12 +4062,9 @@ so clicks intended to close the dialog don't hit mouse-sensitive regions there.
 Or not.
 
 -}
-imageDialog : String -> Model -> Element Msg
-imageDialog url model =
+imageDialog : String -> DialogInputs -> Settings -> Element Msg
+imageDialog url dialogInputs settings =
     let
-        settings =
-            model.settings
-
         style =
             settings.style
 
@@ -4198,9 +4172,9 @@ dialogTitleBar style baseFontSize title =
         ]
 
 
-dialogErrorRow : Model -> Element msg
-dialogErrorRow model =
-    case model.dialogInputs.dialogError of
+dialogErrorRow : DialogInputs -> Element msg
+dialogErrorRow dialogInputs =
+    case dialogInputs.dialogError of
         Nothing ->
             Element.none
 
@@ -4212,15 +4186,9 @@ dialogErrorRow model =
                 [ text err ]
 
 
-settingsDialog : Model -> Element Msg
-settingsDialog model =
+settingsDialog : DialogInputs -> Settings -> Element Msg
+settingsDialog dialogInputs settings =
     let
-        settings =
-            model.settings
-
-        dialogInputs =
-            model.dialogInputs
-
         style =
             settings.style
 
@@ -4232,7 +4200,7 @@ settingsDialog model =
     in
     column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Settings"
-        , dialogErrorRow model
+        , dialogErrorRow dialogInputs
         , let
             styleRow =
                 { label = "Style:"
@@ -4466,15 +4434,9 @@ inputLabel string =
         (text string)
 
 
-saveFeedsDialog : Model -> Element Msg
-saveFeedsDialog model =
+saveFeedsDialog : DialogInputs -> Settings -> Element Msg
+saveFeedsDialog dialogInputs settings =
     let
-        settings =
-            model.settings
-
-        dialogInputs =
-            model.dialogInputs
-
         style =
             settings.style
 
@@ -4486,7 +4448,7 @@ saveFeedsDialog model =
     in
     column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Save/Restore Feeds"
-        , dialogErrorRow model
+        , dialogErrorRow dialogInputs
         , textInputRow
             style
             baseFontSize
@@ -4514,15 +4476,9 @@ saveFeedsDialog model =
         ]
 
 
-feedSetChooserDialog : Model -> Element Msg
-feedSetChooserDialog model =
+feedSetChooserDialog : DialogInputs -> Settings -> Element Msg
+feedSetChooserDialog dialogInputs settings =
     let
-        settings =
-            model.settings
-
-        dialogInputs =
-            model.dialogInputs
-
         style =
             settings.style
 
@@ -4533,7 +4489,7 @@ feedSetChooserDialog model =
             userIconHeight (1.5 * baseFontSize)
 
         feedTypes =
-            List.map .feedType model.feeds
+            dialogInputs.feedTypes
 
         isInstalled feedSet =
             feedTypes == feedSet.feedTypes
@@ -4569,15 +4525,9 @@ feedSetChooserDialog model =
             ]
 
 
-feedSetsDialog : Model -> Element Msg
-feedSetsDialog model =
+feedSetsDialog : DialogInputs -> Settings -> Element Msg
+feedSetsDialog dialogInputs settings =
     let
-        settings =
-            model.settings
-
-        dialogInputs =
-            model.dialogInputs
-
         style =
             settings.style
 
@@ -4588,7 +4538,7 @@ feedSetsDialog model =
             userIconHeight (1.5 * baseFontSize)
 
         feedTypes =
-            List.map .feedType model.feeds
+            dialogInputs.feedTypes
 
         isInstalled feedSet =
             feedTypes == feedSet.feedTypes
@@ -4596,7 +4546,7 @@ feedSetsDialog model =
     column
         (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Feed Sets"
-        , dialogErrorRow model
+        , dialogErrorRow dialogInputs
         , row []
             [ textButton style "Clear Feeds" ClearFeeds "Clear Feeds" ]
         , textInputRow style
@@ -4708,12 +4658,9 @@ feedSetDialogRow style iconHeight isInstalled feedSet =
     }
 
 
-addFeedDialog : Model -> Element Msg
-addFeedDialog model =
+addFeedDialog : DialogInputs -> Settings -> Element Msg
+addFeedDialog dialogInputs settings =
     let
-        settings =
-            model.settings
-
         style =
             settings.style
 
@@ -4733,7 +4680,7 @@ addFeedDialog model =
         addUserFeedRow =
             let
                 feedType =
-                    UserFeed model.dialogInputs.dialogInput
+                    UserFeed dialogInputs.dialogInput
             in
             { label = "User: "
             , element =
@@ -4752,7 +4699,7 @@ addFeedDialog model =
                     , Font.color style.text
                     ]
                     { onChange = DialogInput
-                    , text = model.dialogInputs.dialogInput
+                    , text = dialogInputs.dialogInput
                     , placeholder =
                         Just <|
                             Input.placeholder [] (text "username")
@@ -4773,14 +4720,14 @@ addFeedDialog model =
             }
 
         choices =
-            addFeedChoices model
+            addFeedChoices dialogInputs
 
         data =
             addUserFeedRow :: List.map makeRow choices
     in
     column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Add Feed"
-        , dialogErrorRow model
+        , dialogErrorRow dialogInputs
         , row []
             [ Element.table
                 [ spacing 10, centerX ]
@@ -7146,7 +7093,7 @@ optimizers =
             keyedEl
     , lazyShowDialog =
         if optimizations.lazyShowDialog then
-            Lazy.lazy showTheDialog
+            Lazy.lazy2 showTheDialog
 
         else
             showTheDialog
