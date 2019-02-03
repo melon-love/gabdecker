@@ -1276,6 +1276,8 @@ update msg model =
             { model
                 | feeds = feeds
                 , lastClosedFeed = Just ( feed, index )
+                , dialogInputs =
+                    { dialogInputs | isLastClosedFeed = True }
             }
                 |> withCmd (saveFeeds feeds model)
 
@@ -2625,12 +2627,17 @@ addNewFeed feedType baseFontSize model =
                             , [ feed ]
                             , List.drop index model.feeds
                             ]
+
+                dialogInputs =
+                    model.dialogInputs
             in
             setShowDialog NoDialog
                 Nothing
                 { model
                     | feeds = feeds
                     , lastClosedFeed = Nothing
+                    , dialogInputs =
+                        { dialogInputs | isLastClosedFeed = False }
                     , nextId = model.nextId + 1
                     , scrollToFeed = Just feed.feedType
                 }
