@@ -226,6 +226,7 @@ type alias IconUrls =
     { close : String
     , comment : String
     , dislike : String
+    , edit : String
     , home : String
     , like : String
     , logout : String

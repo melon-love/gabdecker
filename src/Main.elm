@@ -1,4 +1,4 @@
-----------------------------------------------------------------------
+---------------------------------------------------------------------
 --
 -- Main.elm
 -- GabDecker top-level
@@ -166,6 +166,7 @@ allScopes =
 
 type DialogType
     = NoDialog
+    | NewPostDialog
     | AddFeedDialog
     | ImageDialog String
     | UserDialog User Bool
@@ -280,6 +281,8 @@ type Msg
     | Logout
     | LoadMore UpdateType (Feed Msg)
     | LoadAll
+    | NewPost
+    | MakePost
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
     | MoveFeedRight FeedType
@@ -1253,6 +1256,13 @@ update msg model =
 
         LoadAll ->
             loadAll model
+
+        NewPost ->
+            setShowDialog NewPostDialog Nothing (setDialogInput "" model)
+                |> withCmd (focusId dialogInputId)
+
+        MakePost ->
+            makePost model
 
         CloseFeed feed ->
             let
@@ -2722,6 +2732,20 @@ loadAll model =
     { mdl | loadingAll = True } |> withCmds cmds
 
 
+{-| TODO
+-}
+newPost : Model -> ( Model, Cmd Msg )
+newPost model =
+    model |> withNoCmd
+
+
+{-| TODO
+-}
+makePost : Model -> ( Model, Cmd Msg )
+makePost model =
+    model |> withNoCmd
+
+
 feedBefore : Feed Msg -> String
 feedBefore feed =
     case feed.feed.data of
@@ -3516,6 +3540,9 @@ showTheDialog dialogInputs settings =
         AddFeedDialog ->
             addFeedDialog dialogInputs settings
 
+        NewPostDialog ->
+            newPostDialog dialogInputs settings
+
         ImageDialog url ->
             imageDialog url dialogInputs settings
 
@@ -3653,22 +3680,22 @@ addFeedChoices dialogInputs =
                     )
     in
     List.concat
-        [ if homeFeed then
+        [ if not homeFeed then
             [ ( "Home", HomeFeed ) ]
 
           else
             []
-        , if popularFeed then
+        , if not popularFeed then
             [ ( "Popular", PopularFeed ) ]
 
           else
             []
-        , if notificationsFeed then
+        , if not notificationsFeed then
             [ ( "Notifications", NotificationsFeed ) ]
 
           else
             []
-        , if userFeed then
+        , if not userFeed then
             if username == "" then
                 []
 
@@ -4782,6 +4809,31 @@ addFeedDialog dialogInputs settings =
         ]
 
 
+newPostDialog : DialogInputs -> Settings -> Element Msg
+newPostDialog dialogInputs settings =
+    let
+        style =
+            settings.style
+
+        baseFontSize =
+            settings.fontSize
+
+        iconHeight =
+            userIconHeight baseFontSize
+
+        postButton =
+            el [ Font.size <| 7 * iconHeight // 4 ] <|
+                textButton style "Post" MakePost "Post"
+    in
+    column (dialogAttributes settings)
+        [ dialogTitleBar style baseFontSize "Post"
+        , dialogErrorRow dialogInputs
+        , row []
+            [ postButton
+            ]
+        ]
+
+
 okButton : Html Msg
 okButton =
     Html.button
@@ -4804,6 +4856,11 @@ controlColumnId =
 contentId : String
 contentId =
     "contentColumn"
+
+
+dialogInputId : String
+dialogInputId =
+    "dialogInput"
 
 
 newFeedSetInputId : String
@@ -4840,6 +4897,13 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
 
         iconHeight =
             bigUserIconHeight settings.fontSize
+
+        renderIcon icon msg title alt dontHover =
+            standardButtonWithDontHover (isDragging || dontHover)
+                style
+                title
+                msg
+                (widthImage (getIconUrl style icon) alt iconHeight)
     in
     column
         (List.concat
@@ -4881,11 +4945,21 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                             style.headerBackground
                         )
                     ]
-                    [ standardButtonWithDontHover (isDragging || isLoading)
-                        style
-                        "Refresh All Feeds"
+                    [ renderIcon .reload
                         LoadAll
-                        (widthImage (getIconUrl style .reload) "Refresh" iconHeight)
+                        "Refresh All Feeds"
+                        "Refresh"
+                        isLoading
+                    ]
+              , row
+                    [ centerX
+                    , Background.color style.headerBackground
+                    ]
+                    [ renderIcon .edit
+                        NewPost
+                        "Create a New Post"
+                        "Post"
+                        False
                     ]
               ]
             , List.map (feedSelectorButton isDragging style iconHeight icons) <|
@@ -4901,14 +4975,11 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                     , Font.size <| 7 * iconHeight // 4
                     ]
                     [ column [ spacing 0 ]
-                        [ standardButtonWithDontHover isDragging
-                            style
-                            "FeedSets"
+                        [ renderIcon .feedsets
                             FeedSetChooser
-                            (widthImage (getIconUrl style .feedsets)
-                                "FeedSet Chooser"
-                                iconHeight
-                            )
+                            "FeedSets"
+                            "FeedSet Chooser"
+                            False
                         , standardButtonWithDontHover isDragging
                             style
                             "Add New Feed"
@@ -4921,24 +4992,21 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                     , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ column [ spacing 10 ]
-                        [ standardButtonWithDontHover isDragging
-                            style
-                            "Settings"
+                        [ renderIcon .settings
                             ShowSettings
-                            (widthImage (getIconUrl style .settings) "Settings" iconHeight)
-                        , standardButtonWithDontHover isDragging
-                            style
-                            "Restore Feeds"
+                            "Settings"
+                            "Settings"
+                            False
+                        , renderIcon .save
                             SaveFeedTypes
-                            (widthImage (getIconUrl style .save) "Save" iconHeight)
-                        , standardButtonWithDontHover isDragging
-                            style
-                            "Logout"
+                            "Restore Feeds"
+                            "Save"
+                            False
+                        , renderIcon .logout
                             Logout
-                            (heightImage (getIconUrl style .logout)
-                                "Logout"
-                                iconHeight
-                            )
+                            "Logout"
+                            "Logout"
+                            False
                         ]
                     ]
               ]

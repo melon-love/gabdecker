@@ -257,6 +257,7 @@ iconUrls =
     { close = "cancel.svg"
     , comment = "chat-2.svg"
     , dislike = "dislike.svg"
+    , edit = "edit.svg"
     , home = "house.svg"
     , like = "like.svg"
     , logout = "logout.svg"
