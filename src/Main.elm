@@ -304,6 +304,7 @@ type Msg
     | SetStyle StyleOption
     | RestoreFeedTypes
     | DialogInput String
+    | PostInput String
     | RestoreFeedSets
     | SetFeedSetsInput String
     | FontSizeInput String
@@ -329,6 +330,7 @@ type Msg
     | ReceivePostFeed UpdateType FeedType (FeedResult ActivityLogList)
     | ReceiveNotificationsFeed UpdateType FeedType (FeedResult NotificationsLog)
     | ReceiveUser (FeedResult User)
+    | ReceivePost (FeedResult ActivityLog)
 
 
 type Operation
@@ -1120,6 +1122,17 @@ setDialogInput dialogInput model =
         model
 
 
+setPostInput : String -> Model -> Model
+setPostInput postInput model =
+    setDialogInputs
+        (\dialogInputs ->
+            { dialogInputs
+                | postInput = postInput
+            }
+        )
+        model
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -1258,8 +1271,8 @@ update msg model =
             loadAll model
 
         NewPost ->
-            setShowDialog NewPostDialog Nothing (setDialogInput "" model)
-                |> withCmd (focusId dialogInputId)
+            setShowDialog NewPostDialog Nothing model
+                |> withCmd (focusId postInputId)
 
         MakePost ->
             makePost model
@@ -1537,6 +1550,9 @@ update msg model =
         DialogInput username ->
             setDialogInput username model |> withNoCmd
 
+        PostInput postInput ->
+            setPostInput postInput model |> withNoCmd
+
         RestoreFeedSets ->
             case JD.decodeString ED.feedSetsDecoder dialogInputs.feedSetsInput of
                 Err err ->
@@ -1697,6 +1713,9 @@ update msg model =
 
         ReceiveUser result ->
             receiveUser result model
+
+        ReceivePost result ->
+            receivePost result model
 
 
 mouseDown : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
@@ -2732,18 +2751,47 @@ loadAll model =
     { mdl | loadingAll = True } |> withCmds cmds
 
 
-{-| TODO
--}
-newPost : Model -> ( Model, Cmd Msg )
-newPost model =
-    model |> withNoCmd
+emptyPostForm : PostForm
+emptyPostForm =
+    { body = ""
+    , reply_to = Nothing
+    , is_quote = False
+    , is_html = False
+    , nsfw = False
+    , is_premium = False
+    , gif = Nothing
+    , topic = Nothing
+    , group = Nothing
+    , media_attachments = []
+    , premium_min_tier = Nothing
+    , poll = False
+    , poll_option_1 = Nothing
+    , poll_option_2 = Nothing
+    , poll_option_3 = Nothing
+    , poll_option_4 = Nothing
+    }
 
 
 {-| TODO
 -}
 makePost : Model -> ( Model, Cmd Msg )
 makePost model =
-    model |> withNoCmd
+    let
+        dialogInputs =
+            model.dialogInputs
+
+        postForm =
+            { emptyPostForm
+                | body = dialogInputs.postInput
+            }
+    in
+    case model.backend of
+        Nothing ->
+            model |> withNoCmd
+
+        Just backend ->
+            model
+                |> withCmd (Api.newPost backend ReceivePost postForm)
 
 
 feedBefore : Feed Msg -> String
@@ -2876,6 +2924,86 @@ receiveUser result model =
 
                 _ ->
                     model
+            , Cmd.none
+            )
+
+
+replaceFeed : Feed Msg -> Model -> Model
+replaceFeed feed model =
+    let
+        feeds =
+            LE.setIf (\f -> f.feedType == feed.feedType) feed model.feeds
+    in
+    { model | feeds = feeds }
+
+
+addFeedPost : FeedType -> ActivityLog -> Model -> Model
+addFeedPost feedType activityLog model =
+    case findFeed feedType model of
+        Nothing ->
+            model
+
+        Just feed ->
+            let
+                logList =
+                    feed.feed
+            in
+            case logList.data of
+                NotificationFeedData _ ->
+                    model
+
+                PostFeedData data ->
+                    let
+                        newFeed =
+                            { feed
+                                | feed =
+                                    { logList
+                                        | data =
+                                            PostFeedData <| activityLog :: data
+                                    }
+                                , newPosts =
+                                    feed.newPosts + 1
+                            }
+                    in
+                    replaceFeed newFeed model
+
+
+receivePost : FeedResult ActivityLog -> Model -> ( Model, Cmd Msg )
+receivePost result model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    case result of
+        Err _ ->
+            ( case dialogInputs.showDialog of
+                NewPostDialog ->
+                    setDialogError (Just "Error posting.") model
+
+                _ ->
+                    model
+            , Cmd.none
+            )
+
+        Ok activityLog ->
+            let
+                mdl =
+                    case dialogInputs.loggedInUser of
+                        Nothing ->
+                            model
+
+                        Just user ->
+                            addFeedPost (UserFeed user) activityLog model
+
+                mdl2 =
+                    addFeedPost HomeFeed activityLog mdl
+            in
+            ( case dialogInputs.showDialog of
+                NewPostDialog ->
+                    setShowDialog NoDialog Nothing mdl2
+
+                _ ->
+                    mdl2
             , Cmd.none
             )
 
@@ -4821,15 +4949,41 @@ newPostDialog dialogInputs settings =
         iconHeight =
             userIconHeight baseFontSize
 
+        renderIcon icon msg title alt dontHover =
+            standardButtonWithDontHover dontHover
+                style
+                title
+                msg
+                (widthImage (getIconUrl style icon) alt iconHeight)
+
         postButton =
-            el [ Font.size <| 7 * iconHeight // 4 ] <|
-                textButton style "Post" MakePost "Post"
+            renderIcon .edit MakePost "Post" "Post" False
+
+        w =
+            min 500 settings.windowWidth
+
+        h =
+            min 300 settings.windowHeight
     in
     column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Post"
         , dialogErrorRow dialogInputs
         , row []
-            [ postButton
+            [ Input.multiline
+                [ width <| px w
+                , height <| px h
+                , idAttribute postInputId
+                , Background.color <| style.background
+                ]
+                { onChange = PostInput
+                , text = dialogInputs.postInput
+                , placeholder = Nothing
+                , label = Input.labelHidden "Post Text"
+                , spellcheck = True
+                }
+            ]
+        , row [ width Element.fill ]
+            [ el [ Element.alignRight ] postButton
             ]
         ]
 
@@ -4861,6 +5015,11 @@ contentId =
 dialogInputId : String
 dialogInputId =
     "dialogInput"
+
+
+postInputId : String
+postInputId =
+    "postInput"
 
 
 newFeedSetInputId : String
@@ -4954,6 +5113,7 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
               , row
                     [ centerX
                     , Background.color style.headerBackground
+                    , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ renderIcon .edit
                         NewPost

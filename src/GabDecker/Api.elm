@@ -304,9 +304,14 @@ getPost backend tagger =
     unimplemented tagger
 
 
-newPost : Backend -> FeedTagger PostForm msg -> Cmd msg
-newPost backend tagger =
-    unimplemented tagger
+newPost : Backend -> FeedTagger ActivityLog msg -> PostForm -> Cmd msg
+newPost backend tagger postForm =
+    case backend of
+        RealBackend token ->
+            Gab.newPost (wrapHttpReturn tagger) token postForm
+
+        SimulatedBackend ->
+            unimplemented tagger
 
 
 postImage : Backend -> FeedTagger File msg -> Cmd msg
