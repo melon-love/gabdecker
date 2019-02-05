@@ -2997,6 +2997,7 @@ receivePost result model =
 
                 mdl2 =
                     addFeedPost HomeFeed activityLog mdl
+                        |> setPostInput ""
             in
             ( case dialogInputs.showDialog of
                 NewPostDialog ->
