@@ -22,7 +22,7 @@ module GabDecker.Api exposing
     , userProfile
     )
 
-import CustomElement.FileListener as File exposing (File)
+import File exposing (File)
 import Gab
 import Gab.EncodeDecode
     exposing

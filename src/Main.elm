@@ -21,7 +21,6 @@ import Browser.Events as Events
 import Browser.Navigation as Navigation exposing (Key)
 import Char
 import Cmd.Extra exposing (withCmd, withCmds, withNoCmd)
-import CustomElement.FileListener as File exposing (File)
 import DateFormat as DF
 import Dict exposing (Dict)
 import Element
