@@ -116,6 +116,8 @@ This is a place to collect things left to do for GabDecker.
 ## Gap API Features Wanted
 
 * Fetch the comments for a post.
+* Search for user IDs matching a prefix.
+  Need this while typing a post.
 * Group and Topic Feeds.
 * Comments in user feeds.
 * One call to find new post count for each of a list of feeds.
