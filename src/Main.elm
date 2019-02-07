@@ -4950,20 +4950,28 @@ newPostDialog dialogInputs settings =
             userIconHeight baseFontSize
 
         renderIcon icon msg title alt dontHover =
-            standardButtonWithDontHover dontHover
-                style
-                title
-                msg
-                (widthImage (getIconUrl style icon) alt iconHeight)
+            let
+                buttonImage =
+                    widthImage (getIconUrl style icon) alt iconHeight
+            in
+            if dialogInputs.postInput == "" then
+                buttonImage
+
+            else
+                standardButtonWithDontHover dontHover
+                    style
+                    title
+                    msg
+                    buttonImage
 
         postButton =
             renderIcon .edit MakePost "Post" "Post" False
 
         w =
-            min 500 settings.windowWidth
+            min (settings.windowWidth * 3 // 4) (scaleFontSize baseFontSize 40)
 
         h =
-            min 300 settings.windowHeight
+            w * settings.windowHeight // settings.windowWidth
     in
     column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Post"
