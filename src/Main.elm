@@ -163,9 +163,15 @@ allScopes =
     ]
 
 
+type PostResponseType
+    = NormalPost
+    | QuotePost Post
+    | CommentOnPost Post
+
+
 type DialogType
     = NoDialog
-    | NewPostDialog
+    | NewPostDialog PostResponseType
     | AddFeedDialog
     | ImageDialog String
     | UserDialog User Bool
@@ -280,7 +286,7 @@ type Msg
     | Logout
     | LoadMore UpdateType (Feed Msg)
     | LoadAll
-    | NewPost
+    | NewPost PostResponseType
     | MakePost
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
@@ -1269,8 +1275,8 @@ update msg model =
         LoadAll ->
             loadAll model
 
-        NewPost ->
-            setShowDialog NewPostDialog Nothing model
+        NewPost responseType ->
+            setShowDialog (NewPostDialog responseType) Nothing model
                 |> withCmd (focusId postInputId)
 
         MakePost ->
@@ -2976,7 +2982,7 @@ receivePost result model =
     case result of
         Err _ ->
             ( case dialogInputs.showDialog of
-                NewPostDialog ->
+                NewPostDialog _ ->
                     setDialogError (Just "Error posting.") model
 
                 _ ->
@@ -2999,7 +3005,7 @@ receivePost result model =
                         |> setPostInput ""
             in
             ( case dialogInputs.showDialog of
-                NewPostDialog ->
+                NewPostDialog _ ->
                     setShowDialog NoDialog Nothing mdl2
 
                 _ ->
@@ -3668,8 +3674,8 @@ showTheDialog dialogInputs settings =
         AddFeedDialog ->
             addFeedDialog dialogInputs settings
 
-        NewPostDialog ->
-            newPostDialog dialogInputs settings
+        NewPostDialog responseType ->
+            newPostDialog responseType dialogInputs settings
 
         ImageDialog url ->
             imageDialog url dialogInputs settings
@@ -4937,8 +4943,8 @@ addFeedDialog dialogInputs settings =
         ]
 
 
-newPostDialog : DialogInputs -> Settings -> Element Msg
-newPostDialog dialogInputs settings =
+newPostDialog : PostResponseType -> DialogInputs -> Settings -> Element Msg
+newPostDialog responseType dialogInputs settings =
     let
         style =
             settings.style
@@ -5124,7 +5130,7 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                     , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ renderIcon .edit
-                        NewPost
+                        (NewPost NormalPost)
                         "Create a New Post"
                         "Post"
                         False
