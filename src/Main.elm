@@ -164,9 +164,9 @@ allScopes =
 
 
 type PostResponseType
-    = NormalPost
-    | QuotePost Post
-    | CommentOnPost Post
+    = NormalPost (Maybe Post) FeedType
+    | QuotePost Post FeedType
+    | CommentOnPost Post FeedType
 
 
 type DialogType
@@ -310,6 +310,7 @@ type Msg
     | RestoreFeedTypes
     | DialogInput String
     | PostInput String
+    | PostButton FeedType WhichPostButton
     | RestoreFeedSets
     | SetFeedSetsInput String
     | FontSizeInput String
@@ -1138,6 +1139,51 @@ setPostInput postInput model =
         model
 
 
+setPostButton : FeedType -> WhichPostButton -> Model -> ( Model, Cmd Msg )
+setPostButton feedType whichPost model =
+    case model.dialogInputs.showDialog of
+        NewPostDialog responseType ->
+            let
+                maybePost =
+                    case responseType of
+                        NormalPost mp _ ->
+                            mp
+
+                        QuotePost p _ ->
+                            Just p
+
+                        CommentOnPost p _ ->
+                            Just p
+
+                newDialog =
+                    case maybePost of
+                        Nothing ->
+                            NewPostDialog <| NormalPost Nothing feedType
+
+                        Just p ->
+                            case whichPost of
+                                NormalButton ->
+                                    NewPostDialog <| NormalPost maybePost feedType
+
+                                QuoteButton ->
+                                    NewPostDialog <| QuotePost p feedType
+
+                                CommentButton ->
+                                    NewPostDialog <| CommentOnPost p feedType
+            in
+            setDialogInputs
+                (\dialogInputs ->
+                    { dialogInputs
+                        | showDialog = newDialog
+                    }
+                )
+                model
+                |> withNoCmd
+
+        _ ->
+            model |> withNoCmd
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -1557,6 +1603,9 @@ update msg model =
 
         PostInput postInput ->
             setPostInput postInput model |> withNoCmd
+
+        PostButton feedType whichButton ->
+            setPostButton feedType whichButton model
 
         RestoreFeedSets ->
             case JD.decodeString ED.feedSetsDecoder dialogInputs.feedSetsInput of
@@ -2784,6 +2833,22 @@ makePost model =
     let
         dialogInputs =
             model.dialogInputs
+
+        ( reply_to, is_quote ) =
+            case dialogInputs.showDialog of
+                NewPostDialog responseType ->
+                    case responseType of
+                        NormalPost _ _ ->
+                            ( Nothing, False )
+
+                        QuotePost qp _ ->
+                            ( Just qp.id, True )
+
+                        CommentOnPost qp _ ->
+                            ( Just qp.id, False )
+
+                _ ->
+                    ( Nothing, False )
 
         postForm =
             { emptyPostForm
@@ -4943,6 +5008,12 @@ addFeedDialog dialogInputs settings =
         ]
 
 
+type WhichPostButton
+    = NormalButton
+    | QuoteButton
+    | CommentButton
+
+
 newPostDialog : PostResponseType -> DialogInputs -> Settings -> Element Msg
 newPostDialog responseType dialogInputs settings =
     let
@@ -4954,6 +5025,17 @@ newPostDialog responseType dialogInputs settings =
 
         iconHeight =
             userIconHeight baseFontSize
+
+        ( maybePost, whichButton, feedType ) =
+            case responseType of
+                NormalPost mp t ->
+                    ( mp, NormalButton, t )
+
+                QuotePost p t ->
+                    ( Just p, QuoteButton, t )
+
+                CommentOnPost p t ->
+                    ( Just p, CommentButton, t )
 
         renderIcon icon msg title alt dontHover =
             let
@@ -4983,18 +5065,77 @@ newPostDialog responseType dialogInputs settings =
         [ dialogTitleBar style baseFontSize "Post"
         , dialogErrorRow dialogInputs
         , row []
-            [ Input.multiline
-                [ width <| px w
-                , height <| px h
-                , idAttribute postInputId
-                , Background.color <| style.background
+            [ column [ height <| px h ]
+                [ case maybePost of
+                    Nothing ->
+                        Element.none
+
+                    Just _ ->
+                        row [ Element.centerX ]
+                            [ Input.radioRow
+                                [ paddingEach { zeroes | bottom = 10 }
+                                , spacing 10
+                                ]
+                                { onChange = PostButton feedType
+                                , options =
+                                    [ Input.option NormalButton (text "post")
+                                    , Input.option QuoteButton (text "quote")
+                                    , Input.option CommentButton (text "comment")
+                                    ]
+                                , selected = Just whichButton
+                                , label = Input.labelHidden "Type of post"
+                                }
+                            ]
+                , if whichButton == NormalButton then
+                    Element.none
+
+                  else
+                    case maybePost of
+                        Nothing ->
+                            Element.none
+
+                        Just post ->
+                            postRow
+                                { settings | columnWidth = w - 10 }
+                                feedType
+                                False
+                                { id = ""
+                                , published_at = ""
+                                , type_ = "post"
+                                , actuser = post.user
+                                , post =
+                                    { post
+                                        | body_html =
+                                            post.body_html_summary
+                                        , body =
+                                            truncatePost post.body
+                                        , related =
+                                            RelatedPosts
+                                                { parent = Nothing
+                                                , replies = []
+                                                }
+                                        , is_quote = False
+                                        , is_reply = False
+                                        , embed = Nothing
+                                        , attachment = NoAttachment
+                                    }
+                                }
+                                False
+                , row [ height Element.fill ]
+                    [ Input.multiline
+                        [ width <| px w
+                        , height Element.fill
+                        , idAttribute postInputId
+                        , Background.color <| style.background
+                        ]
+                        { onChange = PostInput
+                        , text = dialogInputs.postInput
+                        , placeholder = Nothing
+                        , label = Input.labelHidden "Post Text"
+                        , spellcheck = True
+                        }
+                    ]
                 ]
-                { onChange = PostInput
-                , text = dialogInputs.postInput
-                , placeholder = Nothing
-                , label = Input.labelHidden "Post Text"
-                , spellcheck = True
-                }
             ]
         , row [ width Element.fill ]
             [ el [ Element.alignRight ] postButton
@@ -5130,7 +5271,7 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
                     , paddingEach { zeroes | bottom = 10 }
                     ]
                     [ renderIcon .edit
-                        (NewPost NormalPost)
+                        (NewPost (NormalPost Nothing HomeFeed))
                         "Create a New Post"
                         "Post"
                         False
@@ -6605,7 +6746,7 @@ interactionRow style baseFontSize colwp feedType post =
             ""
             post.reply_count
             ""
-            Noop
+            (NewPost (CommentOnPost post feedType))
         , onecol (heightImage (getIconUrl style .refresh) "reposted" fsize)
             ( post.repost, GreenHighlight )
             ""
@@ -6625,7 +6766,7 @@ interactionRow style baseFontSize colwp feedType post =
             "Quote"
             -1
             ""
-            Noop
+            (NewPost (QuotePost post feedType))
         ]
 
 
