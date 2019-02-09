@@ -2842,10 +2842,10 @@ makePost model =
                             ( Nothing, False )
 
                         QuotePost qp _ ->
-                            ( Just qp.id, True )
+                            ( Just <| String.fromInt qp.id, True )
 
                         CommentOnPost qp _ ->
-                            ( Just qp.id, False )
+                            ( Just <| String.fromInt qp.id, False )
 
                 _ ->
                     ( Nothing, False )
@@ -2853,6 +2853,8 @@ makePost model =
         postForm =
             { emptyPostForm
                 | body = dialogInputs.postInput
+                , reply_to = reply_to
+                , is_quote = is_quote
             }
     in
     case model.backend of
