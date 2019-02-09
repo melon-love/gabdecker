@@ -5900,9 +5900,6 @@ postRow settings feedType isToplevel log isLastNew =
         colwp =
             width <| px cwp
 
-        mediaw =
-            colwp
-
         post =
             log.post
 
@@ -6014,23 +6011,7 @@ postRow settings feedType isToplevel log isLastNew =
                 ]
             , row []
                 [ column [ colwp ] <|
-                    case post.attachment of
-                        MediaAttachment records ->
-                            List.map (mediaRow style mediaw) records
-
-                        YoutubeAttachment id ->
-                            [ embedYouTube cwp id ]
-
-                        GiphyAttachment useless ->
-                            case giphyIdFromEmbed post.embed of
-                                Nothing ->
-                                    []
-
-                                Just id ->
-                                    [ embedGiphy cwp id ]
-
-                        _ ->
-                            [ Element.none ]
+                    attachmentRows cwp style post
                 ]
             , row []
                 [ column
@@ -6084,6 +6065,31 @@ postRow settings feedType isToplevel log isLastNew =
                 interactionRow style baseFontSize colwp feedType post
             ]
         ]
+
+
+attachmentRows : Int -> Style -> Post -> List (Element Msg)
+attachmentRows cwp style post =
+    let
+        mediaw =
+            width <| px cwp
+    in
+    case post.attachment of
+        MediaAttachment records ->
+            List.map (mediaRow style mediaw) records
+
+        YoutubeAttachment id ->
+            [ embedYouTube cwp id ]
+
+        GiphyAttachment useless ->
+            case giphyIdFromEmbed post.embed of
+                Nothing ->
+                    []
+
+                Just id ->
+                    [ embedGiphy cwp id ]
+
+        _ ->
+            []
 
 
 postUserRow : Style -> Float -> Attribute Msg -> Zone -> Post -> Element Msg
@@ -6550,6 +6556,7 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                                         (postCreatedLink style post here)
                                   ]
                                 , notificationsBody settings post
+                                , attachmentRows cwp style post
                                 ]
                 ]
             , case maybePost of
