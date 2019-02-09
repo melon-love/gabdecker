@@ -6556,7 +6556,11 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                                         (postCreatedLink style post here)
                                   ]
                                 , notificationsBody settings post
-                                , attachmentRows cwp style post
+                                , if notification.type_ == MentionNotification then
+                                    attachmentRows cwp style post
+
+                                  else
+                                    []
                                 ]
                 ]
             , case maybePost of
