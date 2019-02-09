@@ -2834,6 +2834,9 @@ makePost model =
         dialogInputs =
             model.dialogInputs
 
+        body =
+            dialogInputs.postInput
+
         ( reply_to, is_quote ) =
             case dialogInputs.showDialog of
                 NewPostDialog responseType ->
@@ -2852,7 +2855,7 @@ makePost model =
 
         postForm =
             { emptyPostForm
-                | body = dialogInputs.postInput
+                | body = body
                 , reply_to = reply_to
                 , is_quote = is_quote
             }
@@ -5914,11 +5917,7 @@ postRow settings feedType isToplevel log isLastNew =
 
         ( repostString, iconUrl ) =
             if log.type_ == "repost" then
-                if post.is_quote then
-                    ( "quoted", chars.leftCurlyQuote )
-
-                else
-                    ( "reposted", getIconUrl style .refresh )
+                ( "reposted", getIconUrl style .refresh )
 
             else if post.is_reply then
                 ( "commented", getIconUrl style .comment )
@@ -6064,6 +6063,13 @@ postRow settings feedType isToplevel log isLastNew =
                                                                 parentPost.body_html_summary
                                                         , body =
                                                             truncatePost parentPost.body
+                                                        , related =
+                                                            RelatedPosts
+                                                                { parent = Nothing
+                                                                , replies = []
+                                                                }
+                                                        , is_quote = False
+                                                        , is_reply = False
                                                     }
                                                 , type_ = "post"
                                             }

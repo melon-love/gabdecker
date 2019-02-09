@@ -3,10 +3,13 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote
-  Selecting an image doesn't work on mobile.
-  It never even notices that the image has been selected.
-  Need to encode the post as HTML, so that the paragraph breaks
-  don't disappear when you edit it on Gab.com.
+  * Selecting an image doesn't work on mobile.
+    It never even notices that the image has been selected.
+  * Need to encode the post as HTML, so that the paragraph breaks
+    don't disappear when you edit it on Gab.com.
+  * Auto-complete @username from a list of known usernames.
+    These are already gathered for user columns. Gather them also from
+    feeds, if it doesn't take too long, which I doubt it will.
 * Delete button on your own posts.
 * Magic numbers for scrolling horizontally depend on font size.
 * URLs:
@@ -121,6 +124,7 @@ This is a place to collect things left to do for GabDecker.
 * Fetch the comments for a post.
 * Search for user IDs matching a prefix.
   Need this while typing a post.
+* HTML posts.
 * Group and Topic Feeds.
 * Comments in user feeds.
 * One call to find new post count for each of a list of feeds.
