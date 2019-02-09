@@ -13,7 +13,7 @@
 ----------------------------------------------------------------------
 
 
-module Main exposing (main, newlinesToPs)
+module Main exposing (main)
 
 import Browser exposing (Document, UrlRequest(..))
 import Browser.Dom as Dom exposing (Viewport)
@@ -169,6 +169,12 @@ type PostResponseType
     | CommentOnPost Post FeedType
 
 
+type alias ReceiveFeedError =
+    { feedType : FeedType
+    , error : Http.Error
+    }
+
+
 type DialogType
     = NoDialog
     | NewPostDialog PostResponseType
@@ -180,6 +186,7 @@ type DialogType
     | FeedSetChooserDialog
     | FeedSetsDialog
     | OperationErrorDialog String
+    | ReceiveFeedErrorDialog (List ReceiveFeedError)
 
 
 type alias DialogInputs =
@@ -3191,43 +3198,25 @@ receiveDisplayedFeed updateType feedType result model =
             )
 
 
-processReceivedError : Http.Error -> Model -> ( Model, Cmd Msg )
-processReceivedError err model =
-    let
-        message =
-            "HTTP error: "
-                ++ (Debug.toString err |> String.left 100)
-
-        dialogInputs =
-            model.dialogInputs
-
-        mdl =
-            case dialogInputs.showDialog of
-                NoDialog ->
-                    setOnlyShowDialog (OperationErrorDialog message) model
-
-                _ ->
-                    model
-    in
-    mdl |> withNoCmd
-
-
 processReceiveFeedError : FeedType -> Http.Error -> Model -> ( Model, Cmd Msg )
 processReceiveFeedError feedType err model =
     let
-        message =
-            "Error getting feed <"
-                ++ feedTypeToString feedType
-                ++ ">: "
-                ++ (Debug.toString err |> String.left 100)
-
         dialogInputs =
             model.dialogInputs
 
+        error =
+            { feedType = feedType
+            , error = err
+            }
+
         mdl =
             case dialogInputs.showDialog of
+                ReceiveFeedErrorDialog errors ->
+                    setOnlyShowDialog (ReceiveFeedErrorDialog <| error :: errors)
+                        model
+
                 NoDialog ->
-                    setOnlyShowDialog (OperationErrorDialog message) model
+                    setOnlyShowDialog (ReceiveFeedErrorDialog [ error ]) model
 
                 _ ->
                     model
@@ -3768,6 +3757,9 @@ showTheDialog dialogInputs settings =
         OperationErrorDialog err ->
             operationErrorDialog err dialogInputs settings
 
+        ReceiveFeedErrorDialog errors ->
+            receiveFeedErrorDialog errors dialogInputs settings
+
         _ ->
             Element.none
 
@@ -3973,6 +3965,61 @@ operationErrorDialog err dialogInputs settings =
             ]
         , row [ paddingEach { zeroes | top = 20 } ]
             [ text err ]
+        ]
+
+
+receiveFeedErrorDialog : List ReceiveFeedError -> DialogInputs -> Settings -> Element Msg
+receiveFeedErrorDialog errors dialogInputs settings =
+    let
+        style =
+            settings.style
+
+        baseFontSize =
+            settings.fontSize
+
+        iconHeight =
+            userIconHeight baseFontSize
+    in
+    column (dialogAttributes settings)
+        [ let
+            closeIcon =
+                heightImage (getIconUrl style .close) "Close" iconHeight
+          in
+          row [ width Element.fill ]
+            [ row
+                [ centerX
+                , centerY
+                , Font.bold
+                , fontSize baseFontSize 1.5
+                ]
+                [ el [ Font.color colors.red ] <| text "Receive Feed Errors " ]
+            , el [ alignRight ]
+                (standardButton style "Close Dialog" CloseDialog closeIcon)
+            ]
+        , Element.table
+            [ spacing 10 ]
+            { data = errors
+            , columns =
+                [ { header = Element.none
+                  , width = Element.shrink
+                  , view =
+                        \{ feedType, error } ->
+                            column []
+                                [ text <| Debug.toString feedType
+                                , text <| Debug.toString error
+                                ]
+                  }
+                , { header = Element.none
+                  , width = Element.shrink
+                  , view =
+                        \{ feedType } ->
+                            row [ spacing 10 ]
+                                [ text "cancel"
+                                , text "retry"
+                                ]
+                  }
+                ]
+            }
         ]
 
 
