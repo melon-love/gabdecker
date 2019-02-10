@@ -1829,7 +1829,12 @@ removeFeedError feedType model =
             { model
                 | dialogInputs =
                     { dialogInputs
-                        | showDialog = ReceiveFeedErrorDialog errs
+                        | showDialog =
+                            if errs == [] then
+                                NoDialog
+
+                            else
+                                ReceiveFeedErrorDialog errs
                     }
             }
                 |> withNoCmd
