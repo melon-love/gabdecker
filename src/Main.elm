@@ -171,6 +171,7 @@ type PostResponseType
 
 type alias ReceiveFeedError =
     { feedType : FeedType
+    , updateType : UpdateType
     , error : Http.Error
     }
 
@@ -195,6 +196,7 @@ type alias DialogInputs =
     , currentFeedSet : String
     , isLastClosedFeed : Bool
     , loggedInUser : Maybe String
+    , icons : Icons
     , showDialog : DialogType
     , dialogError : Maybe String
     , dialogInput : String
@@ -215,6 +217,7 @@ initialDialogInputs =
     , currentFeedSet = ""
     , isLastClosedFeed = False
     , loggedInUser = Nothing
+    , icons = Types.emptyIcons
     , showDialog = NoDialog
     , dialogError = Nothing
     , dialogInput = ""
@@ -246,7 +249,6 @@ type alias Model =
     , scopes : List String
     , receivedScopes : List String
     , tokenAuthorization : Maybe TokenAuthorization
-    , icons : Icons
     , users : Dict String User
     , nextId : Int
     , feeds : List (Feed Msg)
@@ -336,6 +338,8 @@ type Msg
     | DeleteFeedSet String
     | RestoreDefaultSettings
     | AddNewFeed FeedType
+    | RemoveFeedError FeedType
+    | ReloadFeedError FeedType UpdateType
     | Upvote FeedType Post
     | Downvote FeedType Post
     | Repost FeedType Post
@@ -393,9 +397,13 @@ updateUser user model =
             model.users
 
         mdl =
-            { model
-                | users = Dict.insert username user users
-            }
+            if Just user == Dict.get username users then
+                model
+
+            else
+                { model
+                    | users = Dict.insert username user users
+                }
     in
     case
         LE.find
@@ -419,7 +427,7 @@ updateUser user model =
         Just _ ->
             let
                 icons =
-                    mdl.icons
+                    mdl.dialogInputs.icons
 
                 updateUserIcons () =
                     let
@@ -428,9 +436,12 @@ updateUser user model =
                                 | user =
                                     Dict.insert username url icons.user
                             }
+
+                        dialogInputs =
+                            mdl.dialogInputs
                     in
                     ( { mdl
-                        | icons = newIcons
+                        | dialogInputs = { dialogInputs | icons = newIcons }
                       }
                     , True
                     )
@@ -592,7 +603,6 @@ init flags url key =
             , scopes = scopes
             , receivedScopes = scopes
             , tokenAuthorization = authorization
-            , icons = Types.emptyIcons
             , users = Dict.empty
             , nextId = List.length feeds
             , feeds = feeds
@@ -853,13 +863,16 @@ restoreFeedTypes feedTypes model =
     let
         icons =
             Types.emptyIcons
+
+        dialogInputs =
+            model.dialogInputs
     in
     case model.backend of
         Nothing ->
             setFeedTypes feedTypes
                 { model
                     | feeds = []
-                    , icons = icons
+                    , dialogInputs = { dialogInputs | icons = icons }
                 }
                 |> withNoCmd
 
@@ -873,7 +886,7 @@ restoreFeedTypes feedTypes model =
             in
             { model
                 | feeds = feeds
-                , icons = icons
+                , dialogInputs = { dialogInputs | icons = icons }
             }
                 |> withCmds
                     [ loadAllCmd
@@ -989,7 +1002,12 @@ receiveIcons value model =
                     model |> withNoCmd
 
                 Ok icons ->
-                    { model | icons = icons } |> withNoCmd
+                    let
+                        dialogInputs =
+                            model.dialogInputs
+                    in
+                    { model | dialogInputs = { dialogInputs | icons = icons } }
+                        |> withNoCmd
 
 
 storageHandler : LocalStorage.Response -> PortFunnels.State -> Model -> ( Model, Cmd Msg )
@@ -1748,6 +1766,21 @@ update msg model =
         AddNewFeed feedType ->
             addNewFeed feedType model.settings.fontSize model
 
+        RemoveFeedError feedType ->
+            removeFeedError feedType model
+
+        ReloadFeedError feedType updateType ->
+            let
+                ( mdl, _ ) =
+                    removeFeedError feedType model
+            in
+            case findFeed feedType mdl of
+                Just feed ->
+                    update (LoadMore updateType feed) mdl
+
+                Nothing ->
+                    mdl |> withNoCmd
+
         Upvote feedType post ->
             upvote feedType post model
 
@@ -1777,6 +1810,32 @@ update msg model =
 
         ReceivePost result ->
             receivePost result model
+
+
+removeFeedError : FeedType -> Model -> ( Model, Cmd Msg )
+removeFeedError feedType model =
+    let
+        dialogInputs =
+            model.dialogInputs
+    in
+    case dialogInputs.showDialog of
+        ReceiveFeedErrorDialog errors ->
+            let
+                errs =
+                    List.filter
+                        (\err -> err.feedType /= feedType)
+                        errors
+            in
+            { model
+                | dialogInputs =
+                    { dialogInputs
+                        | showDialog = ReceiveFeedErrorDialog errs
+                    }
+            }
+                |> withNoCmd
+
+        _ ->
+            model |> withNoCmd
 
 
 mouseDown : ( Int, Int ) -> Model -> ( Model, Cmd Msg )
@@ -2975,7 +3034,7 @@ updateIcons logList model =
     model2
         |> withCmd
             (if needsUpdate then
-                storeIcons model2.icons model
+                storeIcons model2.dialogInputs.icons model
 
              else
                 Cmd.none
@@ -3099,7 +3158,10 @@ receiveFeed updateType feedType result model =
                 Err err ->
                     case err.httpError of
                         Just httpError ->
-                            processReceiveFeedError feedType httpError model
+                            processReceiveFeedError updateType
+                                feedType
+                                httpError
+                                model
 
                         _ ->
                             model |> withNoCmd
@@ -3198,14 +3260,15 @@ receiveDisplayedFeed updateType feedType result model =
             )
 
 
-processReceiveFeedError : FeedType -> Http.Error -> Model -> ( Model, Cmd Msg )
-processReceiveFeedError feedType err model =
+processReceiveFeedError : UpdateType -> FeedType -> Http.Error -> Model -> ( Model, Cmd Msg )
+processReceiveFeedError updateType feedType err model =
     let
         dialogInputs =
             model.dialogInputs
 
         error =
             { feedType = feedType
+            , updateType = updateType
             , error = err
             }
 
@@ -3688,7 +3751,7 @@ view model =
                 Just backend ->
                     optimizers.mainPage
                         settings
-                        model.icons
+                        dialogInputs.icons
                         model.draggingInfo
                         model.loadingFeeds
                         model.feeds
@@ -3968,6 +4031,25 @@ operationErrorDialog err dialogInputs settings =
         ]
 
 
+httpErrorToString : Http.Error -> String
+httpErrorToString error =
+    case error of
+        Http.BadUrl string ->
+            "BadUrl: " ++ string
+
+        Http.Timeout ->
+            "Timeout"
+
+        Http.NetworkError ->
+            "Network Error"
+
+        Http.BadStatus code ->
+            "Bad Status: " ++ String.fromInt code
+
+        Http.BadBody _ ->
+            "Bad Body"
+
+
 receiveFeedErrorDialog : List ReceiveFeedError -> DialogInputs -> Settings -> Element Msg
 receiveFeedErrorDialog errors dialogInputs settings =
     let
@@ -3979,13 +4061,18 @@ receiveFeedErrorDialog errors dialogInputs settings =
 
         iconHeight =
             userIconHeight baseFontSize
+
+        icons =
+            dialogInputs.icons
+
+        closeIcon =
+            heightImage (getIconUrl style .close) "Close" iconHeight
+
+        reloadIcon =
+            heightImage (getIconUrl style .reload) "Reload" iconHeight
     in
     column (dialogAttributes settings)
-        [ let
-            closeIcon =
-                heightImage (getIconUrl style .close) "Close" iconHeight
-          in
-          row [ width Element.fill ]
+        [ row [ width Element.fill ]
             [ row
                 [ centerX
                 , centerY
@@ -3997,7 +4084,9 @@ receiveFeedErrorDialog errors dialogInputs settings =
                 (standardButton style "Close Dialog" CloseDialog closeIcon)
             ]
         , Element.table
-            [ spacing 10 ]
+            [ spacing 10
+            , width Element.fill
+            ]
             { data = errors
             , columns =
                 [ { header = Element.none
@@ -4005,17 +4094,31 @@ receiveFeedErrorDialog errors dialogInputs settings =
                   , view =
                         \{ feedType, error } ->
                             column []
-                                [ text <| Debug.toString feedType
-                                , text <| Debug.toString error
+                                [ feedTypeDescription style
+                                    0
+                                    feedType
+                                    baseFontSize
+                                    icons
+                                , text <| httpErrorToString error
                                 ]
                   }
                 , { header = Element.none
-                  , width = Element.shrink
+                  , width = Element.fill
                   , view =
-                        \{ feedType } ->
-                            row [ spacing 10 ]
-                                [ text "cancel"
-                                , text "retry"
+                        \{ feedType, updateType } ->
+                            row
+                                [ spacing 10
+                                , alignRight
+                                ]
+                                [ el [ width Element.fill ] <| text " "
+                                , standardButton style
+                                    "Remove"
+                                    (RemoveFeedError feedType)
+                                    closeIcon
+                                , standardButton style
+                                    "Reload"
+                                    (ReloadFeedError feedType updateType)
+                                    reloadIcon
                                 ]
                   }
                 ]
