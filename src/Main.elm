@@ -195,6 +195,7 @@ type DialogType
 type alias PostImage =
     { file : File
     , url : Maybe String
+    , mediaId : Maybe String
     }
 
 
@@ -332,6 +333,8 @@ type Msg
     | ChoosePostImage
     | ReceiveFile File
     | ReceiveFileUrl File String
+    | ReceiveImageUpload File (FeedResult String)
+    | RemovePostImage File
     | PostButton FeedType WhichPostButton
     | RestoreFeedSets
     | SetFeedSetsInput String
@@ -1213,6 +1216,7 @@ setPostButton feedType whichPost model =
                 (\dialogInputs ->
                     { dialogInputs
                         | showDialog = newDialog
+                        , dialogError = Nothing
                     }
                 )
                 model
@@ -1645,17 +1649,20 @@ update msg model =
             setDialogInput username model |> withNoCmd
 
         PostInput postInput ->
-            setPostInput postInput model |> withNoCmd
+            setDialogError Nothing
+                (setPostInput postInput model)
+                |> withNoCmd
 
         ChoosePostImage ->
-            model |> withCmd (Select.file imageMimeTypes ReceiveFile)
+            setDialogError Nothing model
+                |> withCmd (Select.file imageMimeTypes ReceiveFile)
 
         ReceiveFile file ->
             let
                 images =
                     List.concat
                         [ dialogInputs.postImages
-                        , [ PostImage file Nothing ]
+                        , [ PostImage file Nothing Nothing ]
                         ]
             in
             { model
@@ -1667,13 +1674,34 @@ update msg model =
                 |> withCmds
                     [ Task.perform (ReceiveFileUrl file) <|
                         File.toUrl file
+                    , case model.backend of
+                        Nothing ->
+                            Cmd.none
+
+                        Just be ->
+                            Api.postImage be (ReceiveImageUpload file) file
                     ]
 
         ReceiveFileUrl file url ->
             let
                 images =
-                    LE.setIf (\image -> image.file == file)
-                        (PostImage file <| Just url)
+                    LE.updateIf (\image -> image.file == file)
+                        (\image -> { image | url = Just url })
+                        dialogInputs.postImages
+            in
+            { model
+                | dialogInputs =
+                    { dialogInputs | postImages = images }
+            }
+                |> withNoCmd
+
+        ReceiveImageUpload file result ->
+            receiveImageUpload file result model
+
+        RemovePostImage file ->
+            let
+                images =
+                    List.filter (\image -> image.file /= file)
                         dialogInputs.postImages
             in
             { model
@@ -1863,6 +1891,50 @@ update msg model =
 
         ReceivePost result ->
             receivePost result model
+
+
+{-| TODO
+-}
+receiveImageUpload : File -> FeedResult String -> Model -> ( Model, Cmd Msg )
+receiveImageUpload file result model =
+    case model.dialogInputs.showDialog of
+        NewPostDialog _ ->
+            case result of
+                Ok mediaId ->
+                    setDialogInputs
+                        (\inputs ->
+                            { inputs
+                                | postImages =
+                                    LE.updateIf (\image -> image.file == file)
+                                        (\image ->
+                                            { image | mediaId = Just mediaId }
+                                        )
+                                        inputs.postImages
+                            }
+                        )
+                        model
+                        |> withNoCmd
+
+                Err _ ->
+                    setDialogError
+                        (Just <|
+                            "Error uploading image: "
+                                ++ File.name file
+                        )
+                        (setDialogInputs
+                            (\inputs ->
+                                { inputs
+                                    | postImages =
+                                        List.filter (\image -> image.file /= file)
+                                            inputs.postImages
+                                }
+                            )
+                            model
+                        )
+                        |> withNoCmd
+
+        _ ->
+            model |> withNoCmd
 
 
 removeFeedError : FeedType -> Model -> ( Model, Cmd Msg )
@@ -2977,20 +3049,40 @@ makePost model =
                 _ ->
                     ( Nothing, False )
 
+        media =
+            List.map
+                (\image ->
+                    case image.mediaId of
+                        Just id ->
+                            id
+
+                        Nothing ->
+                            ""
+                )
+                dialogInputs.postImages
+                |> List.filter ((==) "")
+
         postForm =
             { emptyPostForm
                 | body = body
                 , reply_to = reply_to
                 , is_quote = is_quote
+                , media_attachments = Debug.log "media_attachments" media
             }
     in
-    case model.backend of
-        Nothing ->
-            model |> withNoCmd
+    case LE.find (\image -> image.mediaId == Nothing) dialogInputs.postImages of
+        Just _ ->
+            setDialogError (Just "Wait for images to upload.") model
+                |> withNoCmd
 
-        Just backend ->
-            model
-                |> withCmd (Api.newPost backend ReceivePost postForm)
+        Nothing ->
+            case model.backend of
+                Nothing ->
+                    model |> withNoCmd
+
+                Just backend ->
+                    model
+                        |> withCmd (Api.newPost backend ReceivePost postForm)
 
 
 feedBefore : Feed Msg -> String
@@ -5227,6 +5319,21 @@ type WhichPostButton
     | CommentButton
 
 
+postImageShadow : Attribute msg
+postImageShadow =
+    Border.shadow
+        { offset = ( 10, 10 )
+        , size = 0
+        , blur = 20
+        , color = colors.gray
+        }
+
+
+postImageGlow : Element.Decoration
+postImageGlow =
+    Border.glow colors.red 5
+
+
 newPostDialog : PostResponseType -> DialogInputs -> Settings -> Element Msg
 newPostDialog responseType dialogInputs settings =
     let
@@ -5265,11 +5372,58 @@ newPostDialog responseType dialogInputs settings =
                     msg
                     buttonImage
 
+        postImages =
+            dialogInputs.postImages
+
+        imageCount =
+            List.length postImages
+
+        postImg url mediaId =
+            let
+                opacity =
+                    case mediaId of
+                        Nothing ->
+                            0.5
+
+                        Just _ ->
+                            1.0
+            in
+            el
+                [ width <| Element.maximum (2 * iconHeight) Element.fill
+                , Element.clipX
+                , Element.alpha opacity
+                ]
+            <|
+                (el
+                    [ centerX
+                    ]
+                 <|
+                    heightImage url "image" (2 * iconHeight)
+                )
+
+        postImageButton postImage =
+            case postImage.url of
+                Nothing ->
+                    Element.none
+
+                Just url ->
+                    button [ Element.mouseOver [ postImageGlow ] ]
+                        { onPress = Just <| RemovePostImage postImage.file
+                        , label = postImg url postImage.mediaId
+                        }
+
+        imageButtons =
+            List.map postImageButton postImages
+
         chooseImageButton =
-            renderIcon .camera ChoosePostImage "Choose Image" "Choose" True False
+            if imageCount < 4 then
+                renderIcon .camera ChoosePostImage "Choose Image" "Choose" True False
+
+            else
+                Element.none
 
         postButton =
-            renderIcon .edit MakePost "Post" "Post" False False
+            renderIcon .edit MakePost "Post" "Post" (imageCount > 0) False
 
         w =
             min (settings.windowWidth * 3 // 4) (scaleFontSize baseFontSize 40)
@@ -5359,10 +5513,17 @@ newPostDialog responseType dialogInputs settings =
                     ]
                 ]
             ]
-        , row [ width Element.fill ]
-            [ chooseImageButton
-            , el [ Element.alignRight ] postButton
+        , row
+            [ width Element.fill
+            , spacing 10
             ]
+          <|
+            List.concat
+                [ imageButtons
+                , [ chooseImageButton
+                  , el [ Element.alignRight ] postButton
+                  ]
+                ]
         ]
 
 
@@ -5932,10 +6093,6 @@ renderRowContents settings feed =
                 data =
                     feed.feed.data
 
-                --                ignore =
-                --                    Debug.log
-                --                        "Rendering"
-                --                        feed.feedType
                 rows =
                     case data of
                         PostFeedData activityLogList ->
