@@ -12,9 +12,14 @@
 ----------------------------------------------------------------------
 
 
-module GabDecker.Authorization exposing (authorization, useSimulator)
+module GabDecker.Authorization exposing
+    ( authorization
+    , defaultStyleOption
+    , useSimulator
+    )
 
 import Dict
+import GabDecker.Types exposing (StyleOption(..))
 import Json.Decode as JD
 import OAuthMiddleware exposing (TokenAuthorization)
 import OAuthMiddleware.EncodeDecode exposing (authorizationDecoder)
@@ -25,6 +30,13 @@ import OAuthMiddleware.EncodeDecode exposing (authorizationDecoder)
 useSimulator : Bool
 useSimulator =
     False
+
+
+{-| The default `StyleOption` for the simulator.
+-}
+defaultStyleOption : StyleOption
+defaultStyleOption =
+    LightStyle
 
 
 {-| Fill in your `clientId`, and `redirectUri` below

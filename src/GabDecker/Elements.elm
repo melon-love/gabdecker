@@ -46,6 +46,7 @@ import Element
         , width
         )
 import Element.Font as Font
+import GabDecker.Authorization exposing (defaultStyleOption)
 import GabDecker.Types
     exposing
         ( IconUrls
@@ -163,8 +164,14 @@ defaultSettings =
     , here = Time.utc
     , windowWidth = 1260
     , windowHeight = 1024
-    , styleOption = LightStyle
-    , style = lightStyle
+    , styleOption = defaultStyleOption
+    , style =
+        case defaultStyleOption of
+            LightStyle ->
+                lightStyle
+
+            _ ->
+                darkStyle
     }
 
 
