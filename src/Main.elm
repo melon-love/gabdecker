@@ -1918,7 +1918,7 @@ receiveImageUpload file result model =
                     setDialogError
                         (Just <|
                             "Error uploading image: "
-                                ++ File.name file
+                                ++ (truncateString 20 <| File.name file)
                         )
                         (setDialogInputs
                             (\inputs ->
@@ -1934,6 +1934,15 @@ receiveImageUpload file result model =
 
         _ ->
             model |> withNoCmd
+
+
+truncateString : Int -> String -> String
+truncateString maxlen string =
+    if String.length string <= maxlen then
+        string
+
+    else
+        String.left maxlen string ++ "..."
 
 
 removeFeedError : FeedType -> Model -> ( Model, Cmd Msg )
