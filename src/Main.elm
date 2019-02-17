@@ -54,6 +54,8 @@ import Element.Font as Font
 import Element.Input as Input exposing (button)
 import Element.Keyed as Keyed
 import Element.Lazy as Lazy
+import File exposing (File)
+import File.Select as Select
 import Gab
 import Gab.EncodeDecode as ED
 import Gab.Types
@@ -190,6 +192,12 @@ type DialogType
     | ReceiveFeedErrorDialog (List ReceiveFeedError)
 
 
+type alias PostImage =
+    { file : File
+    , url : Maybe String
+    }
+
+
 type alias DialogInputs =
     { feedTypes : List FeedType
     , feedSets : List (FeedSet Msg)
@@ -201,6 +209,7 @@ type alias DialogInputs =
     , dialogError : Maybe String
     , dialogInput : String
     , postInput : String
+    , postImages : List PostImage
     , feedSetsInput : String
     , fontSizeInput : String
     , columnWidthInput : String
@@ -222,6 +231,7 @@ initialDialogInputs =
     , dialogError = Nothing
     , dialogInput = ""
     , postInput = ""
+    , postImages = []
     , feedSetsInput = ""
     , fontSizeInput = String.fromFloat defaultFontSize
     , columnWidthInput = String.fromInt defaultColumnWidth
@@ -319,6 +329,9 @@ type Msg
     | RestoreFeedTypes
     | DialogInput String
     | PostInput String
+    | ChoosePostImage
+    | ReceiveFile File
+    | ReceiveFileUrl File String
     | PostButton FeedType WhichPostButton
     | RestoreFeedSets
     | SetFeedSetsInput String
@@ -1209,6 +1222,11 @@ setPostButton feedType whichPost model =
             model |> withNoCmd
 
 
+imageMimeTypes : List String
+imageMimeTypes =
+    [ "image/png", "image/jpg", "image/gif" ]
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -1628,6 +1646,41 @@ update msg model =
 
         PostInput postInput ->
             setPostInput postInput model |> withNoCmd
+
+        ChoosePostImage ->
+            model |> withCmd (Select.file imageMimeTypes ReceiveFile)
+
+        ReceiveFile file ->
+            let
+                images =
+                    List.concat
+                        [ dialogInputs.postImages
+                        , [ PostImage file Nothing ]
+                        ]
+            in
+            { model
+                | dialogInputs =
+                    { dialogInputs
+                        | postImages = images
+                    }
+            }
+                |> withCmds
+                    [ Task.perform (ReceiveFileUrl file) <|
+                        File.toUrl file
+                    ]
+
+        ReceiveFileUrl file url ->
+            let
+                images =
+                    LE.setIf (\image -> image.file == file)
+                        (PostImage file <| Just url)
+                        dialogInputs.postImages
+            in
+            { model
+                | dialogInputs =
+                    { dialogInputs | postImages = images }
+            }
+                |> withNoCmd
 
         PostButton feedType whichButton ->
             setPostButton feedType whichButton model
@@ -5197,12 +5250,12 @@ newPostDialog responseType dialogInputs settings =
                 CommentOnPost p t ->
                     ( Just p, CommentButton, t )
 
-        renderIcon icon msg title alt dontHover =
+        renderIcon icon msg title alt alwaysActive dontHover =
             let
                 buttonImage =
                     widthImage (getIconUrl style icon) alt iconHeight
             in
-            if dialogInputs.postInput == "" then
+            if not alwaysActive && dialogInputs.postInput == "" then
                 buttonImage
 
             else
@@ -5212,8 +5265,11 @@ newPostDialog responseType dialogInputs settings =
                     msg
                     buttonImage
 
+        chooseImageButton =
+            renderIcon .camera ChoosePostImage "Choose Image" "Choose" True False
+
         postButton =
-            renderIcon .edit MakePost "Post" "Post" False
+            renderIcon .edit MakePost "Post" "Post" False False
 
         w =
             min (settings.windowWidth * 3 // 4) (scaleFontSize baseFontSize 40)
@@ -5304,7 +5360,8 @@ newPostDialog responseType dialogInputs settings =
                 ]
             ]
         , row [ width Element.fill ]
-            [ el [ Element.alignRight ] postButton
+            [ chooseImageButton
+            , el [ Element.alignRight ] postButton
             ]
         ]
 

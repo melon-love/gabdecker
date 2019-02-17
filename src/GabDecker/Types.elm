@@ -223,7 +223,8 @@ type alias Styles =
 
 
 type alias IconUrls =
-    { close : String
+    { camera : String
+    , close : String
     , comment : String
     , dislike : String
     , edit : String

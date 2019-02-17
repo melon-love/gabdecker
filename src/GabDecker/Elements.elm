@@ -261,7 +261,8 @@ widthImage src description w =
 
 iconUrls : IconUrls
 iconUrls =
-    { close = "cancel.svg"
+    { camera = "photo-camera.svg"
+    , close = "cancel.svg"
     , comment = "chat-2.svg"
     , dislike = "dislike.svg"
     , edit = "edit.svg"
