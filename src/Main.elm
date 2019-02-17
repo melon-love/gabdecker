@@ -1649,8 +1649,7 @@ update msg model =
             setDialogInput username model |> withNoCmd
 
         PostInput postInput ->
-            setDialogError Nothing
-                (setPostInput postInput model)
+            setPostInput postInput model
                 |> withNoCmd
 
         ChoosePostImage ->
