@@ -5219,7 +5219,8 @@ newPostDialog responseType dialogInputs settings =
             min (settings.windowWidth * 3 // 4) (scaleFontSize baseFontSize 40)
 
         h =
-            w * settings.windowHeight // settings.windowWidth
+            max (settings.windowHeight * 3 // 4)
+                (w * settings.windowHeight // settings.windowWidth)
     in
     column (dialogAttributes settings)
         [ dialogTitleBar style baseFontSize "Post"
@@ -5255,32 +5256,37 @@ newPostDialog responseType dialogInputs settings =
                             Element.none
 
                         Just post ->
-                            postRow
-                                { settings | columnWidth = w - 10 }
-                                feedType
-                                False
-                                { id = ""
-                                , published_at = ""
-                                , type_ = "post"
-                                , actuser = post.user
-                                , post =
-                                    { post
-                                        | body_html =
-                                            post.body_html_summary
-                                        , body =
-                                            truncatePost post.body
-                                        , related =
-                                            RelatedPosts
-                                                { parent = Nothing
-                                                , replies = []
-                                                }
-                                        , is_quote = False
-                                        , is_reply = False
-                                        , embed = Nothing
-                                        , attachment = NoAttachment
+                            el
+                                [ height <| Element.maximum (h // 2) Element.shrink
+                                , Element.scrollbarY
+                                ]
+                            <|
+                                postRow
+                                    { settings | columnWidth = w - 10 }
+                                    feedType
+                                    False
+                                    { id = ""
+                                    , published_at = ""
+                                    , type_ = "post"
+                                    , actuser = post.user
+                                    , post =
+                                        { post
+                                            | body_html =
+                                                post.body_html_summary
+                                            , body =
+                                                truncatePost post.body
+                                            , related =
+                                                RelatedPosts
+                                                    { parent = Nothing
+                                                    , replies = []
+                                                    }
+                                            , is_quote = False
+                                            , is_reply = False
+                                            , embed = Nothing
+                                            , attachment = NoAttachment
+                                        }
                                     }
-                                }
-                                False
+                                    False
                 , row [ height Element.fill ]
                     [ Input.multiline
                         [ width <| px w
