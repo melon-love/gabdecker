@@ -3,14 +3,9 @@
 This is a place to collect things left to do for GabDecker.
 
 * Post / reply / quote
-  * Selecting an image doesn't work on mobile.
-    It never even notices that the image has been selected.
-  * Need to encode the post as HTML, so that the paragraph breaks
-    don't disappear when you edit it on Gab.com.
   * Auto-complete @username from a list of known usernames.
     These are already gathered for user columns. Gather them also from
     feeds, if it doesn't take too long, which I doubt it will.
-* Delete button on your own posts.
 * Magic numbers for scrolling horizontally depend on font size.
 * URLs:
   /feed/<feed> opens and scrolls to feed.
@@ -20,7 +15,6 @@ This is a place to collect things left to do for GabDecker.
 * Quoting a comment doesn't display correctly.
   https://gab.com/DeplorableBuilder/posts/44491314
   It's not "Satoshi commented". It's "StarXO commented on Satoshi's post"
-* When somebody "mentioned you in a comment", include an interaction row.
 * Figure out the proper way to compute `repostString`. It's wrong now.
   repost, repost a comment, quote, quote a comment, comment, comment on a comment.
 * If a comment has an empty body and only a photo, display the photo, or
@@ -30,9 +24,7 @@ This is a place to collect things left to do for GabDecker.
 * Errors are confusing on liking or reposting a Gab from a private
   account.  https://gab.com/chadbigly/posts/47431352
 * Make errors on fetching a feed easier to understand.
-  1. Multiple errors in one dialog.
-  2. Preference to auto-retry some number of times with a delay betewen them.
-  3. Maybe return x-ratelimit-limit and x-ratelimit-remaining return headers.
+  Maybe show x-ratelimit-limit and x-ratelimit-remaining return headers.
 * It looks like the notification API doesn't return comments on comments.
   Looks like it doesn't return comments either, unless they get liked.
   It should. Verify this, then report it.
@@ -109,6 +101,7 @@ This is a place to collect things left to do for GabDecker.
   1) groups & topics
   2) multiple accounts
   3) automatic loading
+  4) RSS feeds
   Warn on the screen when expiration date approaches.
 * Create an elm-ui styles mechanism, and a library of common idioms that uses it.
 
@@ -124,6 +117,7 @@ This is a place to collect things left to do for GabDecker.
 * Fetch the comments for a post.
 * Search for user IDs matching a prefix.
   Need this while typing a post.
+* Delete post.
 * HTML posts.
 * Group and Topic Feeds.
 * Comments in user feeds.

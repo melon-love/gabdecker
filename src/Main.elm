@@ -204,7 +204,6 @@ type alias DialogInputs =
     , feedSets : List (FeedSet Msg)
     , currentFeedSet : String
     , isLastClosedFeed : Bool
-    , loggedInUser : Maybe String
     , icons : Icons
     , showDialog : DialogType
     , dialogError : Maybe String
@@ -226,7 +225,6 @@ initialDialogInputs =
     , feedSets = []
     , currentFeedSet = ""
     , isLastClosedFeed = False
-    , loggedInUser = Nothing
     , icons = Types.emptyIcons
     , showDialog = NoDialog
     , dialogError = Nothing
@@ -572,6 +570,16 @@ init flags url key =
                 useSimulator =
                     Auth.useSimulator
 
+                settings =
+                    { defaultSettings
+                        | loggedInUser =
+                            if useSimulator then
+                                Just "billstclair"
+
+                            else
+                                Nothing
+                    }
+
                 redirectBackUri =
                     locationToRedirectBackUri url
 
@@ -604,7 +612,7 @@ init flags url key =
             in
             { useSimulator = useSimulator
             , styleOption = LightStyle
-            , settings = defaultSettings
+            , settings = settings
             , backend = backend
             , url = url
             , key = key
@@ -850,7 +858,7 @@ receiveToken mv model =
                                 RealBackend savedToken.token
 
                         feeds =
-                            feedTypesToFeeds model.dialogInputs.loggedInUser
+                            feedTypesToFeeds model.settings.loggedInUser
                                 backend
                                 model.dialogInputs.feedTypes
                                 0
@@ -895,7 +903,7 @@ restoreFeedTypes feedTypes model =
         backend ->
             let
                 feeds =
-                    feedTypesToFeeds model.dialogInputs.loggedInUser
+                    feedTypesToFeeds model.settings.loggedInUser
                         backend
                         feedTypes
                         0
@@ -939,7 +947,7 @@ receiveFeedTypes value model =
                                     ( model.feeds, Cmd.none )
 
                                 backend ->
-                                    ( feedTypesToFeeds model.dialogInputs.loggedInUser
+                                    ( feedTypesToFeeds model.settings.loggedInUser
                                         backend
                                         types
                                         0
@@ -1236,6 +1244,9 @@ update msg model =
     let
         dialogInputs =
             model.dialogInputs
+
+        settings =
+            model.settings
     in
     case msg of
         Noop ->
@@ -1275,8 +1286,8 @@ update msg model =
 
                 Ok user ->
                     { model
-                        | dialogInputs =
-                            { dialogInputs
+                        | settings =
+                            { settings
                                 | loggedInUser = Just user.username
                             }
                     }
@@ -1308,10 +1319,6 @@ update msg model =
                     res
 
         WindowResize w h ->
-            let
-                settings =
-                    model.settings
-            in
             { model
                 | settings =
                     { settings | windowWidth = w, windowHeight = h }
@@ -1319,10 +1326,6 @@ update msg model =
                 |> withNoCmd
 
         Here zone ->
-            let
-                settings =
-                    model.settings
-            in
             { model | settings = { settings | here = zone } }
                 |> withNoCmd
 
@@ -1617,9 +1620,6 @@ update msg model =
                         DarkStyle ->
                             darkStyle
 
-                settings =
-                    model.settings
-
                 newSettings =
                     { settings
                         | styleOption = option
@@ -1823,9 +1823,6 @@ update msg model =
 
         RestoreDefaultSettings ->
             let
-                settings =
-                    model.settings
-
                 newSettings =
                     { settings
                         | fontSize = defaultFontSize
@@ -2634,6 +2631,31 @@ updatePost updater feedType postid model =
         modifier lg =
             { lg | post = updater lg.post }
 
+        shouldUpdateNotification { notification } =
+            case notification.post of
+                Nothing ->
+                    False
+
+                Just post ->
+                    post.id == postid
+
+        notificationModifier gangedNotification =
+            let
+                notification =
+                    gangedNotification.notification
+            in
+            case notification.post of
+                Nothing ->
+                    gangedNotification
+
+                Just post ->
+                    { gangedNotification
+                        | notification =
+                            { notification
+                                | post = Just <| updater post
+                            }
+                    }
+
         updateLogList : LogList FeedData -> LogList FeedData
         updateLogList logList =
             case logList.data of
@@ -2646,8 +2668,14 @@ updatePost updater feedType postid model =
                                     activityLogList
                     }
 
-                _ ->
-                    logList
+                NotificationFeedData gangedNotifications ->
+                    { logList
+                        | data =
+                            NotificationFeedData <|
+                                LE.updateIf shouldUpdateNotification
+                                    notificationModifier
+                                    gangedNotifications
+                    }
 
         feeds : List (Feed Msg)
         feeds =
@@ -2987,7 +3015,7 @@ addNewFeed feedType baseFontSize model =
 
                         else
                             addit
-                                (feedTypeToFeed model.dialogInputs.loggedInUser
+                                (feedTypeToFeed model.settings.loggedInUser
                                     backend
                                     feedType
                                     model.nextId
@@ -3272,6 +3300,9 @@ receivePost result model =
     let
         dialogInputs =
             model.dialogInputs
+
+        settings =
+            model.settings
     in
     case result of
         Err _ ->
@@ -3287,7 +3318,7 @@ receivePost result model =
         Ok activityLog ->
             let
                 mdl =
-                    case dialogInputs.loggedInUser of
+                    case settings.loggedInUser of
                         Nothing ->
                             model
 
@@ -4071,8 +4102,8 @@ findFeed feedType model =
     LE.find (\f -> feedType == f.feedType) model.feeds
 
 
-addFeedChoices : DialogInputs -> List ( String, FeedType )
-addFeedChoices dialogInputs =
+addFeedChoices : DialogInputs -> Settings -> List ( String, FeedType )
+addFeedChoices dialogInputs settings =
     let
         feedTypes =
             dialogInputs.feedTypes
@@ -4087,7 +4118,7 @@ addFeedChoices dialogInputs =
             List.member NotificationsFeed feedTypes
 
         ( username, userFeed ) =
-            case dialogInputs.loggedInUser of
+            case settings.loggedInUser of
                 Nothing ->
                     ( "", False )
 
@@ -5280,7 +5311,7 @@ addFeedDialog dialogInputs settings =
             }
 
         choices =
-            addFeedChoices dialogInputs
+            addFeedChoices dialogInputs settings
 
         data =
             addUserFeedRow :: List.map makeRow choices
@@ -6580,10 +6611,13 @@ postCreatedLink style post here =
     newTabLink style (postUrl post) <| iso8601ToString here post.created_at
 
 
-notificationTypeToDescription : Style -> NotificationType -> Bool -> Notification -> List User -> Element Msg
-notificationTypeToDescription style typ isComment notification otherUsers =
+notificationTypeToDescription : Settings -> NotificationType -> Bool -> Notification -> List User -> Element Msg
+notificationTypeToDescription settings typ isComment notification otherUsers =
     -- "comment", "follow", "like", "mention", "repost", "comment-reply"
     let
+        style =
+            settings.style
+
         postOrComment =
             if isComment then
                 "comment"
@@ -6638,12 +6672,43 @@ notificationTypeToDescription style typ isComment notification otherUsers =
                 ""
 
         MentionNotification ->
-            notificationDescriptionLine style
-                actuser
-                " mentioned you "
-                maybePost
-                -- Sometimes this should be "comment"
-                ("in a " ++ postOrComment)
+            let
+                ( commentedOn, maybeComment ) =
+                    case maybePost of
+                        Nothing ->
+                            ( False, Nothing )
+
+                        Just post ->
+                            case post.related of
+                                RelatedPosts { parent } ->
+                                    case parent of
+                                        Nothing ->
+                                            ( False, Nothing )
+
+                                        Just pp ->
+                                            case settings.loggedInUser of
+                                                Nothing ->
+                                                    ( False, Nothing )
+
+                                                Just you ->
+                                                    ( you == pp.user.username
+                                                    , parent
+                                                    )
+            in
+            -- Sometimes this should be " commented on your post"
+            if commentedOn then
+                notificationDescriptionLine style
+                    actuser
+                    " commented on "
+                    maybeComment
+                    ("your " ++ postOrComment)
+
+            else
+                notificationDescriptionLine style
+                    actuser
+                    " mentioned you "
+                    maybePost
+                    ("in a " ++ postOrComment)
 
         UnknownNotification "comment" ->
             notificationDescriptionLine style
@@ -6910,7 +6975,7 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                 , Font.bold
                 , fillWidth
                 ]
-                [ notificationTypeToDescription style
+                [ notificationTypeToDescription settings
                     notification.type_
                     (maybeParent /= Nothing)
                     notification
@@ -6939,6 +7004,24 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                                         (postCreatedLink style post here)
                                   ]
                                 , notificationsBody settings post
+                                , case settings.loggedInUser of
+                                    -- Maybe the interaction row should
+                                    -- always be there, not just for other
+                                    -- people's posts.
+                                    Nothing ->
+                                        []
+
+                                    Just you ->
+                                        if you == post.user.username then
+                                            []
+
+                                        else
+                                            [ interactionRow style
+                                                baseFontSize
+                                                colwp
+                                                NotificationsFeed
+                                                post
+                                            ]
                                 , if notification.type_ == MentionNotification then
                                     attachmentRows cwp style post
 
@@ -6946,20 +7029,15 @@ notificationRow settings isToplevel gangedNotification isLastNew =
                                     []
                                 ]
                 ]
-            , case maybePost of
+            , case maybeParent of
+                Just pp ->
+                    notificationParentRow (cw - colpad)
+                        settings
+                        baseFontSize
+                        pp
+
                 Nothing ->
                     Element.none
-
-                Just post ->
-                    case maybeParent of
-                        Just pp ->
-                            notificationParentRow (cw - colpad)
-                                settings
-                                baseFontSize
-                                pp
-
-                        Nothing ->
-                            Element.none
             , if not isToplevel then
                 Element.none
 

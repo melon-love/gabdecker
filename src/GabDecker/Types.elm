@@ -266,4 +266,5 @@ type alias Settings =
     , windowHeight : Int
     , styleOption : StyleOption
     , style : Style
+    , loggedInUser : Maybe String
     }

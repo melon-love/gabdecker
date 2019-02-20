@@ -172,6 +172,8 @@ defaultSettings =
 
             _ ->
                 darkStyle
+    , loggedInUser =
+        Nothing
     }
 
 
