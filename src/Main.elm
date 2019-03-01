@@ -123,6 +123,7 @@ import Html.Attributes as Attributes exposing (class, href, rel)
 import Html.Events exposing (onClick)
 import Html.Parser as HP
 import Http exposing (Error(..))
+import IdSearch
 import Iso8601
 import Json.Decode as JD exposing (Decoder, Value)
 import Json.Encode as JE
