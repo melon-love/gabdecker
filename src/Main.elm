@@ -21,6 +21,7 @@ import Browser.Events as Events
 import Browser.Navigation as Navigation exposing (Key)
 import Char
 import Cmd.Extra exposing (withCmd, withCmds, withNoCmd)
+import CustomElement.TextAreaTracker as Tracker
 import DateFormat as DF
 import Dict exposing (Dict)
 import Element
@@ -200,6 +201,17 @@ type alias PostImage =
     }
 
 
+type alias UserChoice =
+    { name : String
+    , username : String
+    , picture_url : String
+    }
+
+
+type alias UserChoiceTable =
+    IdSearch.Table UserChoice
+
+
 type alias DialogInputs =
     { feedTypes : List FeedType
     , feedSets : List (FeedSet Msg)
@@ -210,6 +222,8 @@ type alias DialogInputs =
     , dialogError : Maybe String
     , dialogInput : String
     , postInput : String
+    , completions : List UserChoice
+    , coordinates : Maybe Tracker.Coordinates
     , postImages : List PostImage
     , feedSetsInput : String
     , fontSizeInput : String
@@ -231,6 +245,8 @@ initialDialogInputs =
     , dialogError = Nothing
     , dialogInput = ""
     , postInput = ""
+    , completions = []
+    , coordinates = Nothing
     , postImages = []
     , feedSetsInput = ""
     , fontSizeInput = String.fromFloat defaultFontSize
@@ -260,6 +276,9 @@ type alias Model =
     , receivedScopes : List String
     , tokenAuthorization : Maybe TokenAuthorization
     , users : Dict String User
+    , userChoices : UserChoiceTable
+    , triggerSelection : Int
+    , triggerCoordinates : Int
     , nextId : Int
     , feeds : List (Feed Msg)
     , loadingFeeds : Set String
@@ -306,6 +325,8 @@ type Msg
     | LoadMore UpdateType (Feed Msg)
     | LoadAll
     | NewPost PostResponseType
+    | OnNewPostSelection Tracker.Selection
+    | OnNewPostCoordinates Tracker.Coordinates
     | MakePost
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
@@ -416,8 +437,40 @@ updateUser user model =
                 model
 
             else
+                let
+                    userChoices =
+                        model.userChoices
+
+                    insertUserChoice _ =
+                        IdSearch.insert
+                            { name = user.name
+                            , username = user.username
+                            , picture_url = user.picture_url
+                            }
+                            userChoices
+
+                    newUserChoices =
+                        case
+                            LE.find (.username >> (==) username) <|
+                                IdSearch.lookup username userChoices
+                        of
+                            Nothing ->
+                                insertUserChoice ()
+
+                            Just userChoice ->
+                                if
+                                    (userChoice.username == user.username)
+                                        && (userChoice.name == user.name)
+                                        && (userChoice.picture_url == user.picture_url)
+                                then
+                                    userChoices
+
+                                else
+                                    insertUserChoice ()
+                in
                 { model
                     | users = Dict.insert username user users
+                    , userChoices = newUserChoices
                 }
     in
     case
@@ -441,8 +494,11 @@ updateUser user model =
 
         Just _ ->
             let
+                dialogInputs =
+                    mdl.dialogInputs
+
                 icons =
-                    mdl.dialogInputs.icons
+                    dialogInputs.icons
 
                 updateUserIcons () =
                     let
@@ -451,9 +507,6 @@ updateUser user model =
                                 | user =
                                     Dict.insert username url icons.user
                             }
-
-                        dialogInputs =
-                            mdl.dialogInputs
                     in
                     ( { mdl
                         | dialogInputs = { dialogInputs | icons = newIcons }
@@ -629,6 +682,11 @@ init flags url key =
             , receivedScopes = scopes
             , tokenAuthorization = authorization
             , users = Dict.empty
+            , userChoices =
+                IdSearch.makeTable 3
+                    (.username >> String.toLower >> List.singleton)
+            , triggerSelection = 0
+            , triggerCoordinates = 0
             , nextId = List.length feeds
             , feeds = feeds
             , loadingFeeds = Set.empty
@@ -1179,11 +1237,23 @@ setDialogInput dialogInput model =
 
 
 setPostInput : String -> Model -> Model
-setPostInput postInput model =
+setPostInput postInput mdl =
+    let
+        model =
+            if String.contains "@" postInput then
+                { mdl
+                    | triggerSelection = mdl.triggerSelection + 1
+                }
+
+            else
+                mdl
+    in
     setDialogInputs
         (\dialogInputs ->
             { dialogInputs
                 | postInput = postInput
+                , completions = []
+                , coordinates = Nothing
             }
         )
         model
@@ -1375,6 +1445,19 @@ update msg model =
         NewPost responseType ->
             setShowDialog (NewPostDialog responseType) Nothing model
                 |> withCmd (focusId postInputId)
+
+        OnNewPostSelection selection ->
+            onNewPostSelection selection model
+
+        OnNewPostCoordinates coordinates ->
+            { model
+                | dialogInputs =
+                    { dialogInputs
+                        | coordinates = Just coordinates
+                        , completions = dialogInputs.completions
+                    }
+            }
+                |> withNoCmd
 
         MakePost ->
             makePost model
@@ -1650,8 +1733,7 @@ update msg model =
             setDialogInput username model |> withNoCmd
 
         PostInput postInput ->
-            setPostInput postInput model
-                |> withNoCmd
+            setPostInput postInput model |> withNoCmd
 
         ChoosePostImage ->
             setDialogError Nothing model
@@ -3059,8 +3141,88 @@ emptyPostForm =
     }
 
 
-{-| TODO
--}
+findAtName : Int -> String -> Maybe String
+findAtName cursor string =
+    let
+        beginning =
+            String.left cursor string
+                |> String.toLower
+                |> String.replace "\n" " "
+    in
+    if
+        String.startsWith "@" beginning
+            && not (String.contains " " beginning)
+    then
+        Just <| String.dropLeft 1 beginning
+
+    else
+        let
+            res =
+                SE.rightOfBack " @" beginning
+        in
+        if res /= "" && not (String.contains " " res) then
+            Just res
+
+        else
+            Nothing
+
+
+trimCompletions : String -> List UserChoice -> List UserChoice
+trimCompletions prefix choices =
+    let
+        tuples =
+            List.map
+                (\choice ->
+                    ( ( if String.startsWith prefix choice.username then
+                            0
+
+                        else
+                            1
+                      , choice.username
+                      )
+                    , choice
+                    )
+                )
+                choices
+    in
+    List.sortBy Tuple.first tuples
+        |> List.map Tuple.second
+
+
+onNewPostSelection : Tracker.Selection -> Model -> ( Model, Cmd Msg )
+onNewPostSelection selection model =
+    let
+        cursor =
+            selection.selectionEnd
+
+        dialogInputs =
+            model.dialogInputs
+    in
+    if cursor /= selection.selectionStart then
+        model |> withNoCmd
+
+    else
+        case findAtName cursor dialogInputs.postInput of
+            Nothing ->
+                model |> withNoCmd
+
+            Just complete ->
+                case
+                    IdSearch.lookup complete model.userChoices
+                        |> trimCompletions complete
+                of
+                    [] ->
+                        model |> withNoCmd
+
+                    completions ->
+                        { model
+                            | dialogInputs =
+                                { dialogInputs | completions = completions }
+                            , triggerCoordinates = model.triggerCoordinates + 1
+                        }
+                            |> withNoCmd
+
+
 makePost : Model -> ( Model, Cmd Msg )
 makePost model =
     let
@@ -3174,7 +3336,7 @@ updateIcons logList model =
                         RelatedPosts { parent } ->
                             case parent of
                                 Nothing ->
-                                    ( m, False )
+                                    ( m2, False )
 
                                 Just p ->
                                     updateUser p.user m2
@@ -3221,7 +3383,7 @@ updateIcons logList model =
     model2
         |> withCmd
             (if needsUpdate then
-                storeIcons model2.dialogInputs.icons model
+                storeIcons model2.dialogInputs.icons model2
 
              else
                 Cmd.none
@@ -3946,6 +4108,14 @@ view model =
                         model.loadingFeeds
                         model.feeds
             )
+        , Tracker.textAreaTracker
+            [ Tracker.textAreaId postInputId
+            , Tracker.triggerSelection model.triggerSelection
+            , Tracker.onSelection OnNewPostSelection
+            , Tracker.triggerCoordinates model.triggerCoordinates
+            , Tracker.onCoordinates OnNewPostCoordinates
+            ]
+            []
         ]
     }
 
