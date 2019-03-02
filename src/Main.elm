@@ -327,6 +327,7 @@ type Msg
     | NewPost PostResponseType
     | OnNewPostSelection Tracker.Selection
     | OnNewPostCoordinates Tracker.Coordinates
+    | CompletePostChoice UserChoice
     | MakePost
     | CloseFeed (Feed Msg)
     | MoveFeedLeft FeedType
@@ -439,38 +440,16 @@ updateUser user model =
             else
                 let
                     userChoices =
-                        model.userChoices
-
-                    insertUserChoice _ =
                         IdSearch.insert
                             { name = user.name
                             , username = user.username
                             , picture_url = user.picture_url
                             }
-                            userChoices
-
-                    newUserChoices =
-                        case
-                            LE.find (.username >> (==) username) <|
-                                IdSearch.lookup username userChoices
-                        of
-                            Nothing ->
-                                insertUserChoice ()
-
-                            Just userChoice ->
-                                if
-                                    (userChoice.username == user.username)
-                                        && (userChoice.name == user.name)
-                                        && (userChoice.picture_url == user.picture_url)
-                                then
-                                    userChoices
-
-                                else
-                                    insertUserChoice ()
+                            model.userChoices
                 in
                 { model
                     | users = Dict.insert username user users
-                    , userChoices = newUserChoices
+                    , userChoices = userChoices
                 }
     in
     case
@@ -684,7 +663,11 @@ init flags url key =
             , users = Dict.empty
             , userChoices =
                 IdSearch.makeTable 3
-                    (.username >> String.toLower >> List.singleton)
+                    (\user ->
+                        [ String.toLower user.username
+                        , String.toLower user.name
+                        ]
+                    )
             , triggerSelection = 0
             , triggerCoordinates = 0
             , nextId = List.length feeds
@@ -1342,7 +1325,7 @@ update msg model =
             model |> withNoCmd
 
         ReceiveLoggedInUser result ->
-            case Debug.log "ReceiveLoggedInUser" result of
+            case result of
                 Err err ->
                     { model
                         | backend = Nothing
@@ -1454,10 +1437,12 @@ update msg model =
                 | dialogInputs =
                     { dialogInputs
                         | coordinates = Just coordinates
-                        , completions = dialogInputs.completions
                     }
             }
                 |> withNoCmd
+
+        CompletePostChoice choice ->
+            completePostChoice choice model
 
         MakePost ->
             makePost model
@@ -3141,6 +3126,28 @@ emptyPostForm =
     }
 
 
+spliceInAtName : Int -> String -> String -> String
+spliceInAtName cursor atName string =
+    let
+        left =
+            String.left cursor string
+
+        right =
+            String.dropLeft cursor string
+
+        toAt =
+            if
+                String.startsWith "@" left
+                    && not (String.contains " " left)
+            then
+                "@"
+
+            else
+                SE.leftOfBack " @" left ++ " @"
+    in
+    toAt ++ atName ++ right
+
+
 findAtName : Int -> String -> Maybe String
 findAtName cursor string =
     let
@@ -3186,6 +3193,7 @@ trimCompletions prefix choices =
                 choices
     in
     List.sortBy Tuple.first tuples
+        |> List.take 5
         |> List.map Tuple.second
 
 
@@ -3221,6 +3229,33 @@ onNewPostSelection selection model =
                             , triggerCoordinates = model.triggerCoordinates + 1
                         }
                             |> withNoCmd
+
+
+completePostChoice : UserChoice -> Model -> ( Model, Cmd Msg )
+completePostChoice choice model =
+    let
+        dialogInputs =
+            model.dialogInputs
+
+        postInput =
+            case dialogInputs.coordinates of
+                Nothing ->
+                    dialogInputs.postInput
+
+                Just coordinates ->
+                    spliceInAtName coordinates.selectionEnd
+                        choice.username
+                        dialogInputs.postInput
+    in
+    { model
+        | dialogInputs =
+            { dialogInputs
+                | postInput = postInput
+                , completions = []
+                , coordinates = Nothing
+            }
+    }
+        |> withCmd (focusId postInputId)
 
 
 makePost : Model -> ( Model, Cmd Msg )
@@ -5411,13 +5446,24 @@ feedSetDialogRow style iconHeight isInstalled feedSet =
         in
         [ makeButton "Save" SaveToFeedSet .save False
         , if isLoading then
-            el [ Background.color colors.orange ] reloadButton
+            el [ isLoadingHighlight ] reloadButton
 
           else
             reloadButton
         , makeButton "Delete" DeleteFeedSet .close False
         ]
     }
+
+
+isLoadingHighlight : Attribute Msg
+isLoadingHighlight =
+    -- Border.glow colors.orange 3
+    Background.color colors.orange
+
+
+mouseOverHighlight : Style -> Element.Decoration
+mouseOverHighlight style =
+    Border.glow style.linkHover 3
 
 
 addFeedDialog : DialogInputs -> Settings -> Element Msg
@@ -5521,6 +5567,52 @@ addFeedDialog dialogInputs settings =
                 }
             ]
         ]
+
+
+chooseUserDialog : List UserChoice -> Settings -> Element Msg
+chooseUserDialog completions settings =
+    let
+        style =
+            settings.style
+
+        baseFontSize =
+            settings.fontSize
+
+        iconHeight =
+            userIconHeight baseFontSize
+
+        choiceRow choice =
+            button
+                [ fontSize baseFontSize 0.9
+                ]
+                { onPress = Just <| CompletePostChoice choice
+                , label =
+                    row []
+                        [ row []
+                            [ circularHeightImage choice.picture_url "" iconHeight
+                            , text " "
+                            ]
+                        , row
+                            [ Element.mouseOver
+                                [ mouseOverHighlight style ]
+                            , Font.color style.link
+                            ]
+                            [ text choice.name
+                            , text " (@"
+                            , text choice.username
+                            , text ")"
+                            ]
+                        ]
+                }
+    in
+    column
+        [ padding 5
+        , Border.width 1
+        , spacing 5
+        , Background.color style.background
+        ]
+    <|
+        List.map choiceRow completions
 
 
 type WhichPostButton
@@ -5707,12 +5799,39 @@ newPostDialog responseType dialogInputs settings =
                                         }
                                     }
                                     False
-                , row [ height Element.fill ]
+                , row
+                    [ height Element.fill
+                    , Element.inFront <|
+                        case dialogInputs.coordinates of
+                            Nothing ->
+                                Element.none
+
+                            Just coordinates ->
+                                let
+                                    caret =
+                                        coordinates.caretCoordinates
+                                in
+                                el
+                                    [ paddingEach
+                                        { zeroes
+                                            | top =
+                                                -- May need to put this above
+                                                caret.top
+                                                    + round (1.5 * baseFontSize)
+                                        }
+                                    , centerX
+                                    ]
+                                <|
+                                    chooseUserDialog dialogInputs.completions
+                                        settings
+                    ]
                     [ Input.multiline
                         [ width <| px w
                         , height Element.fill
                         , idAttribute postInputId
                         , Background.color <| style.background
+                        , Attributes.value dialogInputs.postInput
+                            |> Element.htmlAttribute
                         ]
                         { onChange = PostInput
                         , text = dialogInputs.postInput
@@ -5844,15 +5963,17 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
     <|
         List.concat
             [ [ row
-                    [ centerX
-                    , Background.color
-                        (if isLoading then
-                            colors.orange
+                    (List.concat
+                        [ [ centerX
+                          , Background.color style.headerBackground
+                          ]
+                        , if isLoading then
+                            [ isLoadingHighlight ]
 
-                         else
-                            style.headerBackground
-                        )
-                    ]
+                          else
+                            []
+                        ]
+                    )
                     [ renderIcon .reload
                         LoadAll
                         "Refresh All Feeds"
@@ -6238,7 +6359,7 @@ feedColumn isLoading settings icons feed =
                         [ centerX ]
                         [ el
                             (if isLoading then
-                                [ Background.color colors.orange ]
+                                [ isLoadingHighlight ]
 
                              else
                                 []
@@ -6714,7 +6835,7 @@ postUserRow style baseFontSize colwp here post =
                     (\u -> text <| embiggen u.name)
                     ""
                     user
-                , text <| " (" ++ username ++ ")"
+                , text <| " (@" ++ username ++ ")"
                 ]
             , case post.group of
                 Just { id, title } ->
@@ -8009,7 +8130,7 @@ generalButton attributes dontHover style title msg label =
                 []
 
               else
-                [ Element.mouseOver [ Background.color style.linkHover ] ]
+                [ Element.mouseOver [ mouseOverHighlight style ] ]
             ]
         )
         { onPress = Just msg
