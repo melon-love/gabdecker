@@ -224,6 +224,7 @@ type alias DialogInputs =
     , postInput : String
     , completions : List UserChoice
     , coordinates : Maybe Tracker.Coordinates
+    , postSelection : ( Int, Int )
     , postImages : List PostImage
     , feedSetsInput : String
     , fontSizeInput : String
@@ -247,6 +248,7 @@ initialDialogInputs =
     , postInput = ""
     , completions = []
     , coordinates = Nothing
+    , postSelection = ( 0, 0 )
     , postImages = []
     , feedSetsInput = ""
     , fontSizeInput = String.fromFloat defaultFontSize
@@ -3126,7 +3128,7 @@ emptyPostForm =
     }
 
 
-spliceInAtName : Int -> String -> String -> String
+spliceInAtName : Int -> String -> String -> ( String, Int )
 spliceInAtName cursor atName string =
     let
         left =
@@ -3145,7 +3147,7 @@ spliceInAtName cursor atName string =
             else
                 SE.leftOfBack " @" left ++ " @"
     in
-    toAt ++ atName ++ right
+    ( toAt ++ atName ++ right, String.length toAt + String.length atName )
 
 
 findAtName : Int -> String -> Maybe String
@@ -3237,20 +3239,28 @@ completePostChoice choice model =
         dialogInputs =
             model.dialogInputs
 
-        postInput =
+        ( postInput, postSelection ) =
             case dialogInputs.coordinates of
                 Nothing ->
-                    dialogInputs.postInput
+                    ( dialogInputs.postInput, dialogInputs.postSelection )
 
                 Just coordinates ->
-                    spliceInAtName coordinates.selectionEnd
-                        choice.username
-                        dialogInputs.postInput
+                    let
+                        ( input, start ) =
+                            spliceInAtName coordinates.selectionEnd
+                                choice.username
+                                dialogInputs.postInput
+
+                        ( _, count ) =
+                            dialogInputs.postSelection
+                    in
+                    ( input, ( start, count + 1 ) )
     in
     { model
         | dialogInputs =
             { dialogInputs
                 | postInput = postInput
+                , postSelection = postSelection
                 , completions = []
                 , coordinates = Nothing
             }
@@ -4143,8 +4153,13 @@ view model =
                         model.loadingFeeds
                         model.feeds
             )
-        , Tracker.textAreaTracker
+        , let
+            ( start, count ) =
+                dialogInputs.postSelection
+          in
+          Tracker.textAreaTracker
             [ Tracker.textAreaId postInputId
+            , Tracker.setSelection start start count
             , Tracker.triggerSelection model.triggerSelection
             , Tracker.onSelection OnNewPostSelection
             , Tracker.triggerCoordinates model.triggerCoordinates

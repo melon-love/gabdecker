@@ -7,7 +7,7 @@
     "dependencies": {
         "direct": {
             "Janiczek/cmd-extra": "1.0.0",
-            "billstclair/elm-custom-element": "1.3.0",
+            "billstclair/elm-custom-element": "1.4.0",
             "billstclair/elm-id-search": "1.0.0",
             "billstclair/elm-localstorage": "6.0.3",
             "billstclair/elm-oauth-middleware": "3.0.0",
