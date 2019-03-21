@@ -269,7 +269,7 @@ notifications backend tagger before =
                 notificationsLogDecoder
 
 
-upvotePost : Backend -> FeedTagger Success msg -> Int -> Bool -> Cmd msg
+upvotePost : Backend -> FeedTagger Success msg -> String -> Bool -> Cmd msg
 upvotePost backend tagger postid unupvote =
     case backend of
         RealBackend token ->
@@ -279,7 +279,7 @@ upvotePost backend tagger postid unupvote =
             unimplemented tagger
 
 
-downvotePost : Backend -> FeedTagger Success msg -> Int -> Bool -> Cmd msg
+downvotePost : Backend -> FeedTagger Success msg -> String -> Bool -> Cmd msg
 downvotePost backend tagger postid undownvote =
     case backend of
         RealBackend token ->
@@ -289,7 +289,7 @@ downvotePost backend tagger postid undownvote =
             unimplemented tagger
 
 
-repost : Backend -> FeedTagger Success msg -> Int -> Bool -> Cmd msg
+repost : Backend -> FeedTagger Success msg -> String -> Bool -> Cmd msg
 repost backend tagger postid unrepost =
     case backend of
         RealBackend token ->

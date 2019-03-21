@@ -126,7 +126,7 @@ emptyIcons =
 
 isEmptyUser : User -> Bool
 isEmptyUser user =
-    user.id == 0
+    user.id == ""
 
 
 isUserProfile : User -> Bool
@@ -137,7 +137,7 @@ isUserProfile user =
 
 emptyUser : String -> User
 emptyUser username =
-    { id = 0
+    { id = ""
     , name = "@" ++ username
     , username = username
     , picture_url = ""

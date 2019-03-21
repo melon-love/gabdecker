@@ -390,9 +390,9 @@ type Msg
 
 
 type Operation
-    = UpvoteOperation FeedType Int Bool
-    | DownvoteOperation FeedType Int Bool
-    | RepostOperation FeedType Int
+    = UpvoteOperation FeedType String Bool
+    | DownvoteOperation FeedType String Bool
+    | RepostOperation FeedType String
 
 
 lookupUserIconUrl : Style -> String -> Icons -> String
@@ -817,7 +817,7 @@ postUrl post =
     "https://gab.com/"
         ++ post.user.username
         ++ "/posts/"
-        ++ String.fromInt post.id
+        ++ post.id
 
 
 feedTypeDescription : Style -> Int -> FeedType -> Float -> Icons -> Element Msg
@@ -2692,7 +2692,7 @@ receiveOperation operation result model =
                 model |> withNoCmd
 
 
-updatePost : (Post -> Post) -> FeedType -> Int -> Model -> Model
+updatePost : (Post -> Post) -> FeedType -> String -> Model -> Model
 updatePost updater feedType postid model =
     let
         shouldUpdate lg =
@@ -3285,10 +3285,10 @@ makePost model =
                             ( Nothing, False )
 
                         QuotePost qp _ ->
-                            ( Just <| String.fromInt qp.id, True )
+                            ( Just qp.id, True )
 
                         CommentOnPost qp _ ->
-                            ( Just <| String.fromInt qp.id, False )
+                            ( Just qp.id, False )
 
                 _ ->
                     ( Nothing, False )
@@ -6878,7 +6878,7 @@ postUserRow style baseFontSize colwp here post =
                     "https://gab.com/"
                         ++ username
                         ++ "/posts/"
-                        ++ String.fromInt post.id
+                        ++ post.id
               in
               row []
                 [ newTabLink style url <|
