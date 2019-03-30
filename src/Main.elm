@@ -8108,7 +8108,7 @@ loginPage settings =
                             "Gabriel Tannd"
                         ]
                     , row [ centerX ]
-                        [ text <| chars.copyright ++ " 2018 Bill St. Clair" ]
+                        [ text <| chars.copyright ++ " 2018-2019 Bill St. Clair" ]
                     , row [ centerX ]
                         [ simpleLink lightStyle
                             "https://github.com/melon-love/gabdecker"
