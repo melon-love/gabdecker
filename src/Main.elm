@@ -216,6 +216,7 @@ type alias DialogInputs =
     { feedTypes : List FeedType
     , feedSets : List (FeedSet Msg)
     , currentFeedSet : String
+    , feedSetColumnWidths : Dict String String
     , isLastClosedFeed : Bool
     , icons : Icons
     , showDialog : DialogType
@@ -240,6 +241,7 @@ initialDialogInputs =
     { feedTypes = initialFeedTypes
     , feedSets = []
     , currentFeedSet = ""
+    , feedSetColumnWidths = Dict.empty
     , isLastClosedFeed = False
     , icons = Types.emptyIcons
     , showDialog = NoDialog
@@ -371,6 +373,7 @@ type Msg
     | ClearFeeds
     | NewFeedSet
     | SetCurrentFeedSet String
+    | SetFeedSetColumnWidth String String
     | ReloadFeedSet String
     | SaveToFeedSet String
     | RestoreFromFeedSet String
@@ -1210,6 +1213,18 @@ setCurrentFeedSet currentFeedSet model =
         model
 
 
+setFieldSetColumnWidth : String -> String -> Model -> Model
+setFieldSetColumnWidth name width model =
+    setDialogInputs
+        (\dialogInputs ->
+            { dialogInputs
+                | feedSetColumnWidths =
+                    Dict.insert name width dialogInputs.feedSetColumnWidths
+            }
+        )
+        model
+
+
 setDialogInput : String -> Model -> Model
 setDialogInput dialogInput model =
     setDialogInputs
@@ -1642,9 +1657,16 @@ update msg model =
                     |> withNoCmd
 
         FeedSets ->
-            setShowDialog FeedSetsDialog
-                Nothing
-                (setCurrentFeedSet "" model)
+            { model
+                | dialogInputs =
+                    { dialogInputs
+                        | showDialog = FeedSetsDialog
+                        , dialogError = Nothing
+                        , currentFeedSet = ""
+                        , feedSetColumnWidths =
+                            feedSetColumnWidths dialogInputs.feedSets
+                    }
+            }
                 |> withCmd (focusId newFeedSetInputId)
 
         SaveFeedTypes ->
@@ -1795,7 +1817,11 @@ update msg model =
                                 Nothing
                                 { model
                                     | dialogInputs =
-                                        { dialogInputs | feedSets = feedSets }
+                                        { dialogInputs
+                                            | feedSets = feedSets
+                                            , feedSetColumnWidths =
+                                                feedSetColumnWidths feedSets
+                                        }
                                 }
                     in
                     mdl |> withCmd (saveFeedSets feedSets mdl)
@@ -1831,6 +1857,9 @@ update msg model =
 
         SetCurrentFeedSet name ->
             setCurrentFeedSet name model |> withNoCmd
+
+        SetFeedSetColumnWidth name width ->
+            setFieldSetColumnWidth name width model |> withNoCmd
 
         ReloadFeedSet name ->
             reloadFeedSet name model
@@ -1957,6 +1986,23 @@ update msg model =
 
         ReceivePost result ->
             receivePost result model
+
+
+feedSetColumnWidths : List (FeedSet msg) -> Dict String String
+feedSetColumnWidths feedSets =
+    List.map
+        (\feedSet ->
+            ( feedSet.name
+            , case feedSet.columnWidth of
+                Nothing ->
+                    ""
+
+                Just w ->
+                    String.fromInt w
+            )
+        )
+        feedSets
+        |> Dict.fromList
 
 
 {-| TODO
@@ -2334,6 +2380,7 @@ saveSettings model =
                     if
                         (size == settings.fontSize)
                             && (width == settings.columnWidth)
+                            && (width == settings.defaultColumnWidth)
                     then
                         model |> withNoCmd
 
@@ -2343,6 +2390,7 @@ saveSettings model =
                                 { settings
                                     | fontSize = max 10 size
                                     , columnWidth = max 100 width
+                                    , defaultColumnWidth = max 100 width
                                 }
 
                             dialogInputs =
@@ -2423,6 +2471,31 @@ reloadFeedSet name model =
 saveToFeedSet : String -> Model -> ( Model, Cmd Msg )
 saveToFeedSet name model =
     let
+        oldColumnWidth =
+            case findFeedSet name model of
+                Nothing ->
+                    Nothing
+
+                Just set ->
+                    set.columnWidth
+
+        columnWidth =
+            case Dict.get name model.dialogInputs.feedSetColumnWidths of
+                Nothing ->
+                    oldColumnWidth
+
+                Just s ->
+                    if s == "" then
+                        Nothing
+
+                    else
+                        case String.toInt s of
+                            Nothing ->
+                                oldColumnWidth
+
+                            w ->
+                                w
+
         feedSet =
             { name = name
             , feedTypes = List.map .feedType model.feeds
@@ -2431,6 +2504,7 @@ saveToFeedSet name model =
                     List.map (\feed -> { feed | newPosts = 0 })
                         model.feeds
             , loadingFeeds = Set.empty
+            , columnWidth = columnWidth
             }
 
         mdl =
@@ -2453,14 +2527,29 @@ updateFeedSet feedSet model =
     setFeedSets (List.sortBy .name <| feedSet :: feedSets) model
 
 
+isFeedSetInstalled : FeedSet msg -> List FeedType -> Settings -> Bool
+isFeedSetInstalled feedSet feedTypes settings =
+    (feedTypes == feedSet.feedTypes)
+        && (case feedSet.columnWidth of
+                Nothing ->
+                    settings.columnWidth == settings.defaultColumnWidth
+
+                Just w ->
+                    w == settings.columnWidth
+           )
+
+
 restoreFromFeedSet : String -> Model -> ( Model, Cmd Msg )
 restoreFromFeedSet name model =
     let
         feedTypes =
             List.map .feedType model.feeds
 
+        settings =
+            model.settings
+
         isInstalled feedSet =
-            feedTypes == feedSet.feedTypes
+            isFeedSetInstalled feedSet feedTypes settings
 
         dialogInputs =
             model.dialogInputs
@@ -2506,6 +2595,16 @@ restoreFromFeedSet name model =
                         updateFeedTypes
                             { model
                                 | feeds = feeds
+                                , settings =
+                                    { settings
+                                        | columnWidth =
+                                            case feedSet.columnWidth of
+                                                Nothing ->
+                                                    settings.defaultColumnWidth
+
+                                                Just w ->
+                                                    w
+                                    }
                                 , dialogInputs =
                                     { dialogInputs
                                         | showDialog = NoDialog
@@ -5304,7 +5403,7 @@ feedSetChooserDialog dialogInputs settings =
             dialogInputs.feedTypes
 
         isInstalled feedSet =
-            feedTypes == feedSet.feedTypes
+            isFeedSetInstalled feedSet feedTypes settings
 
         feedSetRow feedSet =
             let
@@ -5353,7 +5452,7 @@ feedSetsDialog dialogInputs settings =
             dialogInputs.feedTypes
 
         isInstalled feedSet =
-            feedTypes == feedSet.feedTypes
+            isFeedSetInstalled feedSet feedTypes settings
     in
     column
         (dialogAttributes settings)
@@ -5376,7 +5475,7 @@ feedSetsDialog dialogInputs settings =
             [ Element.table
                 [ spacing 10, centerX ]
                 { data =
-                    List.map (feedSetDialogRow style iconHeight isInstalled)
+                    List.map (feedSetDialogRow style iconHeight isInstalled dialogInputs)
                         dialogInputs.feedSets
                 , columns =
                     [ { header = Element.none
@@ -5399,7 +5498,23 @@ feedSetsDialog dialogInputs settings =
                     , { header = Element.none
                       , width = Element.shrink
                       , view =
-                            \x -> row [ spacing 10 ] x.buttons
+                            \x ->
+                                textInput style
+                                    baseFontSize
+                                    { label = ""
+                                    , text = x.columnWidth
+                                    , scale = 4
+                                    , id = ""
+                                    , buttonTitle = ""
+                                    , doit = Noop
+                                    , saveit = SetFeedSetColumnWidth x.nameString
+                                    , placeholder = Nothing
+                                    }
+                      }
+                    , { header = Element.none
+                      , width = Element.shrink
+                      , view =
+                            \x -> row [ spacing 10, centerY ] x.buttons
                       }
                     ]
                 }
@@ -5408,19 +5523,22 @@ feedSetsDialog dialogInputs settings =
 
 
 type alias FeedSetDialogRow =
-    { name : Element Msg
+    { nameString : String
+    , name : Element Msg
     , count : Int
+    , columnWidth : String
     , buttons : List (Element Msg)
     }
 
 
-feedSetDialogRow : Style -> Int -> (FeedSet Msg -> Bool) -> FeedSet Msg -> FeedSetDialogRow
-feedSetDialogRow style iconHeight isInstalled feedSet =
+feedSetDialogRow : Style -> Int -> (FeedSet Msg -> Bool) -> DialogInputs -> FeedSet Msg -> FeedSetDialogRow
+feedSetDialogRow style iconHeight isInstalled dialogInputs feedSet =
     let
         name =
             feedSet.name
     in
-    { name =
+    { nameString = name
+    , name =
         (if not <| isInstalled feedSet then
             standardButton
 
@@ -5443,6 +5561,9 @@ feedSetDialogRow style iconHeight isInstalled feedSet =
 
             Just feeds ->
                 totalNewPosts feeds
+    , columnWidth =
+        Dict.get feedSet.name dialogInputs.feedSetColumnWidths
+            |> Maybe.withDefault ""
     , buttons =
         let
             makeButton label wrapper url dontHover =

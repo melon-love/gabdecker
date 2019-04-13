@@ -242,6 +242,7 @@ encodeSettings : Settings -> Value
 encodeSettings settings =
     JE.object
         [ ( "columnWidth", JE.int settings.columnWidth )
+        , ( "defaultColumnWidth", JE.int settings.defaultColumnWidth )
         , ( "fontSize", JE.float settings.fontSize )
         , ( "style", encodeStyleOption settings.styleOption )
         ]
@@ -275,16 +276,28 @@ settingsDecoder =
                 }
             )
             styleOptionDecoder
-        , JD.map3
-            (\columnWidth fontSize option ->
+        , JD.map4
+            (\columnWidth defaultColumnWidth fontSize option ->
                 { defaultSettings
                     | columnWidth = columnWidth
+                    , defaultColumnWidth =
+                        case defaultColumnWidth of
+                            Nothing ->
+                                columnWidth
+
+                            Just w ->
+                                w
                     , fontSize = fontSize
                     , styleOption = option
                     , style = optionToStyle option
                 }
             )
             (JD.field "columnWidth" JD.int)
+            (JD.oneOf
+                [ JD.field "defaultColumnWidth" <| JD.nullable JD.int
+                , JD.succeed Nothing
+                ]
+            )
             (JD.field "fontSize" JD.float)
             (JD.field "style" styleOptionDecoder)
         ]
@@ -292,17 +305,53 @@ settingsDecoder =
 
 encodeFeedSets : List (FeedSet msg) -> Value
 encodeFeedSets feedSets =
-    List.map (\feedSet -> ( feedSet.name, encodeFeedTypes feedSet.feedTypes ))
+    List.map
+        (\feedSet ->
+            ( feedSet.name
+            , case feedSet.columnWidth of
+                Nothing ->
+                    encodeFeedTypes feedSet.feedTypes
+
+                Just width ->
+                    JE.object
+                        [ ( "feedTypes", encodeFeedTypes feedSet.feedTypes )
+                        , ( "columnWidth", JE.int width )
+                        ]
+            )
+        )
         feedSets
         |> JE.object
 
 
+type alias FeedTypesAndWidth =
+    { feedTypes : List FeedType
+    , columnWidth : Maybe Int
+    }
+
+
+feedTypesAndWidthDecoder : Decoder FeedTypesAndWidth
+feedTypesAndWidthDecoder =
+    JD.oneOf
+        [ feedTypesDecoder
+            |> JD.andThen
+                (\feedTypes ->
+                    FeedTypesAndWidth feedTypes Nothing
+                        |> JD.succeed
+                )
+        , JD.map2 FeedTypesAndWidth
+            (JD.field "feedTypes" feedTypesDecoder)
+            (JD.field "columnWidth" <| JD.nullable JD.int)
+        ]
+
+
 feedSetsDecoder : Decoder (List (FeedSet msg))
 feedSetsDecoder =
-    JD.keyValuePairs feedTypesDecoder
+    JD.keyValuePairs feedTypesAndWidthDecoder
         |> JD.map
             (List.map
-                (\( name, feedTypes ) -> newFeedSet name feedTypes)
+                (\( name, { feedTypes, columnWidth } ) ->
+                    newFeedSet name feedTypes columnWidth
+                )
                 >> List.sortBy .name
             )
 

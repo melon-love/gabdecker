@@ -160,6 +160,7 @@ defaultColumnWidth =
 defaultSettings : Settings
 defaultSettings =
     { columnWidth = defaultColumnWidth
+    , defaultColumnWidth = defaultColumnWidth
     , fontSize = defaultFontSize
     , here = Time.utc
     , windowWidth = 1260

@@ -77,12 +77,13 @@ type alias FeedSet msg =
     , feedTypes : List FeedType
     , feeds : Maybe (List (Feed msg))
     , loadingFeeds : Set String
+    , columnWidth : Maybe Int
     }
 
 
-newFeedSet : String -> List FeedType -> FeedSet msg
-newFeedSet name feedTypes =
-    FeedSet name feedTypes Nothing Set.empty
+newFeedSet : String -> List FeedType -> Maybe Int -> FeedSet msg
+newFeedSet name feedTypes columnWidth =
+    FeedSet name feedTypes Nothing Set.empty columnWidth
 
 
 type alias LogList x =
@@ -260,6 +261,7 @@ type SizeOption
 
 type alias Settings =
     { columnWidth : Int
+    , defaultColumnWidth : Int
     , fontSize : Float
     , here : Zone
     , windowWidth : Int

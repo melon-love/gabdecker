@@ -2,6 +2,10 @@
 
 This is a place to collect things left to do for GabDecker.
 
+* If username case mismatch, image doesn't appear.
+  Downcase for table key.
+* UI to resample screen size. Workaround for the bug when switching
+  from landscape to portrait.
 * Post / reply / quote
   * Auto-complete @username from a list of known usernames.
     These are already gathered for user columns. Gather them also from
