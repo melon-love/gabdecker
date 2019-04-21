@@ -263,6 +263,7 @@ type alias Settings =
     { columnWidth : Int
     , defaultColumnWidth : Int
     , fontSize : Float
+    , showHidden : Bool
     , here : Zone
     , windowWidth : Int
     , windowHeight : Int

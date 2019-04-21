@@ -11,11 +11,14 @@
 
 
 module GabDecker.Parsers exposing
-    ( PartialParse(..)
+    ( AtUser(..)
+    , PartialParse(..)
+    , ReplaceOrPrefix(..)
     , allOneParsers
     , atUserOneParser
     , atUserParser
     , fullyParse
+    , fullyParseAtUsers
     , htmlOneParser
     , htmlParser
     , htmlStringParser
@@ -23,6 +26,7 @@ module GabDecker.Parsers exposing
     , parseElements
     , parseOne
     , parseString
+    , replaceAtUsers
     , subParse
     , subParseOne
     , wrapPartialParses
@@ -168,13 +172,18 @@ parseOneHelp parser _ =
         ]
 
 
-atUserParser : Style -> (Style -> String -> String -> Element msg) -> Parser (Element msg)
-atUserParser style renderer =
+atVariable : Parser String
+atVariable =
     P.variable
         { start = (==) '@'
-        , inner = \c -> c == '_' || Char.isAlphaNum c
+        , inner = \c -> c == '_' || c == '-' || Char.isAlphaNum c
         , reserved = Set.empty
         }
+
+
+atUserParser : Style -> (Style -> String -> String -> Element msg) -> Parser (Element msg)
+atUserParser style renderer =
+    atVariable
         |> P.andThen
             (\s ->
                 P.succeed <|
@@ -377,3 +386,100 @@ htmlCharacters =
                 in
                 loop str ""
             )
+
+
+type AtUser
+    = AtUser String
+    | NotAtUser String
+
+
+getAtUserParser : Parser AtUser
+getAtUserParser =
+    atVariable
+        |> P.andThen
+            (\s -> P.succeed <| AtUser s)
+
+
+getAtUserOneParser : OneParser AtUser
+getAtUserOneParser =
+    parseOne getAtUserParser
+
+
+fullyParseAtUsers : String -> List AtUser
+fullyParseAtUsers string =
+    fullyParse NotAtUser [ getAtUserOneParser ] string
+
+
+type GangAtUser
+    = GangAtUser (List String)
+    | NotGangAtUser String
+
+
+gangAtUsers : String -> List GangAtUser
+gangAtUsers string =
+    let
+        loop : List AtUser -> List String -> List GangAtUser -> List GangAtUser
+        loop input collecting res =
+            case input of
+                [] ->
+                    (GangAtUser <| List.reverse collecting)
+                        :: res
+                        |> List.reverse
+
+                atUser :: rest ->
+                    case atUser of
+                        AtUser s ->
+                            loop rest (s :: collecting) res
+
+                        NotAtUser s ->
+                            if "" == String.filter isNonWhitespaceChar s then
+                                case collecting of
+                                    [] ->
+                                        loop rest [] <| NotGangAtUser s :: res
+
+                                    au :: tail ->
+                                        loop rest ((au ++ s) :: tail) res
+
+                            else
+                                loop rest [] <|
+                                    NotGangAtUser s
+                                        :: (GangAtUser (List.reverse collecting)
+                                                :: res
+                                           )
+    in
+    loop (fullyParseAtUsers string) [] []
+        |> List.filter (\le -> le /= GangAtUser [] && le /= NotGangAtUser "")
+
+
+type ReplaceOrPrefix
+    = Replace String
+    | Prefix String
+
+
+replaceGangAtUsers : Int -> ReplaceOrPrefix -> List GangAtUser -> String
+replaceGangAtUsers count action gangs =
+    let
+        folder gang res =
+            case gang of
+                NotGangAtUser s ->
+                    res ++ s
+
+                GangAtUser ss ->
+                    if List.length ss >= count then
+                        case action of
+                            Replace replace ->
+                                res ++ replace
+
+                            Prefix prefix ->
+                                res ++ prefix ++ String.concat ss
+
+                    else
+                        res ++ String.concat ss
+    in
+    List.foldl folder "" gangs
+
+
+replaceAtUsers : Int -> ReplaceOrPrefix -> String -> String
+replaceAtUsers count action string =
+    gangAtUsers string
+        |> replaceGangAtUsers count action

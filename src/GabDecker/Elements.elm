@@ -162,6 +162,7 @@ defaultSettings =
     { columnWidth = defaultColumnWidth
     , defaultColumnWidth = defaultColumnWidth
     , fontSize = defaultFontSize
+    , showHidden = True
     , here = Time.utc
     , windowWidth = 1260
     , windowHeight = 1024

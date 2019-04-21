@@ -244,6 +244,7 @@ encodeSettings settings =
         [ ( "columnWidth", JE.int settings.columnWidth )
         , ( "defaultColumnWidth", JE.int settings.defaultColumnWidth )
         , ( "fontSize", JE.float settings.fontSize )
+        , ( "showHidden", JE.bool settings.showHidden )
         , ( "style", encodeStyleOption settings.styleOption )
         ]
 
@@ -276,8 +277,8 @@ settingsDecoder =
                 }
             )
             styleOptionDecoder
-        , JD.map4
-            (\columnWidth defaultColumnWidth fontSize option ->
+        , JD.map5
+            (\columnWidth defaultColumnWidth fontSize showHidden option ->
                 { defaultSettings
                     | columnWidth = columnWidth
                     , defaultColumnWidth =
@@ -288,6 +289,7 @@ settingsDecoder =
                             Just w ->
                                 w
                     , fontSize = fontSize
+                    , showHidden = showHidden
                     , styleOption = option
                     , style = optionToStyle option
                 }
@@ -299,6 +301,11 @@ settingsDecoder =
                 ]
             )
             (JD.field "fontSize" JD.float)
+            (JD.oneOf
+                [ JD.field "showHidden" JD.bool
+                , JD.succeed True
+                ]
+            )
             (JD.field "style" styleOptionDecoder)
         ]
 

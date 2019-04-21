@@ -100,7 +100,7 @@ import GabDecker.Elements
         , widthImage
         )
 import GabDecker.EncodeDecode as ED
-import GabDecker.Parsers as Parsers
+import GabDecker.Parsers as Parsers exposing (ReplaceOrPrefix(..))
 import GabDecker.Types as Types
     exposing
         ( ApiError
@@ -369,6 +369,7 @@ type Msg
     | ColumnWidthOption SizeOption
     | SetAutoSizeColumns Int
     | AutoSize
+    | ShowHiddenText Bool
     | SaveSettings
     | ClearFeeds
     | NewFeedSet
@@ -1919,6 +1920,16 @@ update msg model =
 
         AutoSize ->
             autoSize model
+
+        ShowHiddenText showHidden ->
+            let
+                newSettings =
+                    { settings | showHidden = showHidden }
+            in
+            { model
+                | settings = newSettings
+            }
+                |> withCmd (storeSettings newSettings model)
 
         RestoreDefaultSettings ->
             let
@@ -6837,8 +6848,12 @@ postRow settings feedType isToplevel log isLastNew =
                   <|
                     case post.body_html of
                         Nothing ->
+                            let
+                                body =
+                                    addHiddenLink settings post.body
+                            in
                             htmlBodyElements style baseFontSize <|
-                                newlinesToPs post.body
+                                newlinesToPs body
 
                         Just html ->
                             let
@@ -6848,8 +6863,11 @@ postRow settings feedType isToplevel log isLastNew =
 
                                     else
                                         html
+
+                                body =
+                                    addHiddenLink settings html
                             in
-                            htmlBodyElements style baseFontSize fixedHtml
+                            htmlBodyElements style baseFontSize body
                 ]
             , row []
                 [ column [ colwp ] <|
@@ -6907,6 +6925,19 @@ postRow settings feedType isToplevel log isLastNew =
                 interactionRow style baseFontSize colwp feedType post
             ]
         ]
+
+
+addHiddenLink : Settings -> String -> String
+addHiddenLink settings body =
+    let
+        replaceOrPrefix =
+            if settings.showHidden then
+                Prefix <| "<br />" ++ hideHtml
+
+            else
+                Replace showHtml
+    in
+    Parsers.replaceAtUsers 5 replaceOrPrefix body
 
 
 attachmentRows : Int -> Style -> Post -> List (Element Msg)
@@ -7960,7 +7991,13 @@ fixBareHtml html =
 
 atUserRenderer : Style -> String -> String -> Element Msg
 atUserRenderer style username linkText =
-    genericUserButton style False text "" username linkText
+    Html.a
+        [ href "#"
+        , onClick <| ShowUserDialog username
+        , Attributes.title "Show user profile"
+        ]
+        [ Html.text linkText ]
+        |> Element.html
 
 
 {-| Like String.split for lists
@@ -7988,6 +8025,59 @@ splitList a list =
     loop list [] []
 
 
+showHideTag : String
+showHideTag =
+    "param"
+
+
+showHideAttribute : String
+showHideAttribute =
+    "type"
+
+
+showType : String
+showType =
+    "show"
+
+
+hideType : String
+hideType =
+    "hide"
+
+
+showHideHtml : Bool -> String
+showHideHtml show =
+    let
+        type_ =
+            if show then
+                showType
+
+            else
+                hideType
+    in
+    "<" ++ showHideTag ++ " type='" ++ type_ ++ "' />"
+
+
+showHtml : String
+showHtml =
+    showHideHtml True
+
+
+hideHtml : String
+hideHtml =
+    showHideHtml False
+
+
+hideElement : Style -> Element Msg
+hideElement style =
+    textButton style "Hide @user list" (ShowHiddenText False) "--hide @user list--"
+
+
+showElement : Style -> Element Msg
+showElement style =
+    textButton style "Show @user list" (ShowHiddenText True) "--show @user list--"
+
+
 nodeToElements : Style -> Float -> HP.Node -> List (Element Msg)
 nodeToElements style baseFontSize theNode =
     let
@@ -8001,18 +8091,6 @@ nodeToElements style baseFontSize theNode =
         wrapParagraph elements =
             paragraph [ lineSpacing ] <|
                 mappedNodes elements
-
-        handleParagraphBrs : List HP.Node -> List (Element Msg)
-        handleParagraphBrs nodes =
-            if LE.notMember brElement nodes then
-                mappedNodes nodes
-
-            else
-                [ column [ lineSpacing ]
-                    (splitList brElement nodes
-                        |> List.map wrapParagraph
-                    )
-                ]
 
         mappedNodes nodes =
             List.map recurse nodes
@@ -8035,14 +8113,11 @@ nodeToElements style baseFontSize theNode =
                             mappedNodes nodes
 
                         "p" ->
-                            [ paragraph
-                                [ lineSpacing ]
-                              <|
-                                handleParagraphBrs nodes
-                            ]
+                            splitList brElement nodes
+                                |> List.map wrapParagraph
 
                         "br" ->
-                            -- These should all be dealt with by handleParagraphBrs
+                            -- These should all be dealt with in the "p" branch
                             [ text "\n" ]
 
                         "blockquote" ->
@@ -8060,6 +8135,19 @@ nodeToElements style baseFontSize theNode =
                                     mappedNodes nodes
                                 ]
                             ]
+
+                        "param" ->
+                            case LE.find (\( attr, _ ) -> attr == "type") attributes of
+                                Nothing ->
+                                    [ Element.none ]
+
+                                Just ( _, type_ ) ->
+                                    [ if type_ == showType then
+                                        showElement style
+
+                                      else
+                                        hideElement style
+                                    ]
 
                         _ ->
                             if
@@ -8155,7 +8243,7 @@ oldHtmlBodyElements style baseFontSize html =
                 ]
                 elements
     in
-    -- may want to convert single <br/ > to row instead of paragraph.
+    -- may want to convert single <br /> to row instead of paragraph.
     splitIntoParagraphs html
         |> List.map (Parsers.parseElements style atUserRenderer)
         |> List.map par
