@@ -3414,14 +3414,14 @@ makePost model =
                             ""
                 )
                 dialogInputs.postImages
-                |> List.filter ((==) "")
+                |> List.filter ((/=) "")
 
         postForm =
             { emptyPostForm
                 | body = body
                 , reply_to = reply_to
                 , is_quote = is_quote
-                , media_attachments = Debug.log "media_attachments" media
+                , media_attachments = media
             }
     in
     case LE.find (\image -> image.mediaId == Nothing) dialogInputs.postImages of
@@ -3645,7 +3645,15 @@ receivePost result model =
 
                 mdl2 =
                     addFeedPost HomeFeed activityLog mdl
-                        |> setPostInput ""
+                        |> setDialogInputs
+                            (\inputs ->
+                                { inputs
+                                    | postInput = ""
+                                    , postImages = []
+                                    , completions = []
+                                    , coordinates = Nothing
+                                }
+                            )
             in
             ( case dialogInputs.showDialog of
                 NewPostDialog _ ->
