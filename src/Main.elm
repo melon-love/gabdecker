@@ -6850,7 +6850,7 @@ postRow settings feedType isToplevel log isLastNew =
                         Nothing ->
                             let
                                 body =
-                                    addHiddenLink settings post.body
+                                    addHiddenLink False settings post.body
                             in
                             htmlBodyElements style baseFontSize <|
                                 newlinesToPs body
@@ -6865,7 +6865,7 @@ postRow settings feedType isToplevel log isLastNew =
                                         html
 
                                 body =
-                                    addHiddenLink settings html
+                                    addHiddenLink False settings html
                             in
                             htmlBodyElements style baseFontSize body
                 ]
@@ -6927,12 +6927,19 @@ postRow settings feedType isToplevel log isLastNew =
         ]
 
 
-addHiddenLink : Settings -> String -> String
-addHiddenLink settings body =
+addHiddenLink : Bool -> Settings -> String -> String
+addHiddenLink forNotifications settings body =
     let
+        suffix =
+            if forNotifications then
+                "<br />"
+
+            else
+                " "
+
         replaceOrPrefix =
             if settings.showHidden then
-                Prefix <| "<br />" ++ hideHtml
+                Prefix <| "<br />" ++ hideHtml ++ suffix
 
             else
                 Replace showHtml
@@ -7576,7 +7583,11 @@ notificationsBody settings post =
     in
     case post.body_html_summary of
         Just html ->
-            htmlBodyElements style settings.fontSize html
+            let
+                body =
+                    addHiddenLink True settings html
+            in
+            htmlBodyElements style settings.fontSize body
 
         Nothing ->
             let
@@ -7584,14 +7595,16 @@ notificationsBody settings post =
                     truncatePost post.body
 
                 body =
-                    if
+                    (if
                         String.length body1
                             == String.length post.body
-                    then
+                     then
                         body1
 
-                    else
+                     else
                         body1 ++ "..."
+                    )
+                        |> addHiddenLink True settings
             in
             htmlBodyElements style settings.fontSize <|
                 newlinesToPs body
