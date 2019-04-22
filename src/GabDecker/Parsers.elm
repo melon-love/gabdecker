@@ -393,9 +393,19 @@ type AtUser
     | NotAtUser String
 
 
+pKeyword : Parser String
+pKeyword =
+    P.oneOf
+        [ P.keyword "<p>" |> P.andThen (\_ -> P.succeed "<p>")
+        , P.keyword "<P>" |> P.andThen (\_ -> P.succeed "<P>")
+        , P.keyword "</p>" |> P.andThen (\_ -> P.succeed "</p>")
+        , P.keyword "</P>" |> P.andThen (\_ -> P.succeed "</P>")
+        ]
+
+
 getAtUserParser : Parser AtUser
 getAtUserParser =
-    atVariable
+    P.oneOf [ atVariable, pKeyword ]
         |> P.andThen
             (\s -> P.succeed <| AtUser s)
 
