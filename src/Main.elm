@@ -6102,6 +6102,7 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
               , Border.color style.border
               , Background.color style.headerBackground
               , spacing 10
+              , Element.clipX
               , idAttribute controlColumnId
               ]
             , columnBorderAttributes style True
