@@ -1445,7 +1445,7 @@ update msg model =
 
         NewPost responseType ->
             setShowDialog (NewPostDialog responseType) Nothing model
-                |> withCmd (focusId postInputId)
+                |> withCmd (focusId ids.postInput)
 
         OnNewPostSelection selection ->
             onNewPostSelection selection model
@@ -1554,7 +1554,7 @@ update msg model =
                     model
                         |> withCmd
                             (Task.attempt (ScrollToControl firstcolId feedElement) <|
-                                Dom.getElement controlColumnId
+                                Dom.getElement ids.controlColumn
                             )
 
         ScrollToControl firstcolId feedElement result ->
@@ -1631,7 +1631,9 @@ update msg model =
                             model
                                 |> withCmd
                                     (Task.attempt nullMsg <|
-                                        Dom.setViewportOf contentId scrollx fy
+                                        Dom.setViewportOf ids.contentColumn
+                                            scrollx
+                                            fy
                                     )
 
                     else
@@ -1642,12 +1644,12 @@ update msg model =
                         model
                             |> withCmd
                                 (Task.attempt nullMsg <|
-                                    Dom.setViewportOf contentId scrollx fy
+                                    Dom.setViewportOf ids.contentColumn scrollx fy
                                 )
 
         AddFeed ->
             setShowDialog AddFeedDialog Nothing (setDialogInput "" model)
-                |> withCmd (focusId addFeedInputId)
+                |> withCmd (focusId ids.addFeedInput)
 
         FeedSetChooser ->
             if 2 > List.length dialogInputs.feedSets then
@@ -1668,7 +1670,7 @@ update msg model =
                             feedSetColumnWidths dialogInputs.feedSets
                     }
             }
-                |> withCmd (focusId newFeedSetInputId)
+                |> withCmd (focusId ids.newFeedSetInput)
 
         SaveFeedTypes ->
             let
@@ -1690,7 +1692,7 @@ update msg model =
                         , feedSetsInput = feedSetsString
                     }
             }
-                |> withCmd (focusId saveFeedInputId)
+                |> withCmd (focusId ids.saveFeedInput)
 
         ShowSettings ->
             { model
@@ -1702,7 +1704,7 @@ update msg model =
                         , columnWidthInput = String.fromInt model.settings.columnWidth
                     }
             }
-                |> withCmd (focusId settingsInputId)
+                |> withCmd (focusId ids.settingsInput)
 
         SetStyle option ->
             let
@@ -3375,7 +3377,7 @@ completePostChoice choice model =
                 , coordinates = Nothing
             }
     }
-        |> withCmd (focusId postInputId)
+        |> withCmd (focusId ids.postInput)
 
 
 makePost : Model -> ( Model, Cmd Msg )
@@ -4276,7 +4278,7 @@ view model =
                 dialogInputs.postSelection
           in
           Tracker.textAreaTracker
-            [ Tracker.textAreaId postInputId
+            [ Tracker.textAreaId ids.postInput
             , Tracker.setSelection start start count
             , Tracker.triggerSelection model.triggerSelection
             , Tracker.onSelection OnNewPostSelection
@@ -4418,7 +4420,7 @@ mainPage settings icons draggingInfo loadingFeeds feeds =
                 , styleAttribute "-webkit-overflow-scrolling" "touch"
                 , height <| px settings.windowHeight
                 , width <| px (min (settings.windowWidth - ccw) contentWidth)
-                , idAttribute contentId
+                , idAttribute ids.contentColumn
                 ]
                 (List.map
                     (\feed ->
@@ -5170,7 +5172,7 @@ settingsDialog dialogInputs settings =
                             { label = ""
                             , text = dialogInputs.fontSizeInput
                             , scale = 4
-                            , id = settingsInputId
+                            , id = ids.settingsInput
                             , buttonTitle = ""
                             , doit = SaveSettings
                             , saveit = FontSizeInput
@@ -5385,7 +5387,7 @@ saveFeedsDialog dialogInputs settings =
             { label = "Feeds:"
             , text = dialogInputs.dialogInput
             , scale = 15
-            , id = saveFeedInputId
+            , id = ids.saveFeedInput
             , buttonTitle = "Restore Feeds"
             , doit = RestoreFeedTypes
             , saveit = DialogInput
@@ -5484,7 +5486,7 @@ feedSetsDialog dialogInputs settings =
             { label = ""
             , text = dialogInputs.currentFeedSet
             , scale = 10
-            , id = newFeedSetInputId
+            , id = ids.newFeedSetInput
             , buttonTitle = "Save"
             , doit = NewFeedSet
             , saveit = SetCurrentFeedSet
@@ -5653,7 +5655,7 @@ addFeedDialog dialogInputs settings =
                             scaleFontSize baseFontSize
                                 (200 / defaultFontSize)
                         )
-                    , idAttribute addFeedInputId
+                    , idAttribute ids.addFeedInput
                     , onKeysDownAttribute
                         [ ( keycodes.escape, CloseDialog )
                         , ( keycodes.enter, AddNewFeed feedType )
@@ -5983,7 +5985,7 @@ newPostDialog responseType dialogInputs settings =
                     [ Input.multiline
                         [ width <| px w
                         , height Element.fill
-                        , idAttribute postInputId
+                        , idAttribute ids.postInput
                         , Background.color <| style.background
                         , Attributes.value dialogInputs.postInput
                             |> Element.htmlAttribute
@@ -6025,44 +6027,16 @@ controlColumnWidth baseFontSize =
     bigUserIconHeight baseFontSize + 2 * columnPadding
 
 
-controlColumnId : String
-controlColumnId =
-    "controlColumn"
-
-
-contentId : String
-contentId =
-    "contentColumn"
-
-
-dialogInputId : String
-dialogInputId =
-    "dialogInput"
-
-
-postInputId : String
-postInputId =
-    "postInput"
-
-
-newFeedSetInputId : String
-newFeedSetInputId =
-    "newFeedSet"
-
-
-addFeedInputId : String
-addFeedInputId =
-    "addFeedInput"
-
-
-saveFeedInputId : String
-saveFeedInputId =
-    "feedsStringInput"
-
-
-settingsInputId : String
-settingsInputId =
-    "settingsInput"
+ids =
+    { controlColumn = "controlColumn"
+    , contentColumn = "contentColumn"
+    , dialogInput = "dialogInput"
+    , postInput = "postInput"
+    , newFeedSetInput = "newFeedSet"
+    , addFeedInput = "addFeedInput"
+    , saveFeedInput = "saveFeedInput"
+    , settingsInput = "settingsInput"
+    }
 
 
 controlColumn : Int -> Maybe DraggingInfo -> Bool -> Settings -> Icons -> List (Feed Msg) -> Element Msg
@@ -6103,7 +6077,7 @@ controlColumn columnWidth draggingInfo isLoading settings icons feeds =
               , Background.color style.headerBackground
               , spacing 10
               , Element.clipX
-              , idAttribute controlColumnId
+              , idAttribute ids.controlColumn
               ]
             , columnBorderAttributes style True
             , case dragImage settings draggingInfo icons of
