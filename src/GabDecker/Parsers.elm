@@ -25,9 +25,6 @@ module GabDecker.Parsers exposing
     , htmlOneParser
     , htmlParser
     , htmlStringParser
-    , longString
-    , longString2
-    , longString3
     , multiParseString
     , nAtVariables
     , parseElements
@@ -570,15 +567,3 @@ replaceAtUsers n action string =
                             p ++ s ++ res
     in
     List.foldr folder "" <| fullyParseAtUsers n string
-
-
-longString =
-    "<p>Good Morning Top of the... Morning To Y'all.. <br />Remember Yesterday<br />Dream of Tomorrow<br />But Live for Today. <br />~ Anonymous <br />Here's Song To start your DAY <br />Bob Seger:  Travelin Man - Beautiful Loser  <br />https://hooktube.com/attPbjuxli0                                                </p>\n<p>HurryBack @GoodisWinning   @militanthippy  </p>\n<p> ____________________________________________________________</p>\n<p>🙏 👆 ________________________________________________________</p>\n<p> @joesch1999 @Mountaineer1 @SGT_York @American_Rebel7   </p>\n<p>@camponi  @Broken77 @AirGuitarist @shadowmud @rangerjeff44</p>\n<p>@Millwood16  @IAmWiseWolf @FedraFarmer @Dividends4Life </p>\n<p>@RobinGaGaTo4 @SoulShines @TheGabberPorch @LucyDuckette  </p>\n<p>@leamorabito @willluc20 @Skeletortheavenger  @ShaHouMac </p>\n<p>@MuseHunter @iSay @tacsgc  @TrustGodWWG1WGA @gunsmoke  </p>\n<p>@fishguy88 @BethDittmander @VortexQ @Spacecowboy777 @eihs </p>\n<p>@Territrumpgirl @Angel1313 @Gypsy124 @avatarman @Berrygabby </p>\n<p>@Sockalexis @blkdiamond97 @Snugglebunny @Lilly </p>\n<p>@lowlifeamerican @R_OLNEE @UnrulyRefugee @RiverCat @OTC </p>\n<p>@Tanstaafl @BarbC @bluenippledwench @22TCM @Introverser </p>\n<p>@qbmdo @Joy35 @kgrace @Papillon_Life  @lp </p>\n<p>@Imjustagirl @toshietwo  @VictoriaC @Hippiemamagypsylove  @dijjy</p>\n<p>@Livinbygrace @Julia89 @OurCountryFirst @LetFreedomRing2019 </p>\n<p>@Trumprulz2020 @Chucked14 @xeniatom2304</p>"
-
-
-longString2 =
-    "<p>foo </p>\n<p> @joesch1999 @Mountaineer1 @SGT_York @American_Rebel7   </p>\n<p>@camponi  @Broken77 @AirGuitarist @shadowmud @rangerjeff44</p>\n<p>@Millwood16  @IAmWiseWolf @FedraFarmer @Dividends4Life </p>\n<p>@RobinGaGaTo4 @SoulShines @TheGabberPorch @LucyDuckette  </p>\n<p>@leamorabito @willluc20 @Skeletortheavenger  @ShaHouMac </p>\n<p>@MuseHunter @iSay @tacsgc  @TrustGodWWG1WGA @gunsmoke  </p>\n<p>@fishguy88 @BethDittmander @VortexQ @Spacecowboy777 @eihs </p>\n<p>@Territrumpgirl @Angel1313 @Gypsy124 @avatarman @Berrygabby </p>\n<p>@Sockalexis @blkdiamond97 @Snugglebunny @Lilly </p>\n<p>@lowlifeamerican @R_OLNEE @UnrulyRefugee @RiverCat @OTC </p>\n<p>@Tanstaafl @BarbC @bluenippledwench @22TCM @Introverser </p>\n<p>@qbmdo @Joy35 @kgrace @Papillon_Life  @lp </p>\n<p>@Imjustagirl @toshietwo  @VictoriaC @Hippiemamagypsylove  @dijjy</p>\n<p>@Livinbygrace @Julia89 @OurCountryFirst @LetFreedomRing2019 </p>\n<p>@Trumprulz2020 @Chucked14 @xeniatom2304</p>"
-
-
-longString3 =
-    "<p>foo </p>\n<p> @joesch1999 @Mountaineer1 @SGT_York</p>"
