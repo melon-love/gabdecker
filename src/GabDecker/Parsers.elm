@@ -17,12 +17,19 @@ module GabDecker.Parsers exposing
     , allOneParsers
     , atUserOneParser
     , atUserParser
+    , atVariableList
+    , atVariablePs
+    , atVariables
     , fullyParse
     , fullyParseAtUsers
     , htmlOneParser
     , htmlParser
     , htmlStringParser
+    , longString
+    , longString2
+    , longString3
     , multiParseString
+    , nAtVariables
     , parseElements
     , parseOne
     , parseString
@@ -179,6 +186,14 @@ atVariable =
         , inner = \c -> c == '_' || c == '-' || Char.isAlphaNum c
         , reserved = Set.empty
         }
+        |> P.andThen
+            (\v ->
+                if v == "@" then
+                    P.problem "bare @"
+
+                else
+                    P.succeed v
+            )
 
 
 atUserParser : Style -> (Style -> String -> String -> Element msg) -> Parser (Element msg)
@@ -388,77 +403,148 @@ htmlCharacters =
             )
 
 
+keywordString : String -> Parser String
+keywordString string =
+    P.keyword string |> P.andThen (\_ -> P.succeed string)
+
+
+whitespace : Parser ()
+whitespace =
+    P.chompWhile isWhitespaceChar
+
+
+savedWhitespace : Parser String
+savedWhitespace =
+    P.getChompedString <| whitespace
+
+
+pSep : Parser ()
+pSep =
+    P.succeed ()
+        |. whitespace
+        |. P.symbol "</p>"
+        |. whitespace
+        |. P.symbol "<p>"
+        |. whitespace
+
+
+brSep : Parser ()
+brSep =
+    P.succeed ()
+        |. whitespace
+        |. P.oneOf [ P.symbol "<br />", P.symbol "<br/>", P.symbol "<br>" ]
+        |. whitespace
+
+
+atVariableList : Parser (List String)
+atVariableList =
+    P.loop [] variableListHelp
+
+
+variableListHelp : List String -> Parser (Step (List String) (List String))
+variableListHelp res =
+    P.oneOf
+        [ P.backtrackable
+            (P.succeed (\at -> Loop (at :: res))
+                |= P.backtrackable atVariable
+                |. whitespace
+            )
+        , P.succeed ()
+            |> P.andThen
+                (\_ ->
+                    if res == [] then
+                        P.problem "Empty list"
+
+                    else
+                        P.succeed ()
+                            |> P.map (\_ -> P.Done (List.reverse res))
+                )
+        ]
+
+
+atVariablePs : Parser (List String)
+atVariablePs =
+    P.loop [] variablePsHelp
+
+
+variablePsHelp : List String -> Parser (Step (List String) (List String))
+variablePsHelp res =
+    P.oneOf
+        [ P.succeed (\at -> Loop (at :: res))
+            |= P.backtrackable atVariable
+            |. P.backtrackable pSep
+        , P.succeed (\at -> Loop (at :: res))
+            |= P.backtrackable atVariable
+            |. P.backtrackable brSep
+        , P.succeed (\at -> Loop (at :: res))
+            |= P.backtrackable atVariable
+            |. whitespace
+        , P.succeed ()
+            |> P.andThen
+                (\_ ->
+                    if res == [] then
+                        P.problem "Empty list"
+
+                    else
+                        P.succeed ()
+                            |> P.map (\_ -> P.Done (List.reverse res))
+                )
+        ]
+
+
+atVariables : Parser (List String)
+atVariables =
+    P.oneOf
+        [ P.backtrackable atVariableList
+        , P.succeed identity
+            |. P.backtrackable (P.symbol "<p>")
+            |. P.backtrackable whitespace
+            |= P.backtrackable atVariablePs
+            |. P.backtrackable whitespace
+            |. P.backtrackable (P.symbol "</p>")
+        ]
+
+
+nAtVariables : Int -> Parser String
+nAtVariables n =
+    P.getChompedString
+        (atVariables
+            |> P.andThen
+                (\vs ->
+                    if List.length vs >= n then
+                        P.succeed vs
+
+                    else
+                        P.problem "Fewer than n @vars"
+                )
+        )
+
+
+
+-- TODO
+-- Needs to start with <p>, and end with </p>
+
+
 type AtUser
     = AtUser String
     | NotAtUser String
 
 
-pKeyword : Parser String
-pKeyword =
-    P.oneOf
-        [ P.keyword "<p>" |> P.andThen (\_ -> P.succeed "<p>")
-        , P.keyword "<P>" |> P.andThen (\_ -> P.succeed "<P>")
-        , P.keyword "</p>" |> P.andThen (\_ -> P.succeed "</p>")
-        , P.keyword "</P>" |> P.andThen (\_ -> P.succeed "</P>")
-        ]
+nAtUserParser : Int -> Parser AtUser
+nAtUserParser n =
+    nAtVariables n
+        |> P.andThen (P.succeed << AtUser)
 
 
-getAtUserParser : Parser AtUser
-getAtUserParser =
-    P.oneOf [ atVariable, pKeyword ]
-        |> P.andThen
-            (\s -> P.succeed <| AtUser s)
+nAtUserOneParser : Int -> OneParser AtUser
+nAtUserOneParser n =
+    parseOne <| nAtUserParser n
 
 
-getAtUserOneParser : OneParser AtUser
-getAtUserOneParser =
-    parseOne getAtUserParser
-
-
-fullyParseAtUsers : String -> List AtUser
-fullyParseAtUsers string =
-    fullyParse NotAtUser [ getAtUserOneParser ] string
-
-
-type GangAtUser
-    = GangAtUser (List String)
-    | NotGangAtUser String
-
-
-gangAtUsers : String -> List GangAtUser
-gangAtUsers string =
-    let
-        loop : List AtUser -> List String -> List GangAtUser -> List GangAtUser
-        loop input collecting res =
-            case input of
-                [] ->
-                    (GangAtUser <| List.reverse collecting)
-                        :: res
-                        |> List.reverse
-
-                atUser :: rest ->
-                    case atUser of
-                        AtUser s ->
-                            loop rest (s :: collecting) res
-
-                        NotAtUser s ->
-                            if "" == String.filter isNonWhitespaceChar s then
-                                case collecting of
-                                    [] ->
-                                        loop rest [] <| NotGangAtUser s :: res
-
-                                    au :: tail ->
-                                        loop rest ((au ++ s) :: tail) res
-
-                            else
-                                loop rest [] <|
-                                    NotGangAtUser s
-                                        :: (GangAtUser (List.reverse collecting)
-                                                :: res
-                                           )
-    in
-    loop (fullyParseAtUsers string) [] []
-        |> List.filter (\le -> le /= GangAtUser [] && le /= NotGangAtUser "")
+fullyParseAtUsers : Int -> String -> List AtUser
+fullyParseAtUsers n string =
+    Debug.log "fullyParseAtUsers" <|
+        fullyParse NotAtUser [ nAtUserOneParser n ] string
 
 
 type ReplaceOrPrefix
@@ -466,30 +552,33 @@ type ReplaceOrPrefix
     | Prefix String
 
 
-replaceGangAtUsers : Int -> ReplaceOrPrefix -> List GangAtUser -> String
-replaceGangAtUsers count action gangs =
-    let
-        folder gang res =
-            case gang of
-                NotGangAtUser s ->
-                    res ++ s
-
-                GangAtUser ss ->
-                    if List.length ss >= count then
-                        case action of
-                            Replace replace ->
-                                res ++ replace
-
-                            Prefix prefix ->
-                                res ++ prefix ++ String.concat ss
-
-                    else
-                        res ++ String.concat ss
-    in
-    List.foldl folder "" gangs
-
-
 replaceAtUsers : Int -> ReplaceOrPrefix -> String -> String
-replaceAtUsers count action string =
-    gangAtUsers string
-        |> replaceGangAtUsers count action
+replaceAtUsers n action string =
+    let
+        folder : AtUser -> String -> String
+        folder atUser res =
+            case atUser of
+                NotAtUser s ->
+                    s ++ res
+
+                AtUser s ->
+                    case action of
+                        Replace r ->
+                            r ++ res
+
+                        Prefix p ->
+                            p ++ s ++ res
+    in
+    List.foldr folder "" <| fullyParseAtUsers n string
+
+
+longString =
+    "<p>Good Morning Top of the... Morning To Y'all.. <br />Remember Yesterday<br />Dream of Tomorrow<br />But Live for Today. <br />~ Anonymous <br />Here's Song To start your DAY <br />Bob Seger:  Travelin Man - Beautiful Loser  <br />https://hooktube.com/attPbjuxli0                                                </p>\n<p>HurryBack @GoodisWinning   @militanthippy  </p>\n<p> ____________________________________________________________</p>\n<p>🙏 👆 ________________________________________________________</p>\n<p> @joesch1999 @Mountaineer1 @SGT_York @American_Rebel7   </p>\n<p>@camponi  @Broken77 @AirGuitarist @shadowmud @rangerjeff44</p>\n<p>@Millwood16  @IAmWiseWolf @FedraFarmer @Dividends4Life </p>\n<p>@RobinGaGaTo4 @SoulShines @TheGabberPorch @LucyDuckette  </p>\n<p>@leamorabito @willluc20 @Skeletortheavenger  @ShaHouMac </p>\n<p>@MuseHunter @iSay @tacsgc  @TrustGodWWG1WGA @gunsmoke  </p>\n<p>@fishguy88 @BethDittmander @VortexQ @Spacecowboy777 @eihs </p>\n<p>@Territrumpgirl @Angel1313 @Gypsy124 @avatarman @Berrygabby </p>\n<p>@Sockalexis @blkdiamond97 @Snugglebunny @Lilly </p>\n<p>@lowlifeamerican @R_OLNEE @UnrulyRefugee @RiverCat @OTC </p>\n<p>@Tanstaafl @BarbC @bluenippledwench @22TCM @Introverser </p>\n<p>@qbmdo @Joy35 @kgrace @Papillon_Life  @lp </p>\n<p>@Imjustagirl @toshietwo  @VictoriaC @Hippiemamagypsylove  @dijjy</p>\n<p>@Livinbygrace @Julia89 @OurCountryFirst @LetFreedomRing2019 </p>\n<p>@Trumprulz2020 @Chucked14 @xeniatom2304</p>"
+
+
+longString2 =
+    "<p>foo </p>\n<p> @joesch1999 @Mountaineer1 @SGT_York @American_Rebel7   </p>\n<p>@camponi  @Broken77 @AirGuitarist @shadowmud @rangerjeff44</p>\n<p>@Millwood16  @IAmWiseWolf @FedraFarmer @Dividends4Life </p>\n<p>@RobinGaGaTo4 @SoulShines @TheGabberPorch @LucyDuckette  </p>\n<p>@leamorabito @willluc20 @Skeletortheavenger  @ShaHouMac </p>\n<p>@MuseHunter @iSay @tacsgc  @TrustGodWWG1WGA @gunsmoke  </p>\n<p>@fishguy88 @BethDittmander @VortexQ @Spacecowboy777 @eihs </p>\n<p>@Territrumpgirl @Angel1313 @Gypsy124 @avatarman @Berrygabby </p>\n<p>@Sockalexis @blkdiamond97 @Snugglebunny @Lilly </p>\n<p>@lowlifeamerican @R_OLNEE @UnrulyRefugee @RiverCat @OTC </p>\n<p>@Tanstaafl @BarbC @bluenippledwench @22TCM @Introverser </p>\n<p>@qbmdo @Joy35 @kgrace @Papillon_Life  @lp </p>\n<p>@Imjustagirl @toshietwo  @VictoriaC @Hippiemamagypsylove  @dijjy</p>\n<p>@Livinbygrace @Julia89 @OurCountryFirst @LetFreedomRing2019 </p>\n<p>@Trumprulz2020 @Chucked14 @xeniatom2304</p>"
+
+
+longString3 =
+    "<p>foo </p>\n<p> @joesch1999 @Mountaineer1 @SGT_York</p>"
