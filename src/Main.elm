@@ -1048,7 +1048,9 @@ receiveStyle value model =
                         | settings =
                             { settings
                                 | columnWidth = set.columnWidth
+                                , defaultColumnWidth = set.defaultColumnWidth
                                 , fontSize = set.fontSize
+                                , showHidden = set.showHidden
                                 , styleOption = set.styleOption
                                 , style = set.style
                             }
