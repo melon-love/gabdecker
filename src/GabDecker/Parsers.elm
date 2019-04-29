@@ -540,8 +540,7 @@ nAtUserOneParser n =
 
 fullyParseAtUsers : Int -> String -> List AtUser
 fullyParseAtUsers n string =
-    Debug.log "fullyParseAtUsers" <|
-        fullyParse NotAtUser [ nAtUserOneParser n ] string
+    fullyParse NotAtUser [ nAtUserOneParser n ] string
 
 
 type ReplaceOrPrefix

@@ -6850,7 +6850,7 @@ postRow settings feedType isToplevel log isLastNew =
                                         html
 
                                 body =
-                                    addHiddenLink False settings html
+                                    addHiddenLink False settings fixedHtml
                             in
                             htmlBodyElements style baseFontSize body
                 ]
