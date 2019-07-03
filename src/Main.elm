@@ -153,7 +153,7 @@ import Set exposing (Set)
 import String
 import String.Extra as SE
 import Task
-import Time exposing (Posix, Zone)
+import Time exposing (Month, Posix, Zone)
 import Url exposing (Url)
 
 
@@ -290,6 +290,7 @@ type alias Model =
     , lastClosedFeed : Maybe ( Feed Msg, Int )
     , scrollToFeed : Maybe FeedType
     , draggingInfo : Maybe DraggingInfo
+    , now : Maybe Posix
     }
 
 
@@ -324,6 +325,7 @@ type Msg
     | ProcessLocalStorage Value
     | WindowResize Int Int
     | Here Zone
+    | Now Posix
     | Login
     | Logout
     | LoadMore UpdateType (Feed Msg)
@@ -683,6 +685,7 @@ init flags url key =
             , lastClosedFeed = Nothing
             , scrollToFeed = Nothing
             , draggingInfo = Nothing
+            , now = Nothing
             }
     in
     List.foldl setLoadingFeed model model.feeds
@@ -700,6 +703,7 @@ init flags url key =
             , localStorageSend (LocalStorage.get storageKeys.style) model
             , Task.perform getViewport Dom.getViewport
             , Task.perform Here Time.here
+            , Task.perform Now Time.now
             , case savedToken of
                 Nothing ->
                     if model.useSimulator then
@@ -1401,6 +1405,10 @@ update msg model =
 
         Here zone ->
             { model | settings = { settings | here = zone } }
+                |> withNoCmd
+
+        Now posix ->
+            { model | now = Just posix }
                 |> withNoCmd
 
         Login ->
@@ -4265,7 +4273,7 @@ view model =
             ]
             (case model.backend of
                 Nothing ->
-                    loginPage settings
+                    loginPage settings model
 
                 Just backend ->
                     optimizers.mainPage
@@ -8258,8 +8266,8 @@ splitIntoParagraphs string =
         |> List.concat
 
 
-loginPage : Settings -> Element Msg
-loginPage settings =
+loginPage : Settings -> Model -> Element Msg
+loginPage settings model =
     let
         style =
             settings.style
@@ -8296,6 +8304,18 @@ loginPage settings =
                     "GabDecker Splash Image"
                     ( 768, 432 )
                 ]
+            , if
+                case model.now of
+                    Nothing ->
+                        False
+
+                    Just posix ->
+                        isAfterDay (Day 2019 Time.Jul 4) Time.utc posix
+              then
+                gabSocialRow model
+
+              else
+                Element.none
             , row [ centerX ]
                 [ simpleLink lightStyle "news/" "News" ]
             , row [ centerX ]
@@ -8324,6 +8344,119 @@ loginPage settings =
                     ]
                 ]
             ]
+        ]
+
+
+gabSocialRow : Model -> Element Msg
+gabSocialRow model =
+    let
+        feedTypes =
+            model.dialogInputs.feedTypes
+
+        feedSets =
+            model.dialogInputs.feedSets
+    in
+    row
+        [ centerX
+        , fontSize model.settings.fontSize 1.5
+        ]
+        [ column
+            [ centerX
+            , width <| px 600
+            , spacing 10
+            ]
+            [ paragraph []
+                [ text "If you can't log in, it's because Gab has become Gab Social. "
+                , text "A new TweetDeck-like interface, for Gab Social and other Mastodon sites, is in the works. "
+                , text "Watch for it at "
+                , newTabLink lightStyle
+                    "https://mammudeck.com/"
+                    "Mammudeck.com"
+                , text "."
+                ]
+            , if feedTypes == [] && feedSets == [] then
+                Element.none
+
+              else
+                paragraph []
+                    [ text "Copy your settings from below to move them to Mammudeck." ]
+            , if feedTypes /= [] then
+                feedTypesRow feedTypes model
+
+              else
+                Element.none
+            , if feedSets /= [] then
+                feedSetsRow feedSets model
+
+              else
+                Element.none
+            ]
+        ]
+
+
+feedTypesRow : List FeedType -> Model -> Element Msg
+feedTypesRow feedTypes model =
+    let
+        feedTypesString =
+            ED.encodeFeedTypes feedTypes
+                |> JE.encode 0
+
+        settings =
+            model.settings
+
+        baseFontSize =
+            settings.fontSize
+
+        style =
+            settings.style
+
+        params =
+            { label = ""
+            , text = feedTypesString
+            , scale = 25
+            , id = "feedTypes"
+            , buttonTitle = ""
+            , doit = Noop
+            , saveit = \_ -> Noop
+            , placeholder = Nothing
+            }
+    in
+    row [ centerX ]
+        [ inputLabel "Feeds:"
+        , textInput style baseFontSize params
+        ]
+
+
+feedSetsRow : List (FeedSet Msg) -> Model -> Element Msg
+feedSetsRow feedSets model =
+    let
+        feedSetsString =
+            ED.encodeFeedSets feedSets
+                |> JE.encode 0
+
+        settings =
+            model.settings
+
+        baseFontSize =
+            settings.fontSize
+
+        style =
+            settings.style
+
+        params =
+            { label = ""
+            , text = feedSetsString
+            , scale = 26
+            , id = "feedSets"
+            , buttonTitle = ""
+            , doit = Noop
+            , saveit = \_ -> Noop
+            , placeholder = Nothing
+            }
+    in
+    row [ centerX ]
+        [ inputLabel "Sets:"
+        , textInput style baseFontSize params
         ]
 
 
@@ -8383,6 +8516,86 @@ colonToken =
 spaceToken : DF.Token
 spaceToken =
     DF.text " "
+
+
+type alias Day =
+    { year : Int
+    , month : Month
+    , day : Int
+    }
+
+
+monthNumber : Month -> Int
+monthNumber month =
+    case month of
+        Time.Jan ->
+            1
+
+        Time.Feb ->
+            2
+
+        Time.Mar ->
+            3
+
+        Time.Apr ->
+            4
+
+        Time.May ->
+            5
+
+        Time.Jun ->
+            6
+
+        Time.Jul ->
+            7
+
+        Time.Aug ->
+            8
+
+        Time.Sep ->
+            9
+
+        Time.Oct ->
+            10
+
+        Time.Nov ->
+            11
+
+        Time.Dec ->
+            12
+
+
+isAfterDay : Day -> Zone -> Posix -> Bool
+isAfterDay { year, month, day } zone posix =
+    let
+        y =
+            Time.toYear zone posix
+
+        m =
+            Time.toMonth zone posix
+
+        mn =
+            monthNumber m
+
+        monthN =
+            monthNumber month
+
+        d =
+            Time.toDay zone posix
+    in
+    y
+        > year
+        || (y
+                == year
+                && (mn
+                        > monthN
+                        || (mn
+                                == monthN
+                                && d
+                                >= day
+                           )
+                   )
+           )
 
 
 dateString : Zone -> Posix -> String

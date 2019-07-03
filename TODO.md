@@ -2,6 +2,11 @@
 
 This is a place to collect things left to do for GabDecker.
 
+* Load more doesn't work on the Notifications feed.
+* Adding a feed to a saved page should make it persistent.
+  Or something like that. Need to think about how this should work.
+* Email addresses parse as @nick link.
+  Should be <a href='mailto:foo@bar'>foo@bar</a>.
 * If username case mismatch, image doesn't appear.
   Downcase for table key.
 * UI to resample screen size. Workaround for the bug when switching
